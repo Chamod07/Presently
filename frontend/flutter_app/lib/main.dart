@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/scenario_selection.dart';
 import 'home_page.dart';
 import 'camera.dart';
 import 'summary_page.dart';
@@ -21,7 +22,8 @@ class MyApp extends StatelessWidget {
       home: HomePage(),
       routes: {
         '/summary': (context) => SummaryPage(),
-        '/camera': (context) => RecordingScreen()
+        '/camera': (context) => RecordingScreen(),
+        '/scenario_sel': (context) => ScenarioSelection(),
       },
     );
   }
