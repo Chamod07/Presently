@@ -14,12 +14,16 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       body: SafeArea(
           child: Column(
-            children: [
-              IconButton(onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back)),
-              const SizedBox(height: 20),
+            children: [Align(
+                alignment: Alignment.centerLeft,
+              child: IconButton(
+                onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back),
+              ),),
+                const SizedBox(height: 20),
               Center(
-                child: Image.asset('/images/SignIn_SignUp-removebg-preview.png',
-                ),
+                child: Image.asset('images/SignIn_SignUp-removebg-preview.png',
+                    height: 252,
+                    width: 240),
               ),
               const SizedBox(height: 20),
               Text("Sign Up",
@@ -79,7 +83,9 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             const SizedBox(height: 20),
             OutlinedButton.icon(onPressed: () {},
-            icon: Image.asset('images/google_720255.png'),
+            icon: Image.asset('images/google_720255.png',
+                height: 20,
+                width: 20),
             label: const Text ("Register with Google"),
             style: OutlinedButton.styleFrom(
               minimumSize: Size(double.infinity, 50),
@@ -92,10 +98,10 @@ class _SignUpPageState extends State<SignUpPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("Don't have an account? "),
+              const Text("Already have an account? "),
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, '/sign_up'); // Navigate to sign-up page
+                  Navigator.pushNamed(context, '/sign_in'); // Navigate to sign-up page
                 },
             child: const Text(
             "Sign up",

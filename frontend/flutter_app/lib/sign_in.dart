@@ -14,12 +14,14 @@ class _SignInPageState extends State<SignInPage> {
     return Scaffold(
         body: SafeArea(
             child: Column(
-                children: [
-                  IconButton(onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back)),
+                children: [Align(alignment: Alignment.centerLeft,
+                  child: IconButton(onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back)),
+                ),
                   const SizedBox(height: 20),
                   Center(
                     child: Image.asset('images/SignIn_SignUp-removebg-preview.png',
-                    ),
+                    height: 252,
+                    width: 240),
                   ),
                   const SizedBox(height: 20),
                   Text("Sign In",
@@ -69,7 +71,9 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                   const SizedBox(height: 20),
                   OutlinedButton.icon(onPressed: () {},
-                    icon: Image.asset('images/google_720255.png'),
+                    icon: Image.asset('images/google_720255.png',
+                        height: 20,
+                        width: 20),
                     label: const Text ("Continue with Google"),
                     style: OutlinedButton.styleFrom(
                       minimumSize: Size(double.infinity, 50),
