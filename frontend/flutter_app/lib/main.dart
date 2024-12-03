@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
-import 'camera.dart';
-import 'summary_page.dart';
+//import 'home_page.dart';
+//import 'camera.dart';
+//import 'summary_page.dart';
+import 'sign_in.dart';
+import 'sign_up.dart';
+import 'welcome.dart';
 
 void main() {
   runApp(MyApp());
@@ -17,10 +20,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.purple,
       ),
-      home: HomePage(),
+      home: WelcomePage(),
       routes: {
-        '/summary': (context) => SummaryPage(),
-        '/camera': (context) => RecordingScreen()
+        '/sign_in': (context) => SignInPage(),
+        '/sign_up': (context) => SignUpPage()
       },
     );
   }
