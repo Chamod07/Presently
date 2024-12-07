@@ -28,7 +28,7 @@ class _SignUpPageState extends State<SignUpPage> {
               const SizedBox(height: 20),
               Text("Sign Up",
               style: TextStyle(
-                fontFamily: 'Roboto-Medium.ttf',
+                fontFamily: 'Roboto',
                 fontSize: 34,
               ),
               ),

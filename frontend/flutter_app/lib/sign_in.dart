@@ -26,7 +26,7 @@ class _SignInPageState extends State<SignInPage> {
                   const SizedBox(height: 20),
                   Text("Sign In",
                     style: TextStyle(
-                      fontFamily: 'Roboto-Medium.ttf',
+                      fontFamily: 'Roboto',
                       fontSize: 34,
                     ),
                   ),
@@ -59,7 +59,7 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ),
                     child: const Text("Continue",
-                      style: TextStyle(fontSize: 17, color: Colors.white),
+                      style: TextStyle(fontSize: 17, color: Colors.white, fontFamily: 'Roboto'),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -74,7 +74,8 @@ class _SignInPageState extends State<SignInPage> {
                     icon: Image.asset('images/google_720255.png',
                         height: 20,
                         width: 20),
-                    label: const Text ("Continue with Google"),
+                    label: const Text ("Continue with Google",
+                    style: TextStyle(fontFamily: 'Roboto')),
                     style: OutlinedButton.styleFrom(
                       minimumSize: Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(

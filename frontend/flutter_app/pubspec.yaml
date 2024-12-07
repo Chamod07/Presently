@@ -76,14 +76,14 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-     - family: Cookie
-       fonts:
-         - asset: fonts/Cookie-Regular.ttf
+    - family: Cookie
+      fonts:
+       - asset: fonts/Cookie-Regular.ttf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
-     - family: Roboto
-       fonts:
-         - asset: fonts/Roboto-Medium.ttf
+    - family: Roboto
+      fonts:
+        - asset: fonts/Roboto-Medium.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
   #

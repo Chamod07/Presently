@@ -14,8 +14,8 @@ class WelcomePage extends StatelessWidget {
           Expanded(child: Center(
               child: Text("Presently" ,
                   style: TextStyle(
-                      fontFamily: 'Cookie-Regular.ttf',
-                      fontSize: 48,
+                      fontFamily: 'Cookie',
+                      fontSize: 100,
                       color: Color(0xFF7300B8)
                   )
               )
@@ -28,7 +28,7 @@ class WelcomePage extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               color: Color(0xFF7400B8),
-              fontFamily: 'Roboto-Medium.ttf'
+              fontFamily: 'Roboto'
             ),
             ),
             style: ElevatedButton.styleFrom(
