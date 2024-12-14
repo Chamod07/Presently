@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 class HomePage extends StatelessWidget {
@@ -20,14 +21,11 @@ class HomePage extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
             ),
             const SizedBox(height: 20),
-
-            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/scenario_sel');
-                //Navigate to Scenario selection page
+                Navigator.pushNamed(context, '/camera'); // Navigate to CameraScreen
               },
-              child: Text("Start Session"),
+              child: Text("Open Camera"),
             ),
 
             const SizedBox(height: 30),
