@@ -12,7 +12,7 @@ app = FastAPI()
 # Add CORS middleware to allow cross-origin requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,12 +26,11 @@ pose = mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
-mp_drawing = mp.solutions.drawing_utils
 
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -41,7 +40,73 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
 
+# Initialize the connection manager
 manager = ConnectionManager()
+
+
+class PoseEvaluator:
+    @classmethod
+    def evaluate_pose(cls, landmarks):
+        """Comprehensive pose evaluation"""
+        evaluation = {
+            'good_poses': [],
+            'bad_poses': [],
+            'overall_feedback': ''
+        }
+
+        try:
+            # Convert landmarks to a more usable format
+            points = {
+                'left_shoulder': landmarks[11],
+                'right_shoulder': landmarks[12],
+                'left_hip': landmarks[23],
+                'right_hip': landmarks[24],
+                'left_elbow': landmarks[13],
+                'right_elbow': landmarks[14],
+                'left_wrist': landmarks[15],
+                'right_wrist': landmarks[16],
+                'head': landmarks[0]
+            }
+
+            # Open Stance Check
+            shoulder_width = abs(points['left_shoulder'].x - points['right_shoulder'].x)
+            hip_width = abs(points['left_hip'].x - points['right_hip'].x)
+
+            if 0.8 <= (shoulder_width / hip_width) <= 1.2:
+                evaluation['good_poses'].append('Open Stance')
+
+            # Upright Posture Check
+            shoulder_vector = [
+                points['right_shoulder'].x - points['left_shoulder'].x,
+                points['right_shoulder'].y - points['left_shoulder'].y
+            ]
+            vertical_angle = np.degrees(np.arctan2(shoulder_vector[1], shoulder_vector[0]))
+
+            if 170 <= abs(vertical_angle) <= 190:
+                evaluation['good_poses'].append('Upright Posture')
+            else:
+                evaluation['bad_poses'].append('Slouching')
+
+            # Arm Position Check
+            left_arm_cross = abs(points['left_shoulder'].x - points['left_wrist'].x)
+            right_arm_cross = abs(points['right_shoulder'].x - points['right_wrist'].x)
+
+            if left_arm_cross < 0.2 and right_arm_cross < 0.2:
+                evaluation['bad_poses'].append('Crossed Arms')
+
+            # Generate Overall Feedback
+            if len(evaluation['good_poses']) > 1:
+                evaluation['overall_feedback'] = 'Great presentation posture!'
+            elif len(evaluation['bad_poses']) > 1:
+                evaluation['overall_feedback'] = 'Work on your body language.'
+            else:
+                evaluation['overall_feedback'] = 'Decent presentation stance.'
+
+        except Exception as e:
+            print(f"Pose evaluation error: {e}")
+            evaluation['overall_feedback'] = 'Unable to fully analyze pose.'
+
+        return evaluation
 
 
 @app.websocket("/ws")
@@ -50,34 +115,29 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Remove data URI prefix and decode base64
             img_data = base64.b64decode(data.split(',')[1])
-
-            # Convert to numpy array
             np_arr = np.frombuffer(img_data, np.uint8)
-
-            # Decode image
             img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-            # Process image with MediaPipe
             results = pose.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
             if results.pose_landmarks:
-                # Extract landmark coordinates
-                landmarks = []
-                for landmark in results.pose_landmarks.landmark:
-                    landmarks.append({
-                        'x': landmark.x,
-                        'y': landmark.y,
-                        'z': landmark.z,
-                        'visibility': landmark.visibility
-                    })
+                # Evaluate pose
+                pose_evaluation = PoseEvaluator.evaluate_pose(results.pose_landmarks.landmark)
 
-                # Send landmarks back to client
-                await websocket.send_text(json.dumps(landmarks))
+                # Print the evaluation results to the terminal
+                print("Pose Evaluation:", json.dumps(pose_evaluation, indent=2))
+
+                # Combine landmarks and evaluation
+                response = {
+                    'pose_evaluation': pose_evaluation
+                }
+
+                # Send evaluation back to client
+                await websocket.send_text(json.dumps(response))
             else:
-                # Send empty landmarks if no pose detected
-                await websocket.send_text(json.dumps([]))
+                # Send empty response if no pose detected
+                await websocket.send_text(json.dumps({'pose_evaluation': {}}))
 
     except Exception as e:
         print(f"WebSocket error: {e}")
