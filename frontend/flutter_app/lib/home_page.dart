@@ -60,7 +60,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // Start session
+                    Navigator.pushNamed(context, '/camera'); // Start session
                   },
                   child: Text('Start Session'),
                 ),
