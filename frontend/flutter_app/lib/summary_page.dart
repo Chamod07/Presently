@@ -19,6 +19,19 @@ class _SummaryPageState extends State<SummaryPage> {
       ),
       body: Column(
         children: [
+          SizedBox(height: 50),
+          Center(
+            child: SizedBox(
+              width: 100,
+              height: 100,
+              child: CircularProgressIndicator(
+                value: 0.9,
+                color: Color(0xFF4EA7DE),
+                strokeWidth: 10.0,
+              ),
+            ),
+          ),
+          SizedBox(height: 50),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
             child: Row(
@@ -62,7 +75,7 @@ class _SummaryPageState extends State<SummaryPage> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isActive ? Colors.purple : Colors.grey[300],
+        backgroundColor: isActive ? Color(0xFF7400B8): Colors.grey[300],
         foregroundColor: isActive ? Colors.white : Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
