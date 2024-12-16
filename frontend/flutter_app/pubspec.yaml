@@ -36,6 +36,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   camera: ^0.11.0+2
+  firebase_auth: ^5.3.3
 
 dev_dependencies:
   flutter_test:
@@ -89,8 +90,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-camera:
-  git:
-    url: https://github.com/flutter/plugins
-    path: packages/camera/camera
-    ref: 9e46048ad2e1f085c1e8f6c77391fa52025e681f
