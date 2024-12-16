@@ -33,38 +33,54 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               ),
               const SizedBox(height: 20),
+              Container(width: 380, child:
               TextField(
                 decoration: InputDecoration(
                   labelText: "Enter your email",
+                  labelStyle:
+                  TextStyle(
+                      color: Color(0xFFBDBDBD),
+                      fontFamily: "Roboto",
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Color(0x26000000))
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+            ),
+              const SizedBox(height: 20),
+              Container(width: 380, child:
               TextField(
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Enter your password",
+                  labelStyle: TextStyle(color: Color(0xFFBDBDBD),fontFamily: "Roboto"),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Color(0x26000000))
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 20),
+              Container(width: 380, child:
               TextField(
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Confirm password",
+                  labelStyle: TextStyle(color: Color(0xFFBDBDBD),fontFamily: "Roboto"),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Color(0x26000000))
                   ),
                 ),
+              ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {}, style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50),
+                minimumSize: Size(380, 50),
                 backgroundColor: Color(0xFF7400B8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -74,13 +90,7 @@ class _SignUpPageState extends State<SignUpPage> {
               style: TextStyle(fontSize: 17, color: Colors.white),
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                      child: Divider(thickness: 1, color: Color(0xFFF5F5F7)))
-                ],
-              ),
+
             const SizedBox(height: 20),
             OutlinedButton.icon(onPressed: () {},
             icon: Image.asset('images/google_720255.png',
@@ -88,7 +98,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: 20),
             label: const Text ("Register with Google"),
             style: OutlinedButton.styleFrom(
-              minimumSize: Size(double.infinity, 50),
+              minimumSize: Size(380, 50),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),

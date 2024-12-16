@@ -34,8 +34,9 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-#  cupertino_icons: ^1.0.8
-#  camera: ^0.11.0+2
+  web_socket_channel: ^2.4.0
+  cupertino_icons: ^1.0.8
+  camera: ^0.11.0+2
 
 dev_dependencies:
   flutter_test:
@@ -76,14 +77,14 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-    - family: Cookie
-      fonts:
-       - asset: fonts/Cookie-Regular.ttf
+     - family: Cookie
+       fonts:
+         - asset: fonts/Cookie-Regular.ttf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
-    - family: Roboto
-      fonts:
-        - asset: fonts/Roboto-Medium.ttf
+     - family: Roboto
+       fonts:
+         - asset: fonts/Roboto-Medium.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
   #

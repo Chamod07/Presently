@@ -31,28 +31,45 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText: "Enter your email",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  Container(width: 380,
+                    child:
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: "Enter your email",
+                        labelStyle: TextStyle(
+                          fontFamily: "Roboto",
+                          color: Color(0xFFBDBDBD),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0x26000000)
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: "Enter your password",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 20),
+                  Container(width: 380,
+                    child:
+                    TextField(
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: "Enter your password",
+                        labelStyle: TextStyle(
+                            fontFamily: "Roboto",
+                          color: Color(0xFFBDBDBD),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0x26000000)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {}, style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
+                    onPressed: () {Navigator.pushNamed(context, '/home_page');}, style: ElevatedButton.styleFrom(
+                    minimumSize: Size(380, 50),
                     backgroundColor: Color(0xFF7400B8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -62,25 +79,20 @@ class _SignInPageState extends State<SignInPage> {
                       style: TextStyle(fontSize: 17, color: Colors.white, fontFamily: 'Roboto'),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: Divider(thickness: 1, color: Color(0xFFF5F5F7)))
-                    ],
-                  ),
+
                   const SizedBox(height: 20),
                   OutlinedButton.icon(onPressed: () {},
                     icon: Image.asset('images/google_720255.png',
                         height: 20,
                         width: 20),
                     label: const Text ("Continue with Google",
-                    style: TextStyle(fontFamily: 'Roboto')),
+                    style: TextStyle(fontFamily: 'Roboto', color: Color(0xFF333333))),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: Size(double.infinity, 50),
+                      minimumSize: Size(380, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      side: BorderSide(color: Color(0x26000000))
                     ),
                   ),
                   const SizedBox(height: 20),
