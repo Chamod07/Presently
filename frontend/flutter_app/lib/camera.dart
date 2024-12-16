@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/io.dart';
+import 'services/websocket_service.dart';
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -17,69 +14,71 @@ class _RecordingScreenState extends State<RecordingScreen> {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isRecording = false;
-  WebSocketChannel? _channel;
   List<dynamic> _landmarks = [];
-  Timer? _frameTimer;
+
+  // WebSocket service for handling communication
+  final WebSocketService _webSocketService = WebSocketService();
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
-    _connectWebSocket();
+    _setupWebSocket();
   }
 
-  void _connectWebSocket() {
-    _channel = IOWebSocketChannel.connect('ws://192.168.11.144:8000/ws');
-    // For actual device, replace 10.0.2.2 with your PC's local IP
+  void _setupWebSocket() {
+    // Replace with your server's WebSocket URL
+    _webSocketService.connect('ws://192.168.11.144:8000/ws');
+
+
+    // Listen for landmark updates
+    _webSocketService.landmarksStream.listen((landmarks) {
+      setState(() {
+        _landmarks = landmarks;
+      });
+    });
   }
 
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
     _cameraController = CameraController(
-      _cameras![1],
+      _cameras![0],  // Use first available camera
       ResolutionPreset.high,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
+
     await _cameraController!.initialize();
 
-    // Start frame processing
-    _startFrameProcessing();
+    // Start processing frames if camera is initialized
+    if (_cameraController!.value.isInitialized) {
+      _webSocketService.processFrames(_cameraController!);
+    }
 
     setState(() {});
   }
 
-  void _startFrameProcessing() {
-    _frameTimer = Timer.periodic(Duration(milliseconds: 500), (_) async {
-      if (_cameraController != null && _cameraController!.value.isInitialized) {
-        try {
-          final image = await _cameraController!.takePicture();
-          Uint8List imageBytes = await image.readAsBytes();
-          String base64Image = base64Encode(imageBytes);
-
-          // Send image to WebSocket
-          _channel?.sink.add('data:image/jpeg;base64,$base64Image');
-        } catch (e) {
-          print('Error processing frame: $e');
-        }
-      }
-    });
-  }
-
   void _toggleCamera() async {
     if (_cameras == null || _cameraController == null) return;
-    int newIndex = (_cameras!.indexOf(_cameraController!.description) + 1) %
-        _cameras!.length;
+
+    int newIndex = (_cameras!.indexOf(_cameraController!.description) + 1) % _cameras!.length;
+
     _cameraController = CameraController(
       _cameras![newIndex],
       ResolutionPreset.high,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
+
     await _cameraController!.initialize();
+
+    // Restart frame processing with new camera
+    _webSocketService.processFrames(_cameraController!);
+
     setState(() {});
   }
 
   void _startRecording() async {
     if (_cameraController == null || _isRecording) return;
+
     await _cameraController!.startVideoRecording();
     setState(() {
       _isRecording = true;
@@ -88,6 +87,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
   void _stopRecording() async {
     if (_cameraController == null || !_isRecording) return;
+
     await _cameraController!.stopVideoRecording();
     setState(() {
       _isRecording = false;
@@ -96,9 +96,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
   @override
   void dispose() {
-    _frameTimer?.cancel();
     _cameraController?.dispose();
-    _channel?.sink.close();
+    _webSocketService.dispose();
     super.dispose();
   }
 
@@ -107,59 +106,106 @@ class _RecordingScreenState extends State<RecordingScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        // ... (existing AppBar code remains the same)
+        backgroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          'Class Presentation',
+          style: TextStyle(color: Colors.white),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: _cameraController != null &&
-                _cameraController!.value.isInitialized
-                ? Stack(
-              children: [
-                AspectRatio(
-                  aspectRatio: _cameraController!.value.aspectRatio,
-                  child: CameraPreview(_cameraController!),
-                ),
-                // Display landmarks (optional visualization)
-                CustomPaint(
-                  painter: LandmarkPainter(_landmarks),
-                ),
-              ],
+            child: _cameraController != null && _cameraController!.value.isInitialized
+                ? AspectRatio(
+              aspectRatio: _cameraController!.value.aspectRatio,
+              child: CameraPreview(_cameraController!),
             )
                 : const Center(
               child: CircularProgressIndicator(),
             ),
           ),
-          // Stream landmarks from WebSocket
-          StreamBuilder(
-            stream: _channel?.stream,
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                try {
-                  _landmarks = json.decode(snapshot.data);
-                } catch (e) {
-                  print('Error parsing landmarks: $e');
-                }
-              }
-              return Text(
-                'Landmarks: ${_landmarks.length}',
-                style: TextStyle(color: Colors.white),
-              );
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Slider(
+                  value: _isRecording ? 1.0 : 0.0,
+                  min: 0.0,
+                  max: 1.0,
+                  onChanged: (value) {},
+                  activeColor: Colors.white,
+                  inactiveColor: Colors.grey,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '00:00',
+                      style: TextStyle(color: Colors.white, fontSize: 14.0),
+                    ),
+                    Text(
+                      'Recording',
+                      style: TextStyle(
+                        color: _isRecording ? Colors.red : Colors.white,
+                        fontSize: 14.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          // ... (rest of the existing UI remains the same)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 32.0),
+                  onPressed: _toggleCamera,
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isRecording ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 48.0,
+                  ),
+                  onPressed: _isRecording ? _stopRecording : _startRecording,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.stop, color: Colors.red, size: 32.0),
+                  onPressed: _stopRecording,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// Optional custom painter to visualize landmarks
+// The LandmarkPainter remains the same as in the previous implementation
 class LandmarkPainter extends CustomPainter {
   final List<dynamic> landmarks;
+  final double aspectRatio;
 
-  LandmarkPainter(this.landmarks);
+  LandmarkPainter(this.landmarks, this.aspectRatio);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -170,9 +216,9 @@ class LandmarkPainter extends CustomPainter {
 
     for (var landmark in landmarks) {
       canvas.drawCircle(
-          Offset(landmark['x'] * size.width, landmark['y'] * size.height),
-          3,
-          paint
+        Offset(landmark['x'] * size.width, landmark['y'] * size.height),
+        3,
+        paint,
       );
     }
   }
