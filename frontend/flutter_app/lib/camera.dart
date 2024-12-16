@@ -102,7 +102,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
           // Popup Message
           if (_showPopup)
             Positioned(
-              top: 320.0, // Adjust position vertically
+              bottom: 200.0, // Adjust position vertically
               left: 16.0, // Adjust position horizontally
               right: 16.0,
               child: Container(
