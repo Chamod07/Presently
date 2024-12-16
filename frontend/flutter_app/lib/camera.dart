@@ -12,6 +12,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isRecording = false;
+  bool _showPopup = true; // Controls the popup visibility.
 
   @override
   void initState() {
@@ -46,6 +47,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
     await _cameraController!.startVideoRecording();
     setState(() {
       _isRecording = true;
+      _showPopup = true; // Show popup when recording starts (example behavior).
     });
   }
 
@@ -77,7 +79,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
           },
         ),
         title: const Text(
-          'Class Presentation',
+          'Recording Screen',
           style: TextStyle(color: Colors.white),
         ),
         actions: [
@@ -87,72 +89,127 @@ class _RecordingScreenState extends State<RecordingScreen> {
           ),
         ],
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
         children: [
-          Expanded(
+          // Camera Preview
+          Positioned.fill(
             child: _cameraController != null &&
-                    _cameraController!.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _cameraController!.value.aspectRatio,
-                    child: CameraPreview(_cameraController!),
-                  )
-                : const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                _cameraController!.value.isInitialized
+                ? CameraPreview(_cameraController!)
+                : const Center(child: CircularProgressIndicator()),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Slider(
-                  value: _isRecording ? 1.0 : 0.0,
-                  min: 0.0,
-                  max: 1.0,
-                  onChanged: (value) {},
-                  activeColor: Colors.white,
-                  inactiveColor: Colors.grey,
+
+          // Popup Message
+          if (_showPopup)
+            Positioned(
+              bottom: 200.0, // Adjust position vertically
+              left: 16.0, // Adjust position horizontally
+              right: 16.0,
+              child: Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFAF1DD), // Light yellow background
+                  borderRadius: BorderRadius.circular(8.0),
                 ),
-                Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      '00:00',
-                      style: TextStyle(color: Colors.white, fontSize: 14.0),
+                    const Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orangeAccent),
+                        SizedBox(width: 8.0),
+                        Text(
+                          'Skill issues!!!',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 14.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Recording',
-                      style: TextStyle(
-                          color: _isRecording ? Colors.red : Colors.white,
-                          fontSize: 14.0),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showPopup = false; // Hide popup when closed
+                        });
+                      },
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.black54,
+                        size: 20.0,
+                      ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 32.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+
+          // Controls Section
+          Positioned(
+            bottom: 32.0,
+            left: 0,
+            right: 0,
+            child: Column(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.flip_camera_ios,
-                      color: Colors.white, size: 32.0),
-                  onPressed: _toggleCamera,
-                ),
-                IconButton(
-                  icon: Icon(
-                    _isRecording ? Icons.pause : Icons.play_arrow,
-                    color: Colors.white,
-                    size: 48.0,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Slider(
+                        value: _isRecording ? 1.0 : 0.0,
+                        min: 0.0,
+                        max: 1.0,
+                        onChanged: (value) {},
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.grey,
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            '00:00',
+                            style: TextStyle(
+                                color: Colors.white, fontSize: 14.0),
+                          ),
+                          Text(
+                            'Recording',
+                            style: TextStyle(
+                                color: _isRecording
+                                    ? Colors.red
+                                    : Colors.white,
+                                fontSize: 14.0),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  onPressed: _isRecording ? _stopRecording : _startRecording,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.stop, color: Colors.red, size: 32.0),
-                  onPressed: _stopRecording,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.flip_camera_ios,
+                          color: Colors.white, size: 32.0),
+                      onPressed: _toggleCamera,
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        _isRecording ? Icons.pause : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 48.0,
+                      ),
+                      onPressed:
+                      _isRecording ? _stopRecording : _startRecording,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.stop,
+                          color: Colors.red, size: 32.0),
+                      onPressed: _stopRecording,
+                    ),
+                  ],
                 ),
               ],
             ),
