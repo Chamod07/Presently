@@ -33,6 +33,7 @@ dependencies:
   web_socket_channel: ^2.3.0
   cupertino_icons: ^1.0.8
   camera: ^0.11.0+2
+  firebase_auth: ^5.3.3
 
 dev_dependencies:
   flutter_test:
