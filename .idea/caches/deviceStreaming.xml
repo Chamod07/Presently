@@ -4,6 +4,7 @@
     <option name="deviceSelectionList">
       <list>
         <PersistentDeviceSelectionData>
+<<<<<<< Updated upstream
           <option name="api" value="33" />
           <option name="brand" value="google" />
           <option name="codename" value="panther" />
@@ -16,6 +17,8 @@
           <option name="selected" value="true" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> Stashed changes
           <option name="api" value="27" />
           <option name="brand" value="DOCOMO" />
           <option name="codename" value="F01L" />
@@ -247,6 +250,20 @@
           <option name="screenY" value="2400" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< Updated upstream
+=======
+          <option name="api" value="33" />
+          <option name="brand" value="google" />
+          <option name="codename" value="panther" />
+          <option name="id" value="panther" />
+          <option name="manufacturer" value="Google" />
+          <option name="name" value="Pixel 7" />
+          <option name="screenDensity" value="420" />
+          <option name="screenX" value="1080" />
+          <option name="screenY" value="2400" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
+>>>>>>> Stashed changes
           <option name="api" value="34" />
           <option name="brand" value="samsung" />
           <option name="codename" value="q5q" />
@@ -326,6 +343,9 @@
         </PersistentDeviceSelectionData>
       </list>
     </option>
+<<<<<<< Updated upstream
     <option name="selectedCloudProject" value="device-streaming-27c2b014" />
+=======
+>>>>>>> Stashed changes
   </component>
 </project>
