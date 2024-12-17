@@ -6,10 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="13a4c7fb-5fc6-4309-8145-43a1c3a14772" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/flutter_app/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/flutter_app/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/flutter_app/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/flutter_app/pubspec.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/flutter_app/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/flutter_app/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/flutter_app/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/flutter_app/windows/flutter/generated_plugins.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/flutter_app/lib/camera.dart" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/flutter_app/lib/camera.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/flutter_app/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/flutter_app/pubspec.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,31 +17,24 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="Dart File" />
-      </list>
-    </option>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
+    &quot;lastFilter&quot;: {
     &quot;state&quot;: &quot;OPEN&quot;,
     &quot;assignee&quot;: &quot;SteveChrishane&quot;
-  }
-}</component>
+    }
+    }</component>
   <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/Chamod07/presently-app.git&quot;,
-    &quot;accountId&quot;: &quot;3025980f-9aa4-4fd8-bbab-a09c3b971f2d&quot;
-  }
-}</component>
+    &quot;accountId&quot;: &quot;8c39b520-c37b-48f8-8a02-9a222f064baf&quot;
+    }
+    }</component>
   <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 8
-}</component>
+    &quot;associatedIndex&quot;: 8
+    }</component>
   <component name="ProjectId" id="2qHmphhsq7vj5cTujNxzfid86e1" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />

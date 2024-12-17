@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'services/websocket_service.dart';
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -12,47 +14,80 @@ class _RecordingScreenState extends State<RecordingScreen> {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isRecording = false;
-  bool _showPopup = true; // Controls the popup visibility.
+  List<dynamic> _landmarks = [];
+
+  // WebSocket service for handling communication
+  final WebSocketService _webSocketService = WebSocketService();
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+    _setupWebSocket();
+  }
+
+  void _setupWebSocket() {
+    // Replace with your server's WebSocket URL
+    _webSocketService.connect('ws://192.168.11.144:8000/ws');
+
+
+    // Listen for landmark updates
+    _webSocketService.landmarksStream.listen((landmarks) {
+      setState(() {
+        _landmarks = landmarks;
+      });
+    });
   }
 
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
     _cameraController = CameraController(
-      _cameras![0],
+      _cameras![0],  // Use first available camera
       ResolutionPreset.high,
+      imageFormatGroup: ImageFormatGroup.jpeg,
     );
+
     await _cameraController!.initialize();
+
+    // Start processing frames if camera is initialized
+    if (_cameraController!.value.isInitialized) {
+      _webSocketService.processFrames(_cameraController!);
+    }
+
     setState(() {});
   }
 
   void _toggleCamera() async {
     if (_cameras == null || _cameraController == null) return;
-    int newIndex = (_cameras!.indexOf(_cameraController!.description) + 1) %
-        _cameras!.length;
+
+    int newIndex = (_cameras!.indexOf(_cameraController!.description) + 1) % _cameras!.length;
+
     _cameraController = CameraController(
       _cameras![newIndex],
       ResolutionPreset.high,
+      imageFormatGroup: ImageFormatGroup.jpeg,
     );
+
     await _cameraController!.initialize();
+
+    // Restart frame processing with new camera
+    _webSocketService.processFrames(_cameraController!);
+
     setState(() {});
   }
 
   void _startRecording() async {
     if (_cameraController == null || _isRecording) return;
+
     await _cameraController!.startVideoRecording();
     setState(() {
       _isRecording = true;
-      _showPopup = true; // Show popup when recording starts (example behavior).
     });
   }
 
   void _stopRecording() async {
     if (_cameraController == null || !_isRecording) return;
+
     await _cameraController!.stopVideoRecording();
     setState(() {
       _isRecording = false;
@@ -62,6 +97,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
   @override
   void dispose() {
     _cameraController?.dispose();
+    _webSocketService.dispose();
     super.dispose();
   }
 
@@ -79,7 +115,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
           },
         ),
         title: const Text(
-          'Recording Screen',
+          'Class Presentation',
           style: TextStyle(color: Colors.white),
         ),
         actions: [
@@ -89,127 +125,71 @@ class _RecordingScreenState extends State<RecordingScreen> {
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Camera Preview
-          Positioned.fill(
-            child: _cameraController != null &&
-                _cameraController!.value.isInitialized
-                ? CameraPreview(_cameraController!)
-                : const Center(child: CircularProgressIndicator()),
-          ),
-
-          // Popup Message
-          if (_showPopup)
-            Positioned(
-              bottom: 200.0, // Adjust position vertically
-              left: 16.0, // Adjust position horizontally
-              right: 16.0,
-              child: Container(
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFAF1DD), // Light yellow background
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: Colors.orangeAccent),
-                        SizedBox(width: 8.0),
-                        Text(
-                          'Skill issues!!!',
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 14.0,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _showPopup = false; // Hide popup when closed
-                        });
-                      },
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.black54,
-                        size: 20.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          Expanded(
+            child: _cameraController != null && _cameraController!.value.isInitialized
+                ? AspectRatio(
+              aspectRatio: _cameraController!.value.aspectRatio,
+              child: CameraPreview(_cameraController!),
+            )
+                : const Center(
+              child: CircularProgressIndicator(),
             ),
-
-          // Controls Section
-          Positioned(
-            bottom: 32.0,
-            left: 0,
-            right: 0,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Slider(
-                        value: _isRecording ? 1.0 : 0.0,
-                        min: 0.0,
-                        max: 1.0,
-                        onChanged: (value) {},
-                        activeColor: Colors.white,
-                        inactiveColor: Colors.grey,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            '00:00',
-                            style: TextStyle(
-                                color: Colors.white, fontSize: 14.0),
-                          ),
-                          Text(
-                            'Recording',
-                            style: TextStyle(
-                                color: _isRecording
-                                    ? Colors.red
-                                    : Colors.white,
-                                fontSize: 14.0),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                Slider(
+                  value: _isRecording ? 1.0 : 0.0,
+                  min: 0.0,
+                  max: 1.0,
+                  onChanged: (value) {},
+                  activeColor: Colors.white,
+                  inactiveColor: Colors.grey,
                 ),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.flip_camera_ios,
-                          color: Colors.white, size: 32.0),
-                      onPressed: _toggleCamera,
+                    const Text(
+                      '00:00',
+                      style: TextStyle(color: Colors.white, fontSize: 14.0),
                     ),
-                    IconButton(
-                      icon: Icon(
-                        _isRecording ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
-                        size: 48.0,
+                    Text(
+                      'Recording',
+                      style: TextStyle(
+                        color: _isRecording ? Colors.red : Colors.white,
+                        fontSize: 14.0,
                       ),
-                      onPressed:
-                      _isRecording ? _stopRecording : _startRecording,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.stop,
-                          color: Colors.red, size: 32.0),
-                      onPressed: _stopRecording,
                     ),
                   ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 32.0),
+                  onPressed: _toggleCamera,
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isRecording ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 48.0,
+                  ),
+                  onPressed: _isRecording ? _stopRecording : _startRecording,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.stop, color: Colors.red, size: 32.0),
+                  onPressed: _stopRecording,
                 ),
               ],
             ),
@@ -218,4 +198,31 @@ class _RecordingScreenState extends State<RecordingScreen> {
       ),
     );
   }
+}
+
+// The LandmarkPainter remains the same as in the previous implementation
+class LandmarkPainter extends CustomPainter {
+  final List<dynamic> landmarks;
+  final double aspectRatio;
+
+  LandmarkPainter(this.landmarks, this.aspectRatio);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.red
+      ..strokeWidth = 5
+      ..style = PaintingStyle.fill;
+
+    for (var landmark in landmarks) {
+      canvas.drawCircle(
+        Offset(landmark['x'] * size.width, landmark['y'] * size.height),
+        3,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
