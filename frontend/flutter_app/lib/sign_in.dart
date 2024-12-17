@@ -15,13 +15,16 @@ class _SignInPageState extends State<SignInPage> {
         body: SafeArea(
             child: Column(
                 children: [Align(alignment: Alignment.centerLeft,
-                  child: IconButton(onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back)),
+                  child: IconButton(onPressed: () {
+                    Navigator.pop(context);
+                  }, icon: Icon(Icons.arrow_back)),
                 ),
                   const SizedBox(height: 20),
                   Center(
-                    child: Image.asset('images/SignIn_SignUp-removebg-preview.png',
-                    height: 252,
-                    width: 240),
+                    child: Image.asset(
+                        'images/SignIn_SignUp-removebg-preview.png',
+                        height: 252,
+                        width: 240),
                   ),
                   const SizedBox(height: 20),
                   Text("Sign In",
@@ -56,7 +59,7 @@ class _SignInPageState extends State<SignInPage> {
                       decoration: InputDecoration(
                         labelText: "Enter your password",
                         labelStyle: TextStyle(
-                            fontFamily: "Roboto",
+                          fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
                         ),
                         border: OutlineInputBorder(
@@ -68,7 +71,9 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {Navigator.pushNamed(context, '/home_page');}, style: ElevatedButton.styleFrom(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/home_page');
+                    }, style: ElevatedButton.styleFrom(
                     minimumSize: Size(380, 50),
                     backgroundColor: Color(0xFF7400B8),
                     shape: RoundedRectangleBorder(
@@ -76,7 +81,9 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ),
                     child: const Text("Continue",
-                      style: TextStyle(fontSize: 17, color: Colors.white, fontFamily: 'Roboto'),
+                      style: TextStyle(fontSize: 17,
+                          color: Colors.white,
+                          fontFamily: 'Roboto'),
                     ),
                   ),
 
@@ -86,13 +93,14 @@ class _SignInPageState extends State<SignInPage> {
                         height: 20,
                         width: 20),
                     label: const Text ("Continue with Google",
-                    style: TextStyle(fontFamily: 'Roboto', color: Color(0xFF333333))),
+                        style: TextStyle(
+                            fontFamily: 'Roboto', color: Color(0xFF333333))),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: Size(380, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      side: BorderSide(color: Color(0x26000000))
+                        minimumSize: Size(380, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        side: BorderSide(color: Color(0x26000000))
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -102,15 +110,18 @@ class _SignInPageState extends State<SignInPage> {
                         const Text("Don't have an account? "),
                         GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/sign_up'); // Navigate to sign-up page
+                            Navigator.pushNamed(context,
+                                '/sign_up'); // Navigate to sign-up page
                           },
                           child: const Text(
                             "Sign up",
                             style: TextStyle(
                               color: Color(0xFF7400B8),
                             ),
-                          ),),]
-                  ),]
+                          ),),
+                      ]
+                  ),
+                ]
             )
         ));
   }

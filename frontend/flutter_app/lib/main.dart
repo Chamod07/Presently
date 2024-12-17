@@ -3,6 +3,9 @@ import 'package:flutter_app/scenario_selection.dart';
 import 'home_page.dart';
 import 'camera.dart';
 import 'summary_page.dart';
+import 'welcome.dart';
+import 'sign_in.dart';
+import 'sign_up.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() {
@@ -19,8 +22,11 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.purple,
       ),
-      home: HomePage(),
+      home: WelcomePage(),
       routes: {
+        '/sign_in': (context) => SignInPage(),
+        '/sign_up': (context) => SignUpPage(),
+        '/home': (context) => HomePage(),
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => RecordingScreen(),
         '/scenario_sel': (context) => ScenarioSelection(),
