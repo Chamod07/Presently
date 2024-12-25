@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -34,8 +33,7 @@ class _SummaryPageState extends State<SummaryPage> {
           ),
           SizedBox(height: 50),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -62,7 +60,7 @@ class _SummaryPageState extends State<SummaryPage> {
             ),
           ),
           Expanded(
-            child: _showTasks ? TasksTab() : ResourcesTab(),
+            child: _showTasks ? const TasksTab() : const ResourcesTab(),
           ),
         ],
       ),
@@ -77,7 +75,7 @@ class _SummaryPageState extends State<SummaryPage> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isActive ? Color(0xFF7400B8) : Colors.grey[300],
+        backgroundColor: isActive ? Color(0xFF7400B8): Colors.grey[300],
         foregroundColor: isActive ? Colors.white : Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -104,13 +102,13 @@ class TasksTab extends StatelessWidget {
           ExpandableTile(
             title: "Appeared Uneasy",
             subtitle:
-                "It looks like you might have felt a bit nervous during practice. That's okay! Just take things one step at a time, and remember to breathe. You've got this!",
+            "It looks like you might have felt a bit nervous during practice. That's okay! Just take things one step at a time, and remember to breathe. You've got this!",
           ),
           const SizedBox(height: 10),
           ExpandableTile(
             title: "Lack of Eye Contact",
             subtitle:
-                "Don't be afraid to look your audience or the camera in the eye. It shows confidence and helps you connect with them on a deeper level.",
+            "Don't be afraid to look your audience or the camera in the eye. It shows confidence and helps you connect with them on a deeper level.",
           ),
           const SizedBox(height: 10),
           ExpandableTile(
@@ -124,44 +122,32 @@ class TasksTab extends StatelessWidget {
 }
 
 class ResourcesTab extends StatelessWidget {
-  ResourcesTab({super.key});
-
-  // Sample data (could be fetched dynamically from an API)
-  final List<Map<String, String>> videos = [
-    {
-      'title': '4 Essential body language tips froma  world champion public speaker',
-      'subtitle': 'Business Insider',
-      'thumbnail': 'https://img.youtube.com/vi/ZK3jSXYBNak/0.jpg',
-      'url': 'https://www.youtube.com/watch?v=ZK3jSXYBNak'
-    },
-    {
-      'title': 'Body Language for presenatations',
-      'subtitle': 'Communication Coach Alexander Lyon',
-      'thumbnail': 'https://img.youtube.com/vi/TmbQFWBvTtY/0.jpg',
-      'url': 'https://www.youtube.com/watch?v=TmbQFWBvTtY'
-    },
-
-  ];
+  const ResourcesTab({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: ListView.builder(
-        itemCount: videos.length,
-        itemBuilder: (context, index) {
-          final video = videos[index];
-          return Padding(
-            padding:
-                const EdgeInsets.only(bottom: 20), // Add space between cards
-            child: _buildRoundedTile(
-              title: video['title']!,
-              subtitle: video['subtitle']!,
-              thumbnail: video['thumbnail']!,
-              url: video['url']!,
-            ),
-          );
-        },
+      child: ListView(
+        children: [
+          _buildRoundedTile(
+            title: "Body Language for Presentations",
+            subtitle: "Communication Coach Alexander Lyon",
+            icon: Icons.video_library,
+          ),
+          const SizedBox(height: 10),
+          _buildRoundedTile(
+            title: "Body Language Tips",
+            subtitle: "Master the art of non-verbal communication.",
+            icon: Icons.video_library,
+          ),
+          const SizedBox(height: 10),
+          _buildRoundedTile(
+            title: "Voice Modulation Practice",
+            subtitle: "Enhance your vocal variety.",
+            icon: Icons.video_library,
+          ),
+        ],
       ),
     );
   }
@@ -169,8 +155,7 @@ class ResourcesTab extends StatelessWidget {
   Widget _buildRoundedTile({
     required String title,
     required String subtitle,
-    required String thumbnail,
-    required String url,
+    IconData? icon,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -186,31 +171,12 @@ class ResourcesTab extends StatelessWidget {
         ],
       ),
       child: ListTile(
-        onTap: () {
-          // Launch the video URL in a browser or WebView
-          _launchURL(url);
-        },
-        leading: Image.network(
-          thumbnail,
-          width: 50,
-          height: 50,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            // Display a placeholder icon in case of error
-            return Icon(Icons.error, color: Colors.red);
-          },
-        ),
         title: Text(title),
         subtitle: Text(subtitle),
+        trailing: icon != null ? Icon(icon) : null,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
-  }
-
-  // Function to launch the video URL
-  void _launchURL(String url) {
-    launch(url);
-    print("Launching URL: $url"); // Placeholder for URL launch
   }
 }
 
@@ -262,7 +228,7 @@ class _ExpandableTileState extends State<ExpandableTile> {
               },
             ),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           ),
           if (_isExpanded)
             Padding(
