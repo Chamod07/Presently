@@ -72,7 +72,7 @@ class _SignInPageState extends State<SignInPage> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/home_page');
+                      Navigator.pushNamed(context, '/home');
                     }, style: ElevatedButton.styleFrom(
                     minimumSize: Size(380, 50),
                     backgroundColor: Color(0xFF7400B8),

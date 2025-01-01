@@ -79,7 +79,9 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {}, style: ElevatedButton.styleFrom(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/home');
+                    }, style: ElevatedButton.styleFrom(
                     minimumSize: Size(380, 50),
                     backgroundColor: Color(0xFF7400B8),
                     shape: RoundedRectangleBorder(
