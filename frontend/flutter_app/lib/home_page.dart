@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, '/camera'); // Start session
+                    Navigator.pushNamed(context, '/scenario_sel'); // Start session
                   },
                   child: Text('Start Session'),
                 ),
