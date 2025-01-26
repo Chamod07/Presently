@@ -5,7 +5,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import mediapipe as mp
 import json
-import io
+
 
 app = FastAPI()
 
