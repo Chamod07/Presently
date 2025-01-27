@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/navbar.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -64,6 +65,7 @@ class _SummaryPageState extends State<SummaryPage> {
           ),
         ],
       ),
+      bottomNavigationBar: const NavBar (selectedIndex: 0,),
     );
   }
 
