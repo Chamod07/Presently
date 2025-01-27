@@ -33,15 +33,15 @@ class WelcomePage extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
+                                borderRadius: BorderRadius.circular(10),
                                 side: BorderSide(color: Color(0xFF7400B8)
                                 )
                             )
                         )
                     )
                 )
-              ],)
-
+              ],
+            )
         )
     );
   }

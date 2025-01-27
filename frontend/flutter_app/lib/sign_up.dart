@@ -13,12 +13,14 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
         body: SafeArea(
+          child: SingleChildScrollView( //if the page does not fit in screen it will scroll
             child: Column(
                 children: [Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back),
-                  ),),
+                  ),
+                ),
                   const SizedBox(height: 20),
                   Center(
                     child: Image.asset('images/SignIn_SignUp-removebg-preview.png',
@@ -33,7 +35,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Container(width: 380, child:
+                  Container(width: MediaQuery.of(context).size.width * 0.9, child:
                   TextField(
                     decoration: InputDecoration(
                       labelText: "Enter your email",
@@ -50,9 +52,9 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   ),
                   const SizedBox(height: 20),
-                  Container(width: 380, child:
+                  Container(width: MediaQuery.of(context).size.width * 0.9, child:
                   TextField(
-                    obscureText: true,
+                    obscureText: true, // makes password invisible
                     decoration: InputDecoration(
                       labelText: "Enter your password",
                       labelStyle: TextStyle(color: Color(0xFFBDBDBD),fontFamily: "Roboto"),
@@ -64,7 +66,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   ),
                   const SizedBox(height: 20),
-                  Container(width: 380, child:
+                  Container(width: MediaQuery.of(context).size.width * 0.9, child:
                   TextField(
                     obscureText: true,
                     decoration: InputDecoration(
@@ -82,7 +84,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     onPressed: () {
                       Navigator.pushNamed(context, '/home');
                     }, style: ElevatedButton.styleFrom(
-                    minimumSize: Size(380, 50),
+                    minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                     backgroundColor: Color(0xFF7400B8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -100,7 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         width: 20),
                     label: const Text ("Register with Google"),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: Size(380, 50),
+                      minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -113,16 +115,21 @@ class _SignUpPageState extends State<SignUpPage> {
                         const Text("Already have an account? "),
                         GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/sign_in'); // Navigate to sign-up page
+                            Navigator.pushNamed(context, '/sign_in'); // Navigate to sign-in page
                           },
                           child: const Text(
-                            "Sign up",
+                            "Sign in",
                             style: TextStyle(
                               color: Color(0xFF7400B8),
                             ),
-                          ),),]
-                  ),]
+                          ),
+                        ),
+                      ]
+                  ),
+                ]
             )
-        ));
+          )
+        )
+    );
   }
 }
