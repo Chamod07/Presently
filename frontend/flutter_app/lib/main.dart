@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
       title: 'Presently App',
       theme: ThemeData(
         primarySwatch: Colors.purple,
+        scaffoldBackgroundColor: Colors.white, // set background color to white
       ),
       home: WelcomePage(),
       routes: {
