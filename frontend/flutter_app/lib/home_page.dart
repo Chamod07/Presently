@@ -12,6 +12,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Hello Mariah'),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: Icon(Icons.notifications),

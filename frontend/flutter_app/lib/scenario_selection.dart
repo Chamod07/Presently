@@ -17,6 +17,10 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Let\'s get ready'),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -168,6 +172,7 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
             ),
           ],
         ),
+        // ),
       ),
     );
   }
