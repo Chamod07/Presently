@@ -32,6 +32,7 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => RecordingScreen(),
         '/scenario_sel': (context) => ScenarioSelection(),
+        '/task_group_page' : (context) => TaskGroupPage(),
       },
     );
   }

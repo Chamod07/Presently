@@ -54,7 +54,7 @@ class NavBar extends StatelessWidget {
               Navigator.pushReplacementNamed(context, '/scenario_sel');
               break;
             case 2:
-              Navigator.pushReplacementNamed(context, '');
+              Navigator.pushReplacementNamed(context, '/task_group_page');
               break;
             case 3:
               Navigator.pushReplacementNamed(context, '');
