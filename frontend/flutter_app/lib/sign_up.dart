@@ -18,7 +18,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 children: [Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    onPressed: () {Navigator.pop(context);}, icon: Icon(Icons.arrow_back),
+                    onPressed: () {Navigator.pop(context);
+                      }, 
+                    icon: Icon(Icons.arrow_back),
                   ),
                 ),
                   const SizedBox(height: 20),

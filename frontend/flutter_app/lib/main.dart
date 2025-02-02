@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/scenario_selection.dart';
+import 'package:provider/provider.dart';
 import 'home_page.dart';
 import 'camera.dart';
 import 'summary_page.dart';
 import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
+import 'session_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+        create: (context) => SessionProvider(),
+        child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

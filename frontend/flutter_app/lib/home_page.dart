@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/navbar.dart';
+import 'package:provider/provider.dart';
+import 'session_provider.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -67,24 +69,19 @@ class _HomePageState extends State<HomePage> {
             ),
             SizedBox(height: 16.0),
             Expanded(
-              child: ListView(
-                children: [
-                  _buildCard(
-                    title: 'Machine Learning',
-                    navigateTo: '/summary',
-                  ),
-                  SizedBox(height: 16.0),
-                  _buildCard(
-                    title: 'Psychology Traits',
-                    navigateTo: '/summary',
-                  ),
-                  SizedBox(height: 16.0),
-                  _buildCard(
-                    title: 'Developmental Behavior',
-                    navigateTo: '/summary',
-                  ),
-                ],
-              ),
+              child:Consumer<SessionProvider>(
+                builder: (context,sessionProvider, child){
+                  return ListView.builder(
+                    itemCount: sessionProvider.sessions.length,
+                    itemBuilder: (context, index){
+                      return _buildCard(
+                        title: sessionProvider.sessions[index],
+                        navigateTo: '/summary',
+                      );
+                    },
+                  );
+                }
+              )
             ),
           ],
         ),
@@ -93,10 +90,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCard({
+  Widget _buildCard(
+      {
     required String title,
     required String navigateTo,
-  }) {
+
+      }
+      )
+  {
     return GestureDetector(
       onTap: () {
         // Navigate to the summary page

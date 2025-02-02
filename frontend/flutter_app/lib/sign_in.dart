@@ -52,7 +52,7 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Container(width: 380,
+                  Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
                     TextField(
                       obscureText: true,

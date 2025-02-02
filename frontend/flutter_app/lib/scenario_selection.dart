@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
+import 'session_provider.dart';
 
 class ScenarioSelection extends StatefulWidget {
   const ScenarioSelection({super.key});
@@ -161,6 +164,10 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
                 // Handle form submission and navigation to the next screen
                 print('Selected presentation type: $_selectedPresentationType');
                 print('Selected presentation goal: $_selectedPresentationGoal');
+                Provider.of<SessionProvider>(context, listen: false)
+                    .startSession(_selectedPresentationType!, _selectedPresentationGoal!);
+                Provider.of<SessionProvider>(context, listen: false)
+                    .addSession('$_selectedPresentationType - $_selectedPresentationGoal'); // Add session to the list
                 Navigator.pushNamed(context, '/camera');
               },
               child: Text('Get started'),

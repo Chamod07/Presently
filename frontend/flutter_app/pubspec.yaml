@@ -33,7 +33,11 @@ dependencies:
   web_socket_channel: ^2.3.0
   cupertino_icons: ^1.0.8
   camera: ^0.11.0+2
+  provider: ^6.1.2
+  hive: ^2.0.4
+  hive_flutter: ^1.1.0
   firebase_auth: ^5.3.3
+
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
