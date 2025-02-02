@@ -6,6 +6,7 @@ import 'summary_page.dart';
 import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
+import 'task_group_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() {
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => RecordingScreen(),
         '/scenario_sel': (context) => ScenarioSelection(),
+        '/task_group_page' : (context) => TaskGroupPage(),
       },
     );
   }
