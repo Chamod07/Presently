@@ -69,7 +69,9 @@ class SettingsPage extends StatelessWidget {
             ListTile(
               title: Text('About'),
               trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {},
+              onTap: () {
+                Navigator.pushReplacementNamed(context, '/about');
+              },
             ),
           ],
         ),
