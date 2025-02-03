@@ -37,7 +37,7 @@ class NavBar extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: _circularIcon(Icons.settings),
-            label: '',
+            label: 'Settings',
           ),
         ],
         currentIndex: selectedIndex,
@@ -54,10 +54,10 @@ class NavBar extends StatelessWidget {
               Navigator.pushReplacementNamed(context, '/scenario_sel');
               break;
             case 2:
-              Navigator.pushReplacementNamed(context, '');
+              Navigator.pushReplacementNamed(context, '/task_group_page');
               break;
             case 3:
-              Navigator.pushReplacementNamed(context, '');
+              Navigator.pushReplacementNamed(context, '/settings');
               break;
           }
         },
