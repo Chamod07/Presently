@@ -1,3 +1,8 @@
 
 .idea/workspace.xml
 frontend/flutter_app/pubspec.lock
+/frontend/flutter_app/ios/Runner/GeneratedPluginRegistrant.h
+/.idea/kotlinc.xml
+/.idea/Presently.iml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.vscode/settings.json
