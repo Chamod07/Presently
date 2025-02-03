@@ -36,6 +36,10 @@ dependencies:
   firebase_auth: ^5.3.3
   fl_chart: ^0.70.2
   image_picker: ^0.8.4+4
+  google_sign_in: ^6.2.2
+  supabase_flutter: ^2.8.3
+  google_mlkit_pose_detection: ^0.10.0
+  google_mlkit_commons: ^0.6.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
