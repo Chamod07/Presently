@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/about_page.dart';
+//import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
+import 'package:flutter_app/task_group_page.dart';
 import 'home_page.dart';
 import 'camera.dart';
 import 'summary_page.dart';
@@ -8,8 +9,13 @@ import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+void main() async {
+  await Supabase.initialize(
+    url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw',
+  );
   runApp(MyApp());
 }
 
