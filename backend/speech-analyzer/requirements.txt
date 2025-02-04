@@ -1,0 +1,4 @@
+whisper
+pyaudio
+numpy
+soundfile

@@ -7,7 +7,7 @@ import 'package:web_socket_channel/io.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;
-  StreamController<List<dynamic>> _landmarksController = StreamController<List<dynamic>>.broadcast();
+  final StreamController<List<dynamic>> _landmarksController = StreamController<List<dynamic>>.broadcast();
   Timer? _frameTimer;
 
   // Expose landmarks as a stream for easy consumption
