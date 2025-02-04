@@ -4,26 +4,20 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 from mapping import assign_challenges
+from models import Challenge
+import logging
 
 app = FastAPI(title="Task Assigning API")
 
-# for the feedback request
 class Feedback(BaseModel):
-    user_id: str
+    user_id: int
     mistakes: List[str]
 
-# for challenge output 
-class ChallengeOut(BaseModel):
-    id: int
-    title: str
-    description: str
-    instructions: str
-
-@app.post("/assign-challenge", response_model=List[ChallengeOut])
+@app.post("/assign-challenge", response_model=List[Challenge])
 async def assign_challenge(feedback: Feedback):
-    challenges = assign_challenges(feedback.mistakes)
-    if not challenges:
-        raise HTTPException(status_code=404, detail="No challenges found for given mistakes")
-    return challenges
-
-
+    try:
+        challenges = assign_challenges(feedback.mistakes)
+        return challenges
+    except Exception as e:
+        logging.error(f"Error in /assign-challenge: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
