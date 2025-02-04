@@ -1,38 +1,47 @@
+import config
+import logging
 from typing import List, Dict
+from supabase import create_client, Client
 from models import Challenge
 
-# list of challenges
-challenges: List[Challenge] = [
-    Challenge(
-        id=1,
-        title="Stand straight for 1 minute",
-        description="Improve your posture by practicing standing straight.",
-        instructions="Find a quiet space, stand with your shoulders back and your head held high for one minute.",
-        associated_mistakes=["poor posture", "slouching"]
-    ),
-    Challenge(
-        id=2,
-        title="Focus on Deep Breathing",
-        description="Enhance focus by practicing deep breathing.",
-        instructions="Sit comfortably, close your eyes, and take slow, deep breaths for two minutes.",
-        associated_mistakes=["lack of focus", "stress"]
-    )
-]
 
-# mapping mistakes to challenges
-mistake_to_challenges: Dict[str, List[Challenge]] = {}
-for challenge in challenges:
-    for mistake in challenge.associated_mistakes:
-        if mistake not in mistake_to_challenges:
-            mistake_to_challenges[mistake] = []
-        mistake_to_challenges[mistake].append(challenge)
+supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+
+def fetch_challenges() -> List[Challenge]:
+    response = supabase.table("challenges").select("*").execute()
+    data = response.data
+    challenges = []
+    for item in data:
+        try:
+            logging.info(f"Processing row: {item}")
+            challenge = Challenge(**item)
+            challenges.append(challenge)
+        except Exception as e:
+            logging.error(f"Error parsing item {item}: {e}")
+    return challenges
+
+def build_mapping(challenges: List[Challenge]) -> Dict[str, List[Challenge]]:
+    mapping: Dict[str, List[Challenge]] = {}
+    for challenge in challenges:
+        for mistake in challenge.associated_mistakes:
+            mapping.setdefault(mistake, []).append(challenge)
+    return mapping
 
 def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
-    
-    # Using a dictionary to ensure each challenge is added only once
+    challenges = fetch_challenges()
+    if not challenges:
+        raise Exception("No challenges available from the database.")
+
+    mapping: Dict[str, List[Challenge]] = {}
+    for challenge in challenges:
+        for mistake in challenge.associated_mistakes:
+            mapping.setdefault(mistake, []).append(challenge)
+
     assigned = {}
     for mistake in feedback_mistakes:
-        if mistake in mistake_to_challenges:
-            for challenge in mistake_to_challenges[mistake]:
+        if mistake in mapping:
+            for challenge in mapping[mistake]:
                 assigned[challenge.id] = challenge
+    if not assigned:
+        raise Exception("No matching challenges found for given mistakes")
     return list(assigned.values())
