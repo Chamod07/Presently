@@ -1,6 +1,5 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-//import 'package:flutter_app/about_page.dart';
+import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
 import 'package:flutter_app/task_group_page.dart';
 import 'home_page.dart';
@@ -9,7 +8,8 @@ import 'summary_page.dart';
 import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
-
+import 'settings.dart';
+import 'task_group_page.dart';
 
 late List<CameraDescription> cameras;
 
@@ -39,6 +39,8 @@ class MyApp extends StatelessWidget {
         '/camera': (context) => CameraPage(),
         '/scenario_sel': (context) => ScenarioSelection(),
         '/task_group_page' : (context) => TaskGroupPage(),
+        '/settings': (context) => SettingsPage(),
+        '/about': (context) => AboutPage(),
       },
     );
   }
