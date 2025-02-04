@@ -1,0 +1,2 @@
+SUPABASE_URL = "https://gsnigswuhghtbsskkbdd.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdzbmlnc3d1aGdodGJzc2trYmRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1ODQyOTksImV4cCI6MjA1NDE2MDI5OX0.J9ELT1M20hBg5IAdLj1tUygdECy-IR9Aor_NwPJUY7s"
