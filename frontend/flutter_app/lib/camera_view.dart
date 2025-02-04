@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +12,7 @@ class CameraView extends StatefulWidget {
         this.onCameraFeedReady,
         this.onDetectorViewModeChanged,
         this.onCameraLensDirectionChanged,
-        this.initialCameraLensDirection = CameraLensDirection.back})
+        this.initialCameraLensDirection = CameraLensDirection.front})
       : super(key: key);
 
   final CustomPaint? customPaint;
