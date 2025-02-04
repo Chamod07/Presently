@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
 import 'home_page.dart';
 import 'camera.dart';
@@ -7,6 +8,8 @@ import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'settings.dart';
+import 'task_group_page.dart';
 
 void main() {
   runApp(MyApp());
@@ -31,6 +34,9 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => RecordingScreen(),
         '/scenario_sel': (context) => ScenarioSelection(),
+        '/task_group_page' : (context) => TaskGroupPage(),
+        '/settings': (context) => SettingsPage(),
+        '/about': (context) => AboutPage(),
       },
     );
   }
