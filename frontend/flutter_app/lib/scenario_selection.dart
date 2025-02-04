@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'camera.dart';
+
 class ScenarioSelection extends StatefulWidget {
   const ScenarioSelection({super.key});
 
@@ -165,7 +167,12 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
                 // Handle form submission and navigation to the next screen
                 print('Selected presentation type: $_selectedPresentationType');
                 print('Selected presentation goal: $_selectedPresentationGoal');
-                Navigator.pushNamed(context, '/camera');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CameraPage(),
+                  ),
+                );;
               },
               child: Text('Get started'),
 
