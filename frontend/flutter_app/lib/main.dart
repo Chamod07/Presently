@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
@@ -9,7 +10,7 @@ import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
 import 'settings.dart';
-import 'task_group_page.dart';
+
 
 late List<CameraDescription> cameras;
 
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false, //this removes the debug banner
       title: 'Presently App',
       theme: ThemeData(
         primarySwatch: Colors.purple,
