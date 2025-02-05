@@ -7,7 +7,8 @@ class NavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SafeArea(child:
+      Container(
       decoration: BoxDecoration(
         color: const Color(0xFF340052),
         borderRadius: BorderRadius.circular(30),
@@ -61,6 +62,7 @@ class NavBar extends StatelessWidget {
               break;
           }
         },
+      ),
       ),
     );
   }

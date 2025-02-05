@@ -24,7 +24,8 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: Padding(
+      body: SafeArea(
+      child: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,6 +87,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: const NavBar (selectedIndex: 0,),
     );

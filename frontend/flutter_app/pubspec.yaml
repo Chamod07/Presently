@@ -42,7 +42,7 @@ dependencies:
 
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.14.3 #creates a icon for the app
+  flutter_launcher_icons: ^0.14.3 #creates a icon for the app (after running pub get run "dart run flutter_launcher_icons" to generate the app icon)
   flutter_test:
     sdk: flutter
 

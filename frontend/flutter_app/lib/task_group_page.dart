@@ -127,6 +127,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
+                      fontFamily: 'Roberto',
                       color: Colors.black,
                     ),
                   ),
@@ -143,7 +144,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.purple,
+        color: Color(0xFF7400B8),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -182,7 +183,8 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                        fontSize: 16)
+                ),
               ],
             ),
           ),
@@ -273,7 +275,6 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
           ],
         ),
       ),
-
     );
   }
 }

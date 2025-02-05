@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/about_page.dart';
+//import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
+import 'package:flutter_app/task_group_page.dart';
 import 'package:provider/provider.dart';
+import 'info_card.dart';
 import 'home_page.dart';
 import 'camera.dart';
 import 'summary_page.dart';
@@ -40,6 +42,7 @@ class MyApp extends StatelessWidget {
         '/camera': (context) => RecordingScreen(),
         '/scenario_sel': (context) => ScenarioSelection(),
         '/task_group_page' : (context) => TaskGroupPage(),
+        '/info_card': (context) => InfoCard(),
       },
     );
   }
