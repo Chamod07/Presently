@@ -1,6 +1,7 @@
 // task_detail_page.dart
 import 'package:flutter/material.dart';
 import 'task_group.dart'; // Import the TaskGroup model
+import 'package:flutter_app/navbar.dart';
 
 class TaskDetailPage extends StatefulWidget {
   final TaskGroup taskGroup;
@@ -36,10 +37,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/task_group_page'),
         ),
         title: Text(widget.taskGroup.title,
             style: const TextStyle(color: Colors.black)),
@@ -73,7 +72,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             LinearProgressIndicator(
               value: widget.taskGroup.progress,
               backgroundColor: Colors.grey.shade300,
-              color: Colors.purple,
+              color: Color(0xFF7400B8),
               minHeight: 8,
             ),
             const SizedBox(height: 8),
@@ -98,7 +97,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                           color:
-                          task.isCompleted ? Colors.purple : Colors.grey,
+                          task.isCompleted ? Color(0xFF7400B8) : Colors.grey,
                         ),
                         title: Text(
                           task.title,
@@ -121,18 +120,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: ""),
-        ],
-        selectedItemColor: Colors.purple,
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-      ),
+      bottomNavigationBar: const NavBar (selectedIndex: 0),
     );
   }
 
@@ -150,7 +138,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: selectedFilter == label ? Colors.purple : Colors.grey,
+              color: selectedFilter == label ? Color(0xFF2F37ED) : Colors.grey,
             ),
           ),
           const SizedBox(width: 4),
@@ -159,7 +147,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             height: 24,
             decoration: BoxDecoration(
               color:
-              selectedFilter == label ? Colors.purple : Colors.grey.shade300,
+              selectedFilter == label ? Color(0xFF7400B8) : Colors.grey.shade300,
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -183,7 +171,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           task.isCompleted
               ? Icons.check_circle
               : Icons.radio_button_unchecked,
-          color: task.isCompleted ? Colors.purple : Colors.grey,
+          color: task.isCompleted ? Color(0xFF7400B8) : Colors.grey,
         ),
         title: Text(
           task.title,

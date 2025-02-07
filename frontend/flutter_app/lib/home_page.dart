@@ -61,20 +61,50 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             SizedBox(height: 15.0),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/scenario_sel'); // Start session
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF7400B8),
-                foregroundColor: Colors.white,
-                // minimumSize: Size.fromHeight(20),
-              ),
-              child: Text('Start Session',
-                style: TextStyle(fontSize: 17),
-              ),
+
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/scenario_sel');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF7400B8),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Start Session', style: TextStyle(fontSize: 17)),
+                ),
+                SizedBox(width: 16), // Space between buttons
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/task_group_page');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    side: BorderSide(color: Colors.grey),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18.0),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.list, size: 20),
+                        SizedBox(width: 8),
+                        Text('Tasks', style: TextStyle(fontSize: 17)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
+
             SizedBox(height: 15.0),
+
             Expanded(
               child: ListView(
                 children: [

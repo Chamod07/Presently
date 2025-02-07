@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'task_list_page.dart'; // Import the TaskDetailPage
 import 'task_group.dart'; // Import the TaskGroup model
+import 'package:flutter_app/navbar.dart';
 
 class TaskGroupPage extends StatefulWidget {
   const TaskGroupPage({Key? key}) : super(key: key);
@@ -143,7 +144,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.purple,
+        color: Color(0xFF7400B8),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -200,10 +201,8 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            // Define back action if needed
-          },
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
         actions: [
           GestureDetector(
@@ -244,7 +243,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: Colors.purple,
+                    color: Color(0xFF7400B8),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -273,7 +272,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
           ],
         ),
       ),
-
+      bottomNavigationBar: const NavBar (selectedIndex: 0),
     );
   }
 }
