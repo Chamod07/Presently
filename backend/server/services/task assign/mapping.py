@@ -27,7 +27,7 @@ def build_mapping(challenges: List[Challenge]) -> Dict[str, List[Challenge]]:
             mapping.setdefault(mistake, []).append(challenge)
     return mapping
 
-def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
+# def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
     challenges = fetch_challenges()
     if not challenges:
         raise Exception("No challenges available from the database.")
@@ -45,3 +45,27 @@ def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
     if not assigned:
         raise Exception("No matching challenges found for given mistakes")
     return list(assigned.values())
+
+def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
+    challenges = fetch_challenges()
+    if not challenges:
+        raise Exception("No challenges available from the database.")
+
+    mapping: Dict[str, List[Challenge]] = build_mapping(challenges)
+
+    # Count occurrences of each mistake
+    mistake_counts: Dict[str, int] = {}
+    for mistake in feedback_mistakes:
+        mistake_counts[mistake] = mistake_counts.get(mistake, 0) + 1
+
+    assigned = {}
+    for mistake, count in mistake_counts.items():
+        if count >= 5 and mistake in mapping:  # Assign only if mistake occurs 5+ times
+            for challenge in mapping[mistake]:
+                assigned[challenge.id] = challenge
+
+    if not assigned:
+        raise Exception("No matching challenges found for given mistakes")
+    
+    return list(assigned.values())
+
