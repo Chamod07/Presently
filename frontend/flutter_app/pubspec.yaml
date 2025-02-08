@@ -32,10 +32,15 @@ dependencies:
     sdk: flutter
   web_socket_channel: ^2.3.0
   cupertino_icons: ^1.0.8
-  camera: ^0.11.0+2
-  firebase_auth: ^5.3.3
+  camera: ^0.10.5+9
+  #firebase_auth: ^5.3.3
   fl_chart: ^0.70.2
   image_picker: ^0.8.4+4
+  google_sign_in: ^6.2.2
+  supabase_flutter: ^2.8.3
+  google_mlkit_pose_detection: ^0.10.0
+  google_mlkit_commons: ^0.6.1
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
