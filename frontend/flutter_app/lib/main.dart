@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-//import 'package:flutter_app/about_page.dart';
+import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
 import 'package:flutter_app/task_group_page.dart';
 import 'home_page.dart';
@@ -10,6 +10,8 @@ import 'sign_in.dart';
 import 'sign_up.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'settings.dart';
+import 'task_group_page.dart';
 
 void main() async {
   await Supabase.initialize(
@@ -39,6 +41,8 @@ class MyApp extends StatelessWidget {
         '/camera': (context) => RecordingScreen(),
         '/scenario_sel': (context) => ScenarioSelection(),
         '/task_group_page' : (context) => TaskGroupPage(),
+        '/settings': (context) => SettingsPage(),
+        '/about': (context) => AboutPage(),
       },
     );
   }
