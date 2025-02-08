@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/navbar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_app/sign_in.dart';//Added only for the sign out button
 
 class HomePage extends StatefulWidget {
   @override
@@ -7,6 +9,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final supabase = Supabase.instance.client;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,9 +21,31 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: Icon(Icons.notifications),
             onPressed: () {
-              // Navigate to notifications screen
             },
           ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () async {
+              try {
+                await supabase.auth.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => SignInPage()),
+                    (route) => false,
+                  );
+                }
+              }catch (error){
+                if (context.mounted){
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Error signing out'),
+                        backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+    }
+          )
         ],
       ),
       body: Padding(
