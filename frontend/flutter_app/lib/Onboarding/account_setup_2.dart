@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 
-class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+class AccountSetup2 extends StatefulWidget {
+  const AccountSetup2({super.key});
 
   @override
-  State<SignInPage> createState() => _SignInPageState();
+  State<AccountSetup2> createState() => _AccountSetup2State();
 }
 
-class _SignInPageState extends State<SignInPage> {
+class _AccountSetup2State extends State<AccountSetup2> {
+  String? selectDropDown;
+
+  final List<String> userStatus = [
+    'Student',
+    'Undergraduate',
+    'Postgraduate',
+    'Young Professional',
+    'Other'
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: SafeArea(
             child: Column(
-                children: [Align(alignment: Alignment.centerLeft,
-                  child: IconButton(onPressed: () {
-                    Navigator.pop(context);
-                  }, icon: Icon(Icons.arrow_back)),
-                ),
+                children: [
                   const SizedBox(height: 20),
                   Center(
                     child: Image.asset(
@@ -27,7 +33,7 @@ class _SignInPageState extends State<SignInPage> {
                         width: 240),
                   ),
                   const SizedBox(height: 20),
-                  Text("Sign In",
+                  Text("How old are you?",
                     style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 34,
@@ -37,8 +43,10 @@ class _SignInPageState extends State<SignInPage> {
                   Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
                     TextField(
+                      keyboardType: TextInputType.number, //only allows numbers
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], //only allows numbers
                       decoration: InputDecoration(
-                        labelText: "Enter your email",
+                        labelText: "Age",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -52,12 +60,18 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  Text("I am a ...",
+                    style: TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 34,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
-                    TextField(
-                      obscureText: true,
+                    DropdownButtonFormField(
                       decoration: InputDecoration(
-                        labelText: "Enter your password",
+                        labelText: "Select one from the given list",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -67,12 +81,23 @@ class _SignInPageState extends State<SignInPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
+                      items: userStatus.map((String state){
+                        return DropdownMenuItem<String>(
+                            value: state,
+                        child: Text(state),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue){
+                        setState(() {
+                          selectDropDown = newValue;
+                        });
+                      },
                     ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/home');
+                      Navigator.pushNamed(context, '/account_setup_greeting');
                     }, style: ElevatedButton.styleFrom(
                     minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                     backgroundColor: Color(0xFF7400B8),
@@ -85,42 +110,6 @@ class _SignInPageState extends State<SignInPage> {
                           color: Colors.white,
                           fontFamily: 'Roboto'),
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-                  OutlinedButton.icon(onPressed: () {},
-                    icon: Image.asset('images/google_720255.png',
-                        height: 20,
-                        width: 20),
-                    label: const Text ("Continue with Google",
-                        style: TextStyle(
-                            fontFamily: 'Roboto', color: Color(0xFF333333))),
-                    style: OutlinedButton.styleFrom(
-                        minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(color: Color(0x26000000))
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context,
-                                '/sign_up'); // Navigate to sign-up page
-                          },
-                          child: const Text(
-                            "Sign up",
-                            style: TextStyle(
-                              color: Color(0xFF7400B8),
-                            ),
-                          ),
-                        ),
-                      ]
                   ),
                 ]
             )

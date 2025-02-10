@@ -34,8 +34,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   camera: ^0.11.0+2
   provider: ^6.1.2
-  hive: ^2.0.4
-  hive_flutter: ^1.1.0
   firebase_auth: ^5.3.3
   fl_chart: ^0.70.2
   image_picker: ^0.8.4+4
@@ -73,6 +71,9 @@ flutter:
   assets:
      - images/google_720255.png
      - images/SignIn_SignUp-removebg-preview.png
+     - images/OnboardGreet_AccountSetupTitle.png
+     - images/Task_Pass.png
+     - images/Task_failed.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

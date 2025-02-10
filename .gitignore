@@ -1,3 +1,6 @@
 
 .idea/workspace.xml
 frontend/flutter_app/pubspec.lock
+/.idea/
+/.vscode/
+

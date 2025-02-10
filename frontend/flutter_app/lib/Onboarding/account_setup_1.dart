@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
 
 
-class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+class AccountSetup1 extends StatefulWidget {
+  const AccountSetup1({super.key});
 
   @override
-  State<SignInPage> createState() => _SignInPageState();
+  State<AccountSetup1> createState() => _AccountSetup2State();
 }
 
-class _SignInPageState extends State<SignInPage> {
+class _AccountSetup2State extends State<AccountSetup1> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: SafeArea(
             child: Column(
-                children: [Align(alignment: Alignment.centerLeft,
-                  child: IconButton(onPressed: () {
-                    Navigator.pop(context);
-                  }, icon: Icon(Icons.arrow_back)),
-                ),
+                children: [
                   const SizedBox(height: 20),
                   Center(
                     child: Image.asset(
@@ -27,7 +23,7 @@ class _SignInPageState extends State<SignInPage> {
                         width: 240),
                   ),
                   const SizedBox(height: 20),
-                  Text("Sign In",
+                  Text("What shall we call you?",
                     style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 34,
@@ -38,7 +34,7 @@ class _SignInPageState extends State<SignInPage> {
                     child:
                     TextField(
                       decoration: InputDecoration(
-                        labelText: "Enter your email",
+                        labelText: "First Name",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -55,9 +51,8 @@ class _SignInPageState extends State<SignInPage> {
                   Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
                     TextField(
-                      obscureText: true,
                       decoration: InputDecoration(
-                        labelText: "Enter your password",
+                        labelText: "Last Name",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -72,7 +67,7 @@ class _SignInPageState extends State<SignInPage> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/home');
+                      Navigator.pushNamed(context, '/account_setup_2');
                     }, style: ElevatedButton.styleFrom(
                     minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                     backgroundColor: Color(0xFF7400B8),
@@ -85,42 +80,6 @@ class _SignInPageState extends State<SignInPage> {
                           color: Colors.white,
                           fontFamily: 'Roboto'),
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-                  OutlinedButton.icon(onPressed: () {},
-                    icon: Image.asset('images/google_720255.png',
-                        height: 20,
-                        width: 20),
-                    label: const Text ("Continue with Google",
-                        style: TextStyle(
-                            fontFamily: 'Roboto', color: Color(0xFF333333))),
-                    style: OutlinedButton.styleFrom(
-                        minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(color: Color(0x26000000))
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context,
-                                '/sign_up'); // Navigate to sign-up page
-                          },
-                          child: const Text(
-                            "Sign up",
-                            style: TextStyle(
-                              color: Color(0xFF7400B8),
-                            ),
-                          ),
-                        ),
-                      ]
                   ),
                 ]
             )
