@@ -15,11 +15,16 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Hello Mariah'),
+        // title: Text('Hello Mariah,'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications),
+            icon: CircleAvatar(
+              radius: 40,
+              backgroundImage: NetworkImage(
+                'https://via.placeholder.com/150',
+              ),
+            ),
             onPressed: () {
             },
           ),
@@ -64,32 +69,71 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello Mariah',
+                        'Hello Mariah,',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 34,
                           fontWeight: FontWeight.bold,
+
                         ),
                       ),
                       SizedBox(height: 4.0),
                       Text(
                         'Let\'s ace your next presentation',
                         style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
+                          fontSize: 20,
+                          color: Color(0xFF333333),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
+            ),
+            SizedBox(height: 15.0),
+
+            Row(
+              children: [
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, '/scenario_sel'); // Start session
+                    Navigator.pushNamed(context, '/scenario_sel');
                   },
-                  child: Text('Start Session'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF7400B8),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Start Session', style: TextStyle(fontSize: 17)),
+                ),
+                SizedBox(width: 16), // Space between buttons
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/task_group_page');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    side: BorderSide(color: Colors.grey),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18.0),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.list, size: 20),
+                        SizedBox(width: 8),
+                        Text('Tasks', style: TextStyle(fontSize: 17)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 16.0),
+
+            SizedBox(height: 15.0),
+
             Expanded(
               child: ListView(
                 children: [
@@ -123,27 +167,57 @@ class _HomePageState extends State<HomePage> {
   }) {
     return GestureDetector(
       onTap: () {
-        // Navigate to the summary page
         Navigator.pushNamed(context, navigateTo);
       },
-      child: Card(
-        elevation: 2,
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey,
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(
+              Icons.bookmark_border,
+              color: Colors.grey,
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Presentation | University',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
-              Icon(Icons.arrow_forward_ios),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.more_vert,
+              color: Colors.grey,
+            ),
+          ],
         ),
       ),
     );
