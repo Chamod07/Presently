@@ -2,8 +2,8 @@
 import logging
 from typing import List, Dict
 from supabase import create_client, Client
-from server.config.config import SUPABASE_URL, SUPABASE_KEY
-from server.models.TaskAssignModel import Challenge
+from config.config import SUPABASE_URL, SUPABASE_KEY
+from models.TaskAssignModel import Challenge
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
