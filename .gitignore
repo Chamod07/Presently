@@ -3,4 +3,4 @@
 frontend/flutter_app/pubspec.lock
 /.idea/
 /.vscode/
-
+*.pyc

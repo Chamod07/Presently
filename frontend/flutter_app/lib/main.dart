@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: Colors.white, // set background color to white
       ),
-      home: TaskFailed(),
+      home: WelcomePage(),
       routes: {
         '/sign_in': (context) => SignInPage(),
         '/sign_up': (context) => SignUpPage(),
