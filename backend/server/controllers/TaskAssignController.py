@@ -1,20 +1,17 @@
-# uvicorn server.controllers.TaskAssignController:app --reload (to run the server)
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 from server.services.TaskAssignService import assign_challenges
 from server.models.TaskAssignModel import Challenge
 import logging
 
-
-app = FastAPI(title="Task Assigning API")
+router = APIRouter()
 
 class Feedback(BaseModel):
     user_id: int
     mistakes: List[str]
 
-@app.post("/get-task", response_model=List[Challenge])
+@router.post("/get-task", response_model=List[Challenge])
 async def assign_challenge(feedback: Feedback):
     try:
         challenges = assign_challenges(feedback.mistakes)
