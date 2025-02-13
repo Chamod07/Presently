@@ -1,4 +1,3 @@
-# service 
 import logging
 from typing import List, Dict
 from supabase import create_client, Client
@@ -50,4 +49,11 @@ def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
         raise Exception("No matching challenges found for given mistakes")
     
     return list(assigned.values())
+
+# to fetch the task groups
+def get_task_groups():
+    response = supabase.table("user_report").select("*").execute()
+    if response.error:
+        raise Exception(f"Error fetching task groups: {response.error}")
+    return response.data
 
