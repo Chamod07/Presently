@@ -11,6 +11,10 @@ import 'sign_in.dart';
 import 'sign_up.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'settings.dart';
+import 'package:flutter_app/Onboarding/account_setup_greeting.dart';
+import 'package:flutter_app/Onboarding/account_setup_title.dart';
+import 'package:flutter_app/Onboarding/account_setup_1.dart';
+import 'package:flutter_app/Onboarding/account_setup_2.dart';
 
 late List<CameraDescription> cameras;
 
@@ -47,6 +51,11 @@ class MyApp extends StatelessWidget {
         '/task_group_page' : (context) => TaskGroupPage(),
         '/settings': (context) => SettingsPage(),
         '/about': (context) => AboutPage(),
+        '/account_setup_greeting': (context) => AccountSetupGreeting(),
+        '/account_setup_title': (context) => AccountSetupTitle(),
+        '/account_setup_1': (context) => AccountSetup1(),
+        '/account_setup_2': (context) => AccountSetup2(),
+
       },
     );
   }
