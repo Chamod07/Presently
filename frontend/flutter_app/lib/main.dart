@@ -1,8 +1,15 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/about_page.dart';
+//import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
 import 'package:flutter_app/task_group_page.dart';
+import 'package:flutter_app/task_group_page.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_app/Onboarding/account_setup_greeting.dart';
+import 'package:flutter_app/Onboarding/account_setup_title.dart';
+import 'package:flutter_app/Onboarding/account_setup_1.dart';
+import 'package:flutter_app/Onboarding/account_setup_2.dart';
+import 'info_card.dart';
 import 'home_page.dart';
 import 'camera.dart';
 import 'summary_page.dart';
@@ -11,6 +18,10 @@ import 'sign_in.dart';
 import 'sign_up.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'settings.dart';
+import 'session_provider.dart';
+import 'task_failed.dart';
+import 'task_passed.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 late List<CameraDescription> cameras;
 
@@ -22,6 +33,13 @@ void main() async {
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw'
   );
   runApp(MyApp());
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+        create: (context) => SessionProvider(),
+        child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -45,6 +63,13 @@ class MyApp extends StatelessWidget {
         '/camera': (context) => CameraPage(),
         '/scenario_sel': (context) => ScenarioSelection(),
         '/task_group_page' : (context) => TaskGroupPage(),
+        '/info_card': (context) => InfoCard(),
+        '/account_setup_greeting': (context) => AccountSetupGreeting(),
+        '/account_setup_title': (context) => AccountSetupTitle(),
+        '/account_setup_1': (context) => AccountSetup1(),
+        '/account_setup_2': (context) => AccountSetup2(),
+       '/task_passed': (context) => TaskPassed(),
+        '/task_failed': (context) => TaskFailed(),
         '/settings': (context) => SettingsPage(),
         '/about': (context) => AboutPage(),
       },

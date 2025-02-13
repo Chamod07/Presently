@@ -34,6 +34,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   camera: ^0.10.5+9
   #firebase_auth: ^5.3.3
+  camera: ^0.11.0+2
+  provider: ^6.1.2
+  firebase_auth: ^5.3.3
   fl_chart: ^0.70.2
   image_picker: ^0.8.4+4
   google_sign_in: ^6.2.2
@@ -43,7 +46,7 @@ dependencies:
   path: ^1.8.3
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.14.3 #creates a icon for the app
+  flutter_launcher_icons: ^0.14.3 #creates a icon for the app (after running pub get run "dart run flutter_launcher_icons" to generate the app icon)
   flutter_test:
     sdk: flutter
 
@@ -74,6 +77,9 @@ flutter:
   assets:
      - images/google_720255.png
      - images/SignIn_SignUp-removebg-preview.png
+     - images/OnboardGreet_AccountSetupTitle.png
+     - images/Task_Pass.png
+     - images/Task_failed.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

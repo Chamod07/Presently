@@ -25,9 +25,18 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   }
 
   void toggleTaskCompletion(Task task) {
-    setState(() {
-      task.isCompleted = !task.isCompleted;
-    });
+    if(!task.isCompleted){
+      Navigator.pushNamed(context, '/info_card');
+      setState(() {
+        task.isCompleted = !task.isCompleted;
+      }
+      );
+    }
+    else{
+      setState(() {
+        task.isCompleted = !task.isCompleted;
+      });
+    }
   }
 
   @override
