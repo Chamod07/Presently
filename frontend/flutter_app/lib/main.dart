@@ -1,8 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-//import 'package:flutter_app/about_page.dart';
+import 'package:flutter_app/about_page.dart';
 import 'package:flutter_app/scenario_selection.dart';
-import 'package:flutter_app/task_group_page.dart';
 import 'package:flutter_app/task_group_page.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_app/Onboarding/account_setup_greeting.dart';
@@ -32,12 +31,10 @@ void main() async {
       url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw'
   );
-  runApp(MyApp());
-void main() {
   runApp(
     ChangeNotifierProvider(
-        create: (context) => SessionProvider(),
-        child: MyApp(),
+      create: (context) => SessionProvider(),
+      child: MyApp(),
     ),
   );
 }

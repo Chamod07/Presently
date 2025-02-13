@@ -210,15 +210,6 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
               child: Text('Get started',
               style: TextStyle(fontSize: 17, color: Colors.white, fontFamily: 'Roboto')
               ),
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CameraPage(),
-                  ),
-                );;
-              },
-              child: Text('Get started'),
-
             ),
           ],
         ),

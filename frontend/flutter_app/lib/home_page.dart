@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/navbar.dart';
+import 'package:flutter_app/session_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/sign_in.dart';//Added only for the sign out button
 import 'package:provider/provider.dart';
-import 'session_provider.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -28,36 +28,34 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             onPressed: () {
-              // Navigate to notifications screen
             },
           ),
           IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () async {
-              try {
-                await supabase.auth.signOut();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => SignInPage()),
-                    (route) => false,
-                  );
-                }
-              }catch (error){
-                if (context.mounted){
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+              icon: Icon(Icons.logout),
+              onPressed: () async {
+                try {
+                  await supabase.auth.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => SignInPage()),
+                          (route) => false,
+                    );
+                  }
+                }catch (error){
+                  if (context.mounted){
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
                         content: Text('Error signing out'),
                         backgroundColor: Colors.red,
-                    ),
-                  );
+                      ),
+                    );
+                  }
                 }
               }
-    }
           )
         ],
       ),
-      body: SafeArea(
-      child: Padding(
+      body: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,9 +64,6 @@ class _HomePageState extends State<HomePage> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundImage: NetworkImage(
-                    'https://via.placeholder.com/150',
-                  ),
                 ),
                 SizedBox(width: 16.0),
                 Expanded(
@@ -80,6 +75,7 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
+
                         ),
                       ),
                       SizedBox(height: 4.0),
@@ -101,67 +97,124 @@ class _HomePageState extends State<HomePage> {
               children: [
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, '/scenario_sel'); // Start session
+                    Navigator.pushNamed(context, '/scenario_sel');
                   },
-                  child: Text('Start Session'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF7400B8),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Start Session', style: TextStyle(fontSize: 17)),
+                ),
+                SizedBox(width: 16), // Space between buttons
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/task_group_page');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    side: BorderSide(color: Colors.grey),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18.0),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.list, size: 20),
+                        SizedBox(width: 8),
+                        Text('Tasks', style: TextStyle(fontSize: 17)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 16.0),
+
+            SizedBox(height: 15.0),
+
             Expanded(
-              child:Consumer<SessionProvider>(
-                builder: (context,sessionProvider, child){
-                  return ListView.builder(
-                    itemCount: sessionProvider.sessions.length,
-                    itemBuilder: (context, index){
-                      return _buildCard(
-                        title: sessionProvider.sessions[index],
-                        navigateTo: '/summary',
-                      );
-                    },
-                  );
-                }
-              )
+            child:Consumer<SessionProvider>(
+              builder: (context,sessionProvider, child){
+              return ListView.builder(
+                itemCount: sessionProvider.sessions.length,
+                itemBuilder: (context, index){
+                return _buildCard(
+                  title: sessionProvider.sessions[index],
+                      navigateTo: '/summary',
+                );
+              },
+              );
+            },
+            ),
             ),
           ],
         ),
-      ),
       ),
       bottomNavigationBar: const NavBar (selectedIndex: 0,),
     );
   }
 
-  Widget _buildCard(
-      {
+  Widget _buildCard({
     required String title,
     required String navigateTo,
-
-      }
-      )
-  {
+  }) {
     return GestureDetector(
       onTap: () {
-        // Navigate to the summary page
         Navigator.pushNamed(context, navigateTo);
       },
-      child: Card(
-        elevation: 2,
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey,
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(
+              Icons.bookmark_border,
+              color: Colors.grey,
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Presentation | University',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
-              Icon(Icons.arrow_forward_ios),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.more_vert,
+              color: Colors.grey,
+            ),
+          ],
         ),
       ),
     );
