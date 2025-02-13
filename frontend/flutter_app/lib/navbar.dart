@@ -7,13 +7,14 @@ class NavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SafeArea(child:
+      Container(
       decoration: BoxDecoration(
         color: const Color(0xFF340052),
         borderRadius: BorderRadius.circular(30),
       ),
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: BottomNavigationBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -61,6 +62,7 @@ class NavBar extends StatelessWidget {
               break;
           }
         },
+      ),
       ),
     );
   }

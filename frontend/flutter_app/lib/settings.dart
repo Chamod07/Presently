@@ -47,21 +47,6 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
             ListTile(
-              title: Text('Privacy'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {},
-            ),
-            ListTile(
-              title: Text('Security'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {},
-            ),
-            ListTile(
-              title: Text('Account'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {},
-            ),
-            ListTile(
               title: Text('Help'),
               trailing: Icon(Icons.arrow_forward_ios),
               onTap: () {},
@@ -72,6 +57,15 @@ class SettingsPage extends StatelessWidget {
               onTap: () {
                 Navigator.pushReplacementNamed(context, '/about');
               },
+            ),
+            const Spacer(),
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '');
+                },
+                child: const Text('Sign Out'),
+              ),
             ),
           ],
         ),
