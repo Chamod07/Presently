@@ -1,10 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.services.storage_service import upload_to_supabase
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from services.storage_service import upload_to_supabase
+from .auth import get_current_user
 
 router = APIRouter()
 
 @router.post("/upload/")
-async def upload_video(file: UploadFile = File(...)):
+async def upload_video(file: UploadFile = File(...), user = Depends(get_current_user)):
     if file.content_type not in ["video/mp4", "video/mov"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
