@@ -16,6 +16,8 @@ class _SignInPageState extends State<SignInPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool emailError = false;
+  bool passwordError = false;
 
   @override
   void dispose() {
@@ -26,6 +28,10 @@ class _SignInPageState extends State<SignInPage> {
 
   Future<void> signInWithEmail() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      setState(() {
+        emailError = true;
+        passwordError = true;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
       );
@@ -174,7 +180,15 @@ class _SignInPageState extends State<SignInPage> {
                       color: Color(0xFFBDBDBD),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0xFF7400B8)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -203,7 +217,15 @@ class _SignInPageState extends State<SignInPage> {
                       },
                     ),
                     border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0xFF7400B8)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -229,6 +251,30 @@ class _SignInPageState extends State<SignInPage> {
                     fontFamily: 'Roboto',
                   ),
                 ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children:[
+                  Expanded(
+                    child:Divider(
+                      color: Color(0xFFF5F5F7),
+                      thickness: 1,
+                      endIndent: 10,
+                    ),
+                  ),
+                  Text("or",
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                  ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: Color(0xFFF5F5F7),
+                      thickness: 1,
+                      indent: 10,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(

@@ -15,6 +15,9 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool emailError = false;
+  bool passwordError = false;
+  bool confirmPasswordError = false;
 
   Future<bool> checkIfEmailExists(String email) async {
     try {
@@ -32,6 +35,10 @@ class _SignUpPageState extends State<SignUpPage> {
 
   Future<void> signUpWithEmail() async {
     if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() {
+        confirmPasswordError = true;
+        passwordError = true;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Passwords do not match')),
       );
@@ -163,7 +170,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: emailError ? Colors.red: Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -182,7 +197,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -201,7 +224,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),

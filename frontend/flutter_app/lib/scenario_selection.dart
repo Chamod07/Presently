@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'session_provider.dart';
 
-import 'camera.dart';
-
 class ScenarioSelection extends StatefulWidget {
   const ScenarioSelection({super.key});
 
