@@ -25,7 +25,8 @@ class GeminiContextAnalyzer:
         Returns:
             Dict containing analysis results including scores and feedback
         """
-        # Hardcoded topic for testing
+
+        # Hardcoded topic
         SAMPLE_TOPIC = "Introduction to Machine Learning and its Types"
         
         prompt = f"""You are a presentation analysis expert. Analyze this presentation transcription about "{SAMPLE_TOPIC}" and provide structured feedback.

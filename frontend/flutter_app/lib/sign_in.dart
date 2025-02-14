@@ -1,11 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../utils/secure_storage.dart'; // Path to SecureStorage class
-import '../models/session.dart'; // Path to Session class
-
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -13,6 +8,8 @@ class SignInPage extends StatefulWidget {
   @override
   State<SignInPage> createState() => _SignInPageState();
 }
+
+final supabase = Supabase.instance.client;
 
 class _SignInPageState extends State<SignInPage> {
   final _emailController = TextEditingController();
@@ -40,19 +37,12 @@ class _SignInPageState extends State<SignInPage> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:8000/api/auth/signin/email'),
-        body: jsonEncode({
-          'email': _emailController.text.trim(),
-          'password': _passwordController.text
-        }),
-        headers: {'Content-Type': 'application/json'},
+      final AuthResponse res = await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final session = Session.fromJson(data['session']);
-        await SecureStorage.setToken(session!.accessToken);
+      if (res.session != null) {
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
@@ -107,24 +97,14 @@ class _SignInPageState extends State<SignInPage> {
       final idToken = googleAuth.idToken;
 
       if (accessToken != null && idToken != null) {
-        // Replace direct Supabase call with backend API request
-        final response = await http.post(
-            Uri.parse('http://10.0.2.2:8000/api/auth/signin/google'),
-            headers: {'Content-Type': 'application/json'});
-
-        final result = await FlutterWebAuth2.authenticate(
-          url: jsonDecode(response.body)['url'],
-          callbackUrlScheme: "presently",
+        final response = await supabase.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
         );
 
-        final tokenResponse = await http.get(Uri.parse(result));
-        final session = Session.fromJson(jsonDecode(tokenResponse.body));
-
-        await SecureStorage.setToken(session.accessToken);
-        if (mounted) {
+        if (response.session != null && mounted) {
           Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          throw jsonDecode(response.body)['detail'] ?? 'Google sign-in failed';
         }
       }
     } catch (e) {
@@ -134,7 +114,7 @@ class _SignInPageState extends State<SignInPage> {
             content: Text(
               e.toString().contains('cancelled')
                   ? 'Sign in cancelled'
-                  : e.toString(),
+                  : 'Failed to sign in with Google',
             ),
             backgroundColor: Colors.red,
           ),
@@ -214,9 +194,7 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -244,13 +222,13 @@ class _SignInPageState extends State<SignInPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Continue",
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.white,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
+                  "Continue",
+                  style: TextStyle(
+                    fontSize: 17,
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
