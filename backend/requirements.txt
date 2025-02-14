@@ -1,4 +1,0 @@
-google-generativeai>=0.3.0
-python-dotenv>=1.0.0
-typing>=3.7.4.3
-python-dateutil>=2.8.2
