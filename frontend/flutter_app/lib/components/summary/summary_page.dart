@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/navbar.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});

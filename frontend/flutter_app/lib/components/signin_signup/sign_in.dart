@@ -18,6 +18,7 @@ class _SignInPageState extends State<SignInPage> {
   bool _obscurePassword = true;
   bool emailError = false;
   bool passwordError = false;
+  String ? errorMessage;
 
   @override
   void dispose() {
@@ -32,9 +33,9 @@ class _SignInPageState extends State<SignInPage> {
         emailError = true;
         passwordError = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
+      setState(() {
+        errorMessage = "Please enter your email and password";
+      });
       return;
     }
 
@@ -57,16 +58,11 @@ class _SignInPageState extends State<SignInPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().contains('Invalid credentials')
-                  ? 'Invalid email or password'
-                  : 'An error occurred during sign in',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          errorMessage = e.toString().contains('invalid credentials')
+              ? 'Invalid email or password'
+              : 'An error occurred during sign in';
+        });
       }
     } finally {
       if (mounted) {
@@ -115,16 +111,11 @@ class _SignInPageState extends State<SignInPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().contains('cancelled')
-                  ? 'Sign in cancelled'
-                  : 'Failed to sign in with Google',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          errorMessage = e.toString().contains('cancelled')
+              ? 'Sign in cancelled'
+              : 'Failed to sign in with Google';
+        });
       }
     } finally {
       if (mounted) {
@@ -142,15 +133,6 @@ class _SignInPageState extends State<SignInPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.arrow_back),
-                ),
-              ),
               const SizedBox(height: 20),
               Center(
                 child: Image.asset(
@@ -167,6 +149,15 @@ class _SignInPageState extends State<SignInPage> {
                   fontSize: 34,
                 ),
               ),
+              const SizedBox(height: 10),
+              if (errorMessage != null)
+                Text(
+                  errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               const SizedBox(height: 20),
               Container(
                 width: MediaQuery.of(context).size.width * 0.9,

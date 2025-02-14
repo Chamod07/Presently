@@ -18,6 +18,7 @@ class _SignUpPageState extends State<SignUpPage> {
   bool emailError = false;
   bool passwordError = false;
   bool confirmPasswordError = false;
+  String ? errorMessage;
 
   Future<bool> checkIfEmailExists(String email) async {
     try {
@@ -34,14 +35,25 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> signUpWithEmail() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
+      setState(() {
+        emailError = true;
+        passwordError = true;
+        confirmPasswordError = true;
+      });
+      setState(() {
+        errorMessage = "Please enter all fields";
+      });
+      return;
+    }
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         confirmPasswordError = true;
         passwordError = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      setState(() {
+        errorMessage = "Passwords do not match";
+      });
       return;
     }
 
@@ -116,9 +128,9 @@ class _SignUpPageState extends State<SignUpPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: ${e.toString()}')),
-        );
+        setState(() {
+          errorMessage = 'Sign up failed: ${e.toString()}';
+        });
       }
     } finally {
       if (mounted) {
@@ -134,13 +146,6 @@ class _SignUpPageState extends State<SignUpPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.arrow_back),
-                ),
-              ),
               const SizedBox(height: 20),
               Center(
                 child: Image.asset(
@@ -157,6 +162,15 @@ class _SignUpPageState extends State<SignUpPage> {
                   fontSize: 34,
                 ),
               ),
+              const SizedBox(height: 10),
+              if (errorMessage != null)
+                Text(
+                  errorMessage!,
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               const SizedBox(height: 20),
               Container(
                 width: MediaQuery.of(context).size.width * 0.9,

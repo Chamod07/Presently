@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/navbar.dart';
-import 'package:flutter_app/session_provider.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_app/sign_in.dart';//Added only for the sign out button
+import 'package:flutter_app/components/signin_signup/sign_in.dart';//Added only for the sign out button
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
