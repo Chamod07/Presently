@@ -10,6 +10,7 @@ import 'welcome.dart';
 import 'sign_in.dart';
 import 'sign_up.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'settings.dart';
 import 'package:flutter_app/Onboarding/account_setup_greeting.dart';
 import 'package:flutter_app/Onboarding/account_setup_title.dart';
@@ -21,11 +22,15 @@ late List<CameraDescription> cameras;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
+
+  await dotenv.load(fileName: ".env");
+
   await Supabase.initialize(
-      url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw'
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-  runApp(MyApp());
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -48,14 +53,13 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => CameraPage(),
         '/scenario_sel': (context) => ScenarioSelection(),
-        '/task_group_page' : (context) => TaskGroupPage(),
+        '/task_group_page': (context) => TaskGroupPage(),
         '/settings': (context) => SettingsPage(),
         '/about': (context) => AboutPage(),
         '/account_setup_greeting': (context) => AccountSetupGreeting(),
         '/account_setup_title': (context) => AccountSetupTitle(),
         '/account_setup_1': (context) => AccountSetup1(),
         '/account_setup_2': (context) => AccountSetup2(),
-
       },
     );
   }
