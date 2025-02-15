@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'task_list_page.dart'; // Import the TaskDetailPage
 import 'task_group.dart'; // Import the TaskGroup model
-import 'package:flutter_app/navbar.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart';
 
 class TaskGroupPage extends StatefulWidget {
   const TaskGroupPage({Key? key}) : super(key: key);
