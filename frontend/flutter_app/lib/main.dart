@@ -1,20 +1,24 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/about_page.dart';
-import 'package:flutter_app/scenario_selection.dart';
-import 'package:flutter_app/task_group_page.dart';
-import 'home_page.dart';
-import 'camera.dart';
-import 'summary_page.dart';
-import 'welcome.dart';
-import 'sign_in.dart';
-import 'sign_up.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_app/components/scenario_selection/session_provider.dart';
+import 'package:flutter_app/components/settings/about_page.dart';
+import 'package:flutter_app/components/scenario_selection/scenario_selection.dart';
+import 'package:flutter_app/components/tasks/task_failed.dart';
+import 'package:flutter_app/components/tasks/task_group_page.dart';
+import 'package:flutter_app/components/dashboard/home_page.dart';
+import 'package:flutter_app/components/camera/camera.dart';
+import 'package:flutter_app/components/summary/summary_page.dart';
+import 'package:flutter_app/components/onboarding/welcome.dart';
+import 'package:flutter_app/components/signin_signup/sign_in.dart';
+import 'package:flutter_app/components/signin_signup/sign_up.dart';
+import 'package:flutter_app/components/tasks/task_passed.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'settings.dart';
-import 'package:flutter_app/Onboarding/account_setup_greeting.dart';
-import 'package:flutter_app/Onboarding/account_setup_title.dart';
-import 'package:flutter_app/Onboarding/account_setup_1.dart';
-import 'package:flutter_app/Onboarding/account_setup_2.dart';
+import 'package:flutter_app/components/settings/settings.dart';
+import 'package:flutter_app/components/onboarding/account_setup_greeting.dart';
+import 'package:flutter_app/components/onboarding/account_setup_title.dart';
+import 'package:flutter_app/components/onboarding/account_setup_1.dart';
+import 'package:flutter_app/components/onboarding/account_setup_2.dart';
 
 late List<CameraDescription> cameras;
 
@@ -25,7 +29,11 @@ void main() async {
       url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw'
   );
-  runApp(MyApp());
+  runApp(
+      ChangeNotifierProvider(
+        create: (context) => SessionProvider(),
+        child: MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -55,6 +63,8 @@ class MyApp extends StatelessWidget {
         '/account_setup_title': (context) => AccountSetupTitle(),
         '/account_setup_1': (context) => AccountSetup1(),
         '/account_setup_2': (context) => AccountSetup2(),
+        '/task_pass': (context) => TaskPassed(),
+        '/task_failed': (context) => TaskFailed(),
 
       },
     );

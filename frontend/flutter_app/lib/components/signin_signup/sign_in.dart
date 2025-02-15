@@ -16,6 +16,9 @@ class _SignInPageState extends State<SignInPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool emailError = false;
+  bool passwordError = false;
+  String ? errorText;
 
   @override
   void dispose() {
@@ -26,9 +29,11 @@ class _SignInPageState extends State<SignInPage> {
 
   Future<void> signInWithEmail() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
+      setState(() {
+        emailError = _emailController.text.isEmpty;
+        passwordError = _passwordController.text.isEmpty;
+        errorText = 'Please fill in all fields';
+      });
       return;
     }
 
@@ -51,16 +56,11 @@ class _SignInPageState extends State<SignInPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().contains('Invalid credentials')
-                  ? 'Invalid email or password'
-                  : 'An error occurred during sign in',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          errorText = e.toString().contains('invalid credentials')
+              ? 'Invalid email or password'
+              : 'An error occurred during sign in';
+        });
       }
     } finally {
       if (mounted) {
@@ -109,16 +109,11 @@ class _SignInPageState extends State<SignInPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().contains('cancelled')
-                  ? 'Sign in cancelled'
-                  : 'Failed to sign in with Google',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          errorText = e.toString().contains('cancelled')
+              ? 'Sign in cancelled'
+              : 'Failed to sign in with Google';
+        });
       }
     } finally {
       if (mounted) {
@@ -136,19 +131,10 @@ class _SignInPageState extends State<SignInPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.arrow_back),
-                ),
-              ),
               const SizedBox(height: 20),
               Center(
                 child: Image.asset(
-                  'images/SignIn_SignUp-removebg-preview.png',
+                  'images/SignIn_SignUp.png',
                   height: 252,
                   width: 240,
                 ),
@@ -161,6 +147,15 @@ class _SignInPageState extends State<SignInPage> {
                   fontSize: 34,
                 ),
               ),
+              const SizedBox(height: 10),
+              if(errorText != null)
+                Text(
+                  errorText!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               const SizedBox(height: 20),
               Container(
                 width: MediaQuery.of(context).size.width * 0.9,
@@ -174,7 +169,19 @@ class _SignInPageState extends State<SignInPage> {
                       color: Color(0xFFBDBDBD),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: emailError ? Colors.red :  Color(0x26000000),
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: emailError ? Colors.red : Color(0xFF7400B8),
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -203,7 +210,19 @@ class _SignInPageState extends State<SignInPage> {
                       },
                     ),
                     border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: passwordError ? Colors.red : Color(0x26000000),
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: passwordError ? Colors.red : Color(0xFF7400B8),
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -229,6 +248,31 @@ class _SignInPageState extends State<SignInPage> {
                     fontFamily: 'Roboto',
                   ),
                 ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child:
+                  Divider(
+                    color: const Color(0xFFF5F5F7),
+                    thickness: 1,
+                    endIndent: 10,
+                  )
+                  ),
+                  Text('or',
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                  Expanded(child:
+                  Divider(
+                    color: const Color(0xFFF5F5F7),
+                    thickness: 1,
+                    indent: 10,
+                  )
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
