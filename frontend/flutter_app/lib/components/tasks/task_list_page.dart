@@ -1,7 +1,7 @@
 // task_detail_page.dart
 import 'package:flutter/material.dart';
 import 'task_group.dart'; // Import the TaskGroup model
-import 'package:flutter_app/navbar.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart';
 
 class TaskDetailPage extends StatefulWidget {
   final TaskGroup taskGroup;
