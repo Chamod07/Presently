@@ -8,7 +8,7 @@ analyzer = GeminiGrammarAnalyzer()
 last_analysis = None
 
 
-@router.post("/api/analyser/grammar/analyze")
+@router.post("/analyze")
 async def analyze_grammar(request: Request):
     """Analyze text for grammatical correctness and store results"""
     try:
@@ -27,7 +27,7 @@ async def analyze_grammar(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/analyser/grammar/score")
+@router.get("/score")
 async def get_grammar_score():
     """Get the overall grammar score and confidence level"""
     if not last_analysis:
@@ -38,7 +38,7 @@ async def get_grammar_score():
     }
 
 
-@router.get("/api/analyser/grammar/sub_scores")
+@router.get("/sub_scores")
 async def get_detailed_analysis():
     """Get detailed analysis scores for grammar, structure, and word choice"""
     if not last_analysis:
@@ -46,7 +46,7 @@ async def get_detailed_analysis():
     return {"analysis": last_analysis["analysis"]}
 
 
-@router.get("/api/analyser/grammar/weaknesses")
+@router.get("/weaknesses")
 async def get_identified_issues():
     """Get list of identified grammar issues with suggestions"""
     if not last_analysis:
@@ -54,7 +54,7 @@ async def get_identified_issues():
     return {"identified_issues": last_analysis["identified_issues"]}
 
 
-@router.get("/api/analyser/grammar/health")
+@router.get("/health")
 async def health_check():
     "Check if the API is running"
     return {"status": "healthy"}
