@@ -1,14 +1,13 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from backend.server.services.gemini_context_service import GeminiContextAnalyzer
 
-app = FastAPI()
+router = APIRouter()
 analyzer = GeminiContextAnalyzer()
 
 # Store last analysis result
 last_analysis = None
 
-
-@app.post("/api/analyser/context/analyze")
+@router.post("/api/analyser/context/analyze")
 async def analyze_presentation(request: Request):
     """Analyze a presentation transcription and store results"""
     try:
@@ -26,8 +25,7 @@ async def analyze_presentation(request: Request):
         print(f"\nError during analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.get("/api/analyser/context/score")
+@router.get("/api/analyser/context/score")
 async def get_overall_score():
     """Get the overall score of the latest analysis"""
     if not last_analysis:
@@ -35,8 +33,7 @@ async def get_overall_score():
     print("\nReturning Overall Score:", last_analysis["overall_score"])
     return {"overall_score": last_analysis["overall_score"]}
 
-
-@app.get("/api/analyser/context/sub_scores")
+@router.get("/api/analyser/context/sub_scores")
 async def get_summery_score():
     """Get the content analysis scores of the latest analysis"""
     if not last_analysis:
@@ -44,8 +41,7 @@ async def get_summery_score():
     print("\nReturning Content Analysis:", last_analysis["content_analysis"])
     return {"content_analysis": last_analysis["content_analysis"]}
 
-
-@app.get("/api/analyser/context/weaknesses")
+@router.get("/api/analyser/context/weaknesses")
 async def get_weaknesses():
     """Get the weakness analysis from the latest analysis"""
     if not last_analysis:
@@ -53,13 +49,7 @@ async def get_weaknesses():
     print("\nReturning Weaknesses:", last_analysis["weakness_topics"])
     return {"weakness_topics": last_analysis["weakness_topics"]}
 
-
-@app.get("/api/analyser/context/health")
+@router.get("/api/analyser/context/health")
 async def health_check_context():
     """Check if the API is running"""
     return {"status": "healthy"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

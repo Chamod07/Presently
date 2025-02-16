@@ -1,14 +1,14 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from backend.server.services.gemini_grammar_service import GeminiGrammarAnalyzer
 
-app = FastAPI()
+router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
 
 # Store last analysis result
 last_analysis = None
 
 
-@app.post("/api/analyser/grammar/analyze")
+@router.post("/api/analyser/grammar/analyze")
 async def analyze_grammar(request: Request):
     """Analyze text for grammatical correctness and store results"""
     try:
@@ -27,7 +27,7 @@ async def analyze_grammar(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/analyser/grammar/score")
+@router.get("/api/analyser/grammar/score")
 async def get_grammar_score():
     """Get the overall grammar score and confidence level"""
     if not last_analysis:
@@ -38,7 +38,7 @@ async def get_grammar_score():
     }
 
 
-@app.get("/api/analyser/grammar/sub_scores")
+@router.get("/api/analyser/grammar/sub_scores")
 async def get_detailed_analysis():
     """Get detailed analysis scores for grammar, structure, and word choice"""
     if not last_analysis:
@@ -46,7 +46,7 @@ async def get_detailed_analysis():
     return {"analysis": last_analysis["analysis"]}
 
 
-@app.get("/api/analyser/grammar/weaknesses")
+@router.get("/api/analyser/grammar/weaknesses")
 async def get_identified_issues():
     """Get list of identified grammar issues with suggestions"""
     if not last_analysis:
@@ -54,12 +54,7 @@ async def get_identified_issues():
     return {"identified_issues": last_analysis["identified_issues"]}
 
 
-@app.get("/api/analyser/grammar/health")
+@router.get("/api/analyser/grammar/health")
 async def health_check():
     "Check if the API is running"
     return {"status": "healthy"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
