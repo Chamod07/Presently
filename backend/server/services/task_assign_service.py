@@ -1,13 +1,19 @@
 import logging
+import os
 from typing import List, Dict
+from dotenv import load_dotenv
 from supabase import create_client, Client
-from config.config import SUPABASE_URL, SUPABASE_KEY
-from models.TaskAssignModel import Challenge
+from models.task_assign_model import Challenge
+
+load_dotenv()  # Load environment variables from .env
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def fetch_challenges() -> List[Challenge]:
-    response = supabase.table("challenges").select("*").execute()
+    response = supabase.table("Challenges").select("*").execute()
     data = response.data
     challenges = []
     for item in data:
@@ -22,7 +28,7 @@ def fetch_challenges() -> List[Challenge]:
 def build_mapping(challenges: List[Challenge]) -> Dict[str, List[Challenge]]:
     mapping: Dict[str, List[Challenge]] = {}
     for challenge in challenges:
-        for mistake in challenge.associated_mistakes:
+        for mistake in challenge.associatedMistakes:
             mapping.setdefault(mistake, []).append(challenge)
     return mapping
 
@@ -51,9 +57,15 @@ def assign_challenges(feedback_mistakes: List[str]) -> List[Challenge]:
     return list(assigned.values())
 
 # to fetch the task groups
-def get_task_groups():
-    response = supabase.table("user_report").select("*").execute()
-    if response.error:
+def get_task_groups_by_user(user_id: str):
+    response = supabase.table("UserReport").select("reportName").eq("userId", user_id).execute()
+    
+    if hasattr(response, "data") and response.data:
+        report_names = [item.get("reportName") for item in response.data if "reportName" in item]
+        return report_names
+    
+    if hasattr(response, "error") and response.error:
         raise Exception(f"Error fetching task groups: {response.error}")
-    return response.data
 
+    # to return and emty list if no data is found
+    return []  

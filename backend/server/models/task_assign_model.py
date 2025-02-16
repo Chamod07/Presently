@@ -6,7 +6,7 @@ class Challenge(BaseModel):
     title: str
     description: str
     instructions: List[str]         
-    associated_mistakes: List[str]    
+    associatedMistakes: List[str]    
     points: int                     
 
 # to ignore additional fields if there are any 
