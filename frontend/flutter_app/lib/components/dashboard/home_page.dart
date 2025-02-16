@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/navbar.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/components/scenario_selection/session_provider.dart';
+import 'package:flutter_app/components/signin_signup/sign_in.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_app/sign_in.dart';//Added only for the sign out button
+
 
 class HomePage extends StatefulWidget {
   @override
@@ -135,24 +138,19 @@ class _HomePageState extends State<HomePage> {
             SizedBox(height: 15.0),
 
             Expanded(
-              child: ListView(
-                children: [
-                  _buildCard(
-                    title: 'Machine Learning',
-                    navigateTo: '/summary',
-                  ),
-                  SizedBox(height: 16.0),
-                  _buildCard(
-                    title: 'Psychology Traits',
-                    navigateTo: '/summary',
-                  ),
-                  SizedBox(height: 16.0),
-                  _buildCard(
-                    title: 'Developmental Behavior',
-                    navigateTo: '/summary',
-                  ),
-                ],
-              ),
+              child: Consumer<SessionProvider>(
+                builder: (context, sessionProvider, child){
+                  return ListView.builder(
+                    itemCount: sessionProvider.sessions.length,
+                    itemBuilder: (context, index){
+                      return _buildCard(
+                        title: sessionProvider.sessions[index],
+                        navigateTo: '/session_page',
+                      );
+                    },
+                  );
+                }
+              )
             ),
           ],
         ),

@@ -15,6 +15,10 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool emailError = false;
+  bool passwordError = false;
+  bool confirmPasswordError = false;
+  String? errorText;
 
   Future<bool> checkIfEmailExists(String email) async {
     try {
@@ -32,9 +36,11 @@ class _SignUpPageState extends State<SignUpPage> {
 
   Future<void> signUpWithEmail() async {
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      setState(() {
+        passwordError = true;
+        confirmPasswordError = true;
+        errorText = 'Passwords do not match';
+      });
       return;
     }
 
@@ -109,9 +115,9 @@ class _SignUpPageState extends State<SignUpPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: ${e.toString()}')),
-        );
+        setState(() {
+          errorText = 'Sign up failed: ${e.toString()}';
+        });
       }
     } finally {
       if (mounted) {
@@ -127,17 +133,10 @@ class _SignUpPageState extends State<SignUpPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.arrow_back),
-                ),
-              ),
               const SizedBox(height: 20),
               Center(
                 child: Image.asset(
-                  'images/SignIn_SignUp-removebg-preview.png',
+                  'images/SignIn_SignUp.png',
                   height: 252,
                   width: 240,
                 ),
@@ -150,6 +149,15 @@ class _SignUpPageState extends State<SignUpPage> {
                   fontSize: 34,
                 ),
               ),
+              const SizedBox(height: 10),
+              if (errorText != null)
+                Text(
+                  errorText!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               const SizedBox(height: 20),
               Container(
                 width: MediaQuery.of(context).size.width * 0.9,
@@ -163,7 +171,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -182,7 +198,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -201,7 +225,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0x26000000)),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),

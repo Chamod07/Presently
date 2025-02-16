@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from backend.server.services.gemini_grammar_service import GeminiGrammarAnalyzer
+from services.gemini_grammar_service import GeminiGrammarAnalyzer
 
 router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
