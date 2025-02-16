@@ -27,7 +27,7 @@ async def analyze_presentation(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/analyser/context/overall_score")
+@app.get("/api/analyser/context/score")
 async def get_overall_score():
     """Get the overall score of the latest analysis"""
     if not last_analysis:
@@ -36,7 +36,7 @@ async def get_overall_score():
     return {"overall_score": last_analysis["overall_score"]}
 
 
-@app.get("/api/analyser/context/summery_score")
+@app.get("/api/analyser/context/sub_scores")
 async def get_summery_score():
     """Get the content analysis scores of the latest analysis"""
     if not last_analysis:
@@ -54,8 +54,8 @@ async def get_weaknesses():
     return {"weakness_topics": last_analysis["weakness_topics"]}
 
 
-@app.get("/health")
-async def health_check():
+@app.get("/api/analyser/context/health")
+async def health_check_context():
     """Check if the API is running"""
     return {"status": "healthy"}
 

@@ -38,7 +38,7 @@ async def get_grammar_score():
     }
 
 
-@app.get("/api/analyser/grammar/detailed_analysis")
+@app.get("/api/analyser/grammar/sub_scores")
 async def get_detailed_analysis():
     """Get detailed analysis scores for grammar, structure, and word choice"""
     if not last_analysis:
@@ -46,7 +46,7 @@ async def get_detailed_analysis():
     return {"analysis": last_analysis["analysis"]}
 
 
-@app.get("/api/analyser/grammar/issues")
+@app.get("/api/analyser/grammar/weaknesses")
 async def get_identified_issues():
     """Get list of identified grammar issues with suggestions"""
     if not last_analysis:
@@ -54,7 +54,7 @@ async def get_identified_issues():
     return {"identified_issues": last_analysis["identified_issues"]}
 
 
-@app.get("/health")
+@app.get("/api/analyser/grammar/health")
 async def health_check():
     "Check if the API is running"
     return {"status": "healthy"}
