@@ -17,10 +17,12 @@ SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 app = FastAPI(title="Presently Backend")
 
-# Include the router from TaskAssignController
-app.include_router(router)
+
+app.include_router(router)  # TaskAssignController
 app.include_router(auth.router, prefix="/api/auth")
 app.include_router(upload.router)
+app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["grammar"])
+app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 
 if __name__ == "__main__":
 
