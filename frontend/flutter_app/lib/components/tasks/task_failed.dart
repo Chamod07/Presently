@@ -16,7 +16,7 @@ class TaskFailed extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'images/Task_failed.png',
+                  'images/Task_Fail.png',
                 ),
                 Text(
                   'Try Again!',

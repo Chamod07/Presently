@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/components/summary/graph_display.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -21,16 +22,8 @@ class _SummaryPageState extends State<SummaryPage> {
       body: Column(
         children: [
           SizedBox(height: 50),
-          Center(
-            child: SizedBox(
-              width: 100,
-              height: 100,
-              child: CircularProgressIndicator(
-                value: 0.9,
-                color: Color(0xFF4EA7DE),
-                strokeWidth: 10.0,
-              ),
-            ),
+          Center(child:
+            const GraphDisplay(),
           ),
           SizedBox(height: 50),
           Padding(
