@@ -60,6 +60,7 @@ async def analyze_presentation(request: Request):
     except Exception as e:
         print(f"\nError during analysis: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 @router.get("/score")
 async def get_overall_score(report_id: str = Query(..., title="Report ID")):
     """Get the overall score of a specific analysis by Report ID"""
