@@ -6,6 +6,7 @@ from services import storage_service
 from fastapi import Query
 import datetime
 import uuid
+from fastapi import status
 
 router = APIRouter()
 analyzer = GeminiContextAnalyzer()
@@ -40,16 +41,25 @@ async def analyze_presentation(request: Request):
         )
         
         data = user_report.dict()
-        response = storage_service.supabase.table("UserReport").insert(data).execute()
-        
-        if response.data and "error" in response.data:
-            raise HTTPException(status_code=500, detail=response.data["error"])
-        
-        return {"message": "Analysis completed successfully and stored in Supabase"}
+
+        # Check if a report with the given reportId already exists
+        existing_report = storage_service.supabase.table("UserReport").select("*").eq("reportId", report_id).execute()
+
+        if existing_report.data:
+            # Update the existing report
+            response = storage_service.supabase.table("UserReport").update(data).eq("reportId", report_id).execute()
+            if response.data and "error" in response.data:
+                raise HTTPException(status_code=500, detail=response.data["error"])
+            return {"message": f"Analysis completed successfully and updated report with reportId {report_id}"}
+        else:
+            # Insert a new report
+            response = storage_service.supabase.table("UserReport").insert(data).execute()
+            if response.data and "error" in response.data:
+                raise HTTPException(status_code=500, detail=response.data["error"])
+            return {"message": "Analysis completed successfully and stored in Supabase"}
     except Exception as e:
         print(f"\nError during analysis: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 @router.get("/score")
 async def get_overall_score(report_id: str = Query(..., title="Report ID")):
     """Get the overall score of a specific analysis by Report ID"""
