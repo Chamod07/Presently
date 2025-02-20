@@ -13,9 +13,17 @@ async def analyze_presentation(request: Request):
     try:
         body = await request.json()
         transcription = body.get("transcription")
-        if not transcription:
-            raise HTTPException(status_code=400, detail="Transcription text is required")
-            
+        report_id = body.get("reportId")
+        topic = body.get("topic", "")
+        
+        if not transcription or not report_id:
+            raise HTTPException(status_code=400, detail="transcription and reportId are required")
+        
+        try:
+            uuid.UUID(report_id, version=4)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid reportId format")
+        
         global last_analysis
         last_analysis = analyzer.analyze_presentation(transcription)
         print("\nStored Analysis Result:")
