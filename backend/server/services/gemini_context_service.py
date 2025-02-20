@@ -90,7 +90,7 @@ def main():
     
     # Test analysis
     try:
-        result = analyzer.analyze_presentation(transcription)
+        result = analyzer.analyze_presentation(transcription, "default topic")
         print("\nAnalysis Result:")
         print(f"Overall Score: {result['overall_score']}/10")
         print(f"Confidence Level: {result['confidence_level']}")
