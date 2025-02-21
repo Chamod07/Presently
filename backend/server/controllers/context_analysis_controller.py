@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from backend.server.services.gemini_context_service import GeminiContextAnalyzer
+from services.gemini_context_service import GeminiContextAnalyzer
 
 router = APIRouter()
 analyzer = GeminiContextAnalyzer()

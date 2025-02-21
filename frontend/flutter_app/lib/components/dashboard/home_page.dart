@@ -140,6 +140,19 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: Consumer<SessionProvider>(
                 builder: (context, sessionProvider, child){
+                  if(sessionProvider.sessions.isEmpty){
+                    return Center(
+                      child: Text(
+                        'No sessions available! Please start a new session',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.grey,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                    );
+                  }
                   return ListView.builder(
                     itemCount: sessionProvider.sessions.length,
                     itemBuilder: (context, index){
