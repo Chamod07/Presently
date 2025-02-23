@@ -39,7 +39,6 @@ async def analyze_presentation(request: Request):
             createdAt=datetime.datetime.now().isoformat(),
             userId="130761fb-86ba-4a34-8bc3-0414c9ef91e6"
         )
-        
         data = user_report.dict()
 
         # Check if a report with the given reportId already exists
@@ -97,7 +96,6 @@ async def get_weaknesses(report_id: str = Query(..., title="Report ID")):
     print("\nReturning Weaknesses:", weakness_topics_context)
     return {"weakness_topics": weakness_topics_context}
 
-from typing import List
 
 @router.get("/reports")
 async def list_reports(limit: int = Query(10, title="Limit"), offset: int = Query(0, title="Offset")):
@@ -109,17 +107,8 @@ async def list_reports(limit: int = Query(10, title="Limit"), offset: int = Quer
     
     return response.data
 
-@router.get("/reports/{reportId}")
-async def get_report(reportId: str):
-    """Get full analysis details for a specific report"""
-    response = storage_service.supabase.table("UserReport").select("*").eq("reportId", reportId).execute()
-    
-    if not response.data:
-        raise HTTPException(status_code=404, detail="No report found with this reportId")
-    
-    return response.data[0]
 
-@router.delete("/reports/{reportId}")
+@router.delete("/report/delete/{reportId}")
 async def delete_report(reportId: str):
     """Remove a report"""
     response = storage_service.supabase.table("UserReport").delete().eq("reportId", reportId).execute()
@@ -128,6 +117,8 @@ async def delete_report(reportId: str):
         raise HTTPException(status_code=500, detail=response.error)
     
     return {"message": f"Report with reportId {reportId} deleted successfully"}
+
+    #confirmation needs to be added.
 
 @router.get("/health")
 async def health_check_context():
