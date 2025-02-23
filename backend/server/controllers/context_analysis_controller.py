@@ -29,7 +29,7 @@ async def analyze_presentation(request: Request):
             raise HTTPException(status_code=400, detail="Invalid reportId format")
         
         analysis_results = analyzer.analyze_presentation(transcription, topic)
-        
+
         user_report = UserReport(
             reportId=report_id,
             reportTopic=topic,
@@ -52,7 +52,7 @@ async def analyze_presentation(request: Request):
                 "weaknessTopicsContext": analysis_results["weakness_topics"],
                # "updatedAt": datetime.datetime.now().isoformat()
             }
-            
+
             print(f"\nUpdating context fields for report {report_id}: {update_data}")
             response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
             print(f"Update result: {response.data}")
@@ -73,10 +73,10 @@ async def analyze_presentation(request: Request):
 async def get_overall_score(report_id: str = Query(..., title="Report ID")):
     """Get the overall score of a specific analysis by Report ID"""
     response = storage_service.supabase.table("UserReport").select("scoreContext").eq("reportId", report_id).execute()
-    
+
     if not response.data:
         raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
-    
+
     overall_score = response.data[0]["scoreContext"]
     print("\nReturning Overall Score:", overall_score)
     return {"overall_score": overall_score}
@@ -85,10 +85,10 @@ async def get_overall_score(report_id: str = Query(..., title="Report ID")):
 async def get_summery_score(report_id: str = Query(..., title="Report ID")):
     """Get the content analysis scores of a specific analysis by Report ID"""
     response = storage_service.supabase.table("UserReport").select("subScoresContext").eq("reportId", report_id).execute()
-    
+
     if not response.data:
         raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
-    
+
     sub_scores_context = response.data[0]["subScoresContext"]
     print("\nReturning Content Analysis:", sub_scores_context)
     return {"content_analysis": sub_scores_context}
@@ -97,10 +97,10 @@ async def get_summery_score(report_id: str = Query(..., title="Report ID")):
 async def get_weaknesses(report_id: str = Query(..., title="Report ID")):
     """Get the weakness analysis from a specific analysis by Report ID"""
     response = storage_service.supabase.table("UserReport").select("weaknessTopicsContext").eq("reportId", report_id).execute()
-    
+
     if not response.data:
         raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
-    
+
     weakness_topics_context = response.data[0]["weaknessTopicsContext"]
     print("\nReturning Weaknesses:", weakness_topics_context)
     return {"weakness_topics": weakness_topics_context}
@@ -110,10 +110,10 @@ async def get_weaknesses(report_id: str = Query(..., title="Report ID")):
 async def list_reports(limit: int = Query(10, title="Limit"), offset: int = Query(0, title="Offset")):
     """List all reports with pagination"""
     response = storage_service.supabase.table("UserReport").select("*").range(offset, offset + limit - 1).execute()
-    
+
     if response.error:
         raise HTTPException(status_code=500, detail=response.error)
-    
+
     return response.data
 
 
@@ -121,10 +121,10 @@ async def list_reports(limit: int = Query(10, title="Limit"), offset: int = Quer
 async def delete_report(reportId: str):
     """Remove a report"""
     response = storage_service.supabase.table("UserReport").delete().eq("reportId", reportId).execute()
-    
+
     if response.error:
         raise HTTPException(status_code=500, detail=response.error)
-    
+
     return {"message": f"Report with reportId {reportId} deleted successfully"}
 
     #confirmation needs to be added.
