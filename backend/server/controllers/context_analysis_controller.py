@@ -45,8 +45,17 @@ async def analyze_presentation(request: Request):
         existing_report = storage_service.supabase.table("UserReport").select("*").eq("reportId", report_id).execute()
 
         if existing_report.data:
-            # Update the existing report
-            response = storage_service.supabase.table("UserReport").update(data).eq("reportId", report_id).execute()
+            # Update only context-related fields
+            update_data = {
+                "scoreContext": analysis_results["overall_score"],
+                "subScoresContext": analysis_results["content_analysis"],
+                "weaknessTopicsContext": analysis_results["weakness_topics"],
+               # "updatedAt": datetime.datetime.now().isoformat()
+            }
+            
+            print(f"\nUpdating context fields for report {report_id}: {update_data}")
+            response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+            print(f"Update result: {response.data}")
             if response.data and "error" in response.data:
                 raise HTTPException(status_code=500, detail=response.data["error"])
             return {"message": f"Analysis completed successfully and updated report with reportId {report_id}"}

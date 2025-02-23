@@ -45,8 +45,17 @@ async def analyze_grammar(request: Request):
         existing_report = storage_service.supabase.table("UserReport").select("*").eq("reportId", report_id).execute()
 
         if existing_report.data:
-            # Update the existing report
-            response = storage_service.supabase.table("UserReport").update(data).eq("reportId", report_id).execute()
+            # Update only grammar-related fields
+            update_data = {
+                "scoreGrammar": analysis_results["grammar_score"],
+                "subScoresGrammar": analysis_results["analysis"],
+                "weaknessTopicsGrammar": analysis_results["identified_issues"],
+         #       "updatedAt": datetime.datetime.now().isoformat()
+            }
+            
+            print(f"\nUpdating grammar fields for report {report_id}: {update_data}")
+            response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+            print(f"Update result: {response.data}")
             if response.data and "error" in response.data:
                 raise HTTPException(status_code=500, detail=response.data["error"])
             return {"message": f"Grammar analysis completed successfully and updated report with reportId {report_id}"}
