@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, Request
 from services.gemini_grammar_service import GeminiGrammarAnalyzer
+from models.user_report_model import UserReport
+from services import storage_service
+from fastapi import Query
+import datetime
+import uuid
+from fastapi import status
 
 router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
-
-# Store last analysis result
-last_analysis = None
-
 
 @router.post("/analyze")
 async def analyze_grammar(request: Request):
@@ -14,45 +16,98 @@ async def analyze_grammar(request: Request):
     try:
         body = await request.json()
         transcription = body.get("transcription")
-        if not transcription:
-            raise HTTPException(status_code=400, detail="Transcription text is required")
+        report_id = body.get("reportId")
+        topic = body.get("topic", "")
+
+        if not transcription or not report_id:
+            raise HTTPException(status_code=400, detail="Transcription text and reportId are required")
+
+        try:
+            uuid.UUID(report_id, version=4)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid reportId format")
+
+        analysis_results = analyzer.analyze_grammar(transcription)
+
+        user_report = UserReport(
+            reportId=report_id,
+            reportTopic=topic,
+            createdAt=datetime.datetime.now().isoformat(),
+            userId="130761fb-86ba-4a34-8bc3-0414c9ef91e6",  # Use the provided userId
+            scoreGrammar=analysis_results["grammar_score"],
+            subScoresGrammar=analysis_results["analysis"],
+            weaknessTopicsGrammar=analysis_results["identified_issues"]
+        )
+
+        data = user_report.dict()
+
+        # Check if a report with the given reportId already exists
+        existing_report = storage_service.supabase.table("UserReport").select("*").eq("reportId", report_id).execute()
+
+        if existing_report.data:
+            # Update only grammar-related fields
+            update_data = {
+                "scoreGrammar": analysis_results["grammar_score"],
+                "subScoresGrammar": analysis_results["analysis"],
+                "weaknessTopicsGrammar": analysis_results["identified_issues"],
+         #       "updatedAt": datetime.datetime.now().isoformat()
+            }
             
-        global last_analysis
-        last_analysis = analyzer.analyze_grammar(transcription)
-        print("\nStored Grammar Analysis Result:")
-        print(last_analysis)
-        return {"message": "Grammar analysis completed successfully"}
+            print(f"\nUpdating grammar fields for report {report_id}: {update_data}")
+            response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+            print(f"Update result: {response.data}")
+            if response.data and "error" in response.data:
+                raise HTTPException(status_code=500, detail=response.data["error"])
+            return {"message": f"Grammar analysis completed successfully and updated report with reportId {report_id}"}
+        else:
+            # Insert a new report
+            response = storage_service.supabase.table("UserReport").insert(data).execute()
+            if response.data and "error" in response.data:
+                raise HTTPException(status_code=500, detail=response.data["error"])
+            return {"message": "Grammar analysis completed successfully and stored in Supabase"}
+
     except Exception as e:
         print(f"\nError during grammar analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/score")
-async def get_grammar_score():
-    """Get the overall grammar score and confidence level"""
-    if not last_analysis:
+async def get_grammar_score(report_id: str = Query(..., title="Report ID")):
+    """Get the overall grammar score"""
+    response = storage_service.supabase.table("UserReport").select("scoreGrammar").eq("reportId", report_id).execute()
+
+    if not response.data:
         raise HTTPException(status_code=404, detail="No grammar analysis results found")
+
+    grammar_score = response.data[0]["scoreGrammar"]
     return {
-        "grammar_score": last_analysis["grammar_score"],
-        "confidence_level": last_analysis["confidence_level"]
+        "grammar_score": grammar_score,
     }
 
 
+
 @router.get("/sub_scores")
-async def get_detailed_analysis():
+async def get_detailed_analysis(report_id: str = Query(..., title="Report ID")):
     """Get detailed analysis scores for grammar, structure, and word choice"""
-    if not last_analysis:
+    response = storage_service.supabase.table("UserReport").select("subScoresGrammar").eq("reportId", report_id).execute()
+
+    if not response.data:
         raise HTTPException(status_code=404, detail="No grammar analysis results found")
-    return {"analysis": last_analysis["analysis"]}
+
+    analysis = response.data[0]["subScoresGrammar"]
+    return {"analysis": analysis}
 
 
 @router.get("/weaknesses")
-async def get_identified_issues():
+async def get_identified_issues(report_id: str = Query(..., title="Report ID")):
     """Get list of identified grammar issues with suggestions"""
-    if not last_analysis:
-        raise HTTPException(status_code=404, detail="No grammar analysis results found")
-    return {"identified_issues": last_analysis["identified_issues"]}
+    response = storage_service.supabase.table("UserReport").select("weaknessTopicsGrammar").eq("reportId", report_id).execute()
 
+    if not response.data:
+        raise HTTPException(status_code=404, detail="No grammar analysis results found")
+
+    identified_issues = response.data[0]["weaknessTopicsGrammar"]
+    return {"identified_issues": identified_issues}
 
 @router.get("/health")
 async def health_check():
