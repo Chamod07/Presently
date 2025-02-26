@@ -20,20 +20,6 @@ class _SignUpPageState extends State<SignUpPage> {
   bool confirmPasswordError = false;
   String? errorText;
 
-  Future<bool> checkIfEmailExists(String email) async {
-    try {
-      await supabase.auth.signInWithOtp(
-        email: email,
-      );
-      return true; // If no error is thrown, email exists
-    } catch (e) {
-      if (e.toString().contains('Email rate limit exceeded')) {
-        return true; // Email exists but rate limited
-      }
-      return false; // Email doesn't exist
-    }
-  }
-
   Future<void> signUpWithEmail() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
@@ -47,10 +33,15 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      // First check if email exists
-      final emailExists = await checkIfEmailExists(_emailController.text.trim());
 
-      if (emailExists) {
+      final AuthResponse res = await supabase.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (res.user != null &&
+          (res.user!.identities == null || res.user!.identities!.isEmpty)) {
+
         if (mounted) {
           showDialog(
             context: context,
@@ -71,18 +62,8 @@ class _SignUpPageState extends State<SignUpPage> {
               );
             },
           );
-          setState(() => _isLoading = false);
-          return;
         }
-      }
-
-      // If email doesn't exist, proceed with signup
-      final AuthResponse res = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      if (res.session == null) {
+      } else if (res.session == null) {
         if (mounted) {
           _emailController.clear();
           _passwordController.clear();
@@ -113,10 +94,11 @@ class _SignUpPageState extends State<SignUpPage> {
           Navigator.pushReplacementNamed(context, '/home');
         }
       }
-    } catch (e) {
+    } catch (error) {
+
       if (mounted) {
         setState(() {
-          errorText = 'Sign up failed: ${e.toString()}';
+          errorText = 'Sign up failed: ${error.toString()}';
         });
       }
     } finally {
