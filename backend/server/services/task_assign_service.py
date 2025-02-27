@@ -11,19 +11,39 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def user_has_access_to_report(report_id: str, user_id: str) -> bool:
+    """
+    Verify if a user has access to a specific report
+    
+    Args:
+        report_id: The ID of the report to check
+        user_id: The ID of the user
+        
+    Returns:
+        bool: True if user has access, False otherwise
+    """
+    response = supabase.table("UserReport").select("userId").eq("reportId", report_id).execute()
+    
+    if not response.data:
+        return False
+    
+    report_user_id = response.data[0].get("userId")
+    return report_user_id == user_id
+
 # to fetch the task groups
 def get_task_groups_by_user(user_id: str):
-    response = supabase.table("UserReport").select("reportTopic").eq("userId", user_id).execute()
+    response = supabase.table("UserReport").select("reportTopic, reportId").eq("userId", user_id).execute()
     
     if hasattr(response, "data") and response.data:
-        report_names = [item.get("reportTopic") for item in response.data if "reportTopic" in item]
+        # to return both reportTopic and reportId
+        report_names = [{"Id": item.get("reportId"), "Topic": item.get("reportTopic")} for item in response.data if "reportTopic" in item and "reportId" in item]
         return report_names
     
     if hasattr(response, "error") and response.error:
         raise Exception(f"Error fetching task groups: {response.error}")
 
-    # to return and emty list if no data is found
-    return []  
+    # to return an empty list if no data is found
+    return []
 
 # to count the number of reports linked to the given userId
 def get_report_count(user_id: str):
@@ -53,31 +73,44 @@ def get_task_count(report_id: str):
     # to default to 0 if no challenges are found
     return 0
 
-# to fetch the challenges
+# to fetch the tasks 
 def get_tasks(report_id: str):
-    # Get challenge IDs linked to the reportId
-    task_group_response = supabase.table("TaskGroupChallenges").select("challengeId").eq("reportId", report_id).execute()
+    # Get challenge IDs and isDone status linked to the reportId
+    task_group_response = supabase.table("TaskGroupChallenges") \
+        .select("challengeId, isDone") \
+        .eq("reportId", report_id) \
+        .execute()
 
     # Handle errors in fetching task group challenges
     if hasattr(task_group_response, "error") and task_group_response.error:
         raise Exception(f"Error fetching challenge IDs: {task_group_response.error}")
 
-    challenge_ids = [item["challengeId"] for item in task_group_response.data if "challengeId" in item]
+    # Create a mapping of challengeId to its isDone status
+    challenge_status_map = {
+        item["challengeId"]: item["isDone"]
+        for item in task_group_response.data if "challengeId" in item
+    }
+
+    challenge_ids = list(challenge_status_map.keys())
 
     if not challenge_ids:
         return []  # Return empty list if no challenges are assigned
 
-    # Fetch challenge titles from Challenges table
-    # challenges_response = supabase.table("Challenges").select("id, title").in_("id", challenge_ids).execute()
-    challenges_response = supabase.table("Challenges").select("id, title").in_("id", challenge_ids).execute()
+    # Fetch challenge details (id and title) from Challenges table
+    challenges_response = supabase.table("Challenges") \
+        .select("id, title") \
+        .in_("id", challenge_ids) \
+        .execute()
 
     # Handle errors in fetching challenges
     if hasattr(challenges_response, "error") and challenges_response.error:
         raise Exception(f"Error fetching challenge titles: {challenges_response.error}")
 
-    # Extract and return list of challenge titles
-    # return [{"id": item["id"], "title": item["title"]} for item in challenges_response.data if "id" in item and "title" in item]
-    return [item["title"] for item in challenges_response.data if "id" in item]
+    # Combine the challenge details with the isDone status from our mapping
+    return [
+        {"id": item["id"], "title": item["title"], "isDone": challenge_status_map.get(item["id"])}
+        for item in challenges_response.data if "id" in item and "title" in item
+    ]
 
 def get_challenge_count_by_status(report_id: str, is_done: bool):
     # Query to count challenges with the given status (isDone=True or isDone=False)
@@ -180,3 +213,62 @@ def assign_challenges_for_report(report_id: str, threshold: int = 5) -> List[int
     insert_task_group_challenges(report_id, assigned_challenge_ids_list)
     
     return assigned_challenge_ids_list
+
+# to get the progress for the given report
+def get_task_group_progress(report_id: str) -> float:
+ 
+    # Get total count of tasks for the given report
+    total_response = supabase.table("TaskGroupChallenges") \
+        .select("id", count="exact") \
+        .eq("reportId", report_id) \
+        .execute()
+    
+    if hasattr(total_response, "error") and total_response.error:
+        raise Exception(f"Error fetching total tasks: {total_response.error}")
+    
+    total_tasks = total_response.count if hasattr(total_response, "count") else 0
+
+    # Get count of tasks that are marked as done (isDone=True)
+    completed_response = supabase.table("TaskGroupChallenges") \
+        .select("id", count="exact") \
+        .eq("reportId", report_id) \
+        .eq("isDone", True) \
+        .execute()
+    
+    if hasattr(completed_response, "error") and completed_response.error:
+        raise Exception(f"Error fetching completed tasks: {completed_response.error}")
+    
+    completed_tasks = completed_response.count if hasattr(completed_response, "count") else 0
+
+    # Avoid division by zero; if no tasks exist, progress is 0%
+    if total_tasks == 0:
+        return 0.0
+
+    percentage = (completed_tasks / total_tasks) * 100
+    return round(percentage, 0)
+
+# to get the overrall progress of all the report
+def get_overall_progress(user_id: str) -> float:
+  
+    # Fetch all task groups (reports) for the given user
+    response = supabase.table("UserReport") \
+        .select("reportId") \
+        .eq("userId", user_id) \
+        .execute()
+    
+    if hasattr(response, "error") and response.error:
+        raise Exception(f"Error fetching user reports: {response.error}")
+    
+    reports = response.data if hasattr(response, "data") and response.data else []
+
+    if not reports:
+        return 0.0
+
+    total_percentage = 0.0
+    for report in reports:
+        report_id = report.get("reportId")
+        progress = get_task_group_progress(report_id)
+        total_percentage += progress
+
+    overall_progress = total_percentage / len(reports)
+    return round(overall_progress, 0)

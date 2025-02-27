@@ -2,9 +2,6 @@
 
 from dotenv import load_dotenv
 import os
-
-load_dotenv()  # Load environment variables from .env
-
 from fastapi import FastAPI
 from controllers.task_assign_controller import router as task_assign_router
 from controllers.context_analysis_controller import router as context_router
