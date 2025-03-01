@@ -5,19 +5,20 @@ import os
 
 load_dotenv()  # Load environment variables from .env
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from controllers.TaskAssignController import router
 from controllers.context_analysis_controller import router as context_router
 from controllers.grammar_analysis_controller import router as grammar_router
 from routers import auth, upload
+from middleware.jwt_middleware import verify_supabase_jwt
 
 load_dotenv()  # Load environment variables from .env
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+app = FastAPI(title="Presently Backend", dependencies=[Depends(verify_supabase_jwt)])
 
-app = FastAPI(title="Presently Backend")
 
 
 app.include_router(router)  # TaskAssignController
