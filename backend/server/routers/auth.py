@@ -4,6 +4,8 @@ from supabase import create_client
 from pydantic import BaseModel
 import os
 
+import supabase
+
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
