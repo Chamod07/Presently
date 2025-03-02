@@ -3,6 +3,7 @@
 from dotenv import load_dotenv
 import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from controllers.task_assign_controller import router as task_assign_router
 from controllers.context_analysis_controller import router as context_router
 from controllers.grammar_analysis_controller import router as grammar_router
@@ -16,6 +17,15 @@ SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 app = FastAPI(title="Presently Backend")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development only - in production specify domains
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+    expose_headers=["*"],  # This is important for proper CORS operation
+)
 
 app.include_router(task_assign_router, prefix="/api/task-assign", tags=["task assign"])
 app.include_router(auth.router, prefix="/api/auth")

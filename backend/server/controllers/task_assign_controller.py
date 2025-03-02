@@ -34,7 +34,7 @@ def fetch_task_groups(user_id: str = Depends(get_current_user_id)):
     except Exception as e:
         logging.error(f"Error in /report: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-     
+ 
 @router.get("/report_count")
 def fetch_task_group_count(user_id: str = Depends(get_current_user_id)):
     try:
