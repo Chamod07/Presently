@@ -18,6 +18,8 @@ class _SignUpPageState extends State<SignUpPage> {
   bool emailError = false;
   bool passwordError = false;
   bool confirmPasswordError = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String? errorText;
 
   Future<bool> checkIfEmailExists(String email) async {
@@ -196,6 +198,16 @@ class _SignUpPageState extends State<SignUpPage> {
                       color: Color(0xFFBDBDBD),
                       fontFamily: "Roboto",
                     ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
@@ -222,6 +234,16 @@ class _SignUpPageState extends State<SignUpPage> {
                     labelStyle: TextStyle(
                       color: Color(0xFFBDBDBD),
                       fontFamily: "Roboto",
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
