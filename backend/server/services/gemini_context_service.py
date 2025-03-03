@@ -15,21 +15,19 @@ class GeminiContextAnalyzer:
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('gemini-pro')
 
-    def analyze_presentation(self, transcription: str) -> Dict[str, Any]:
+    def analyze_presentation(self, transcription: str, topic: str) -> Dict[str, Any]:
         """
-        Analyze presentation transcription using Gemini API
-        
-        Args:
-            transcription (str): The presentation transcription text
-            
-        Returns:
-            Dict containing analysis results including scores and feedback
-        """
-
-        # Hardcoded topic
-        SAMPLE_TOPIC = "Introduction to Machine Learning and its Types"
-        
-        prompt = f"""You are a presentation analysis expert. Analyze this presentation transcription about "{SAMPLE_TOPIC}" and provide structured feedback.
+         Analyze presentation transcription using Gemini API with a dynamic topic.
+         
+         Args:
+             transcription (str): The presentation transcription text.
+             topic (str): The topic to use in the analysis.
+             
+         Returns:
+             Dict containing analysis results.
+         """
+ 
+        prompt = f"""You are a presentation analysis expert. Analyze this presentation transcription about "{topic}" and provide structured feedback.
         
         Generate a JSON response with the following structure exactly:
         {{
@@ -92,7 +90,7 @@ def main():
     
     # Test analysis
     try:
-        result = analyzer.analyze_presentation(transcription)
+        result = analyzer.analyze_presentation(transcription, "default topic")
         print("\nAnalysis Result:")
         print(f"Overall Score: {result['overall_score']}/10")
         print(f"Confidence Level: {result['confidence_level']}")

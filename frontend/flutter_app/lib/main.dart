@@ -27,12 +27,11 @@ void main() async {
   cameras = await availableCameras();
   await Supabase.initialize(
       url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw'
-  );
-  runApp(
-      ChangeNotifierProvider(
-        create: (context) => SessionProvider(),
-        child: MyApp(),
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MzA1MTIsImV4cCI6MjA1NjQwNjUxMn0.wH9-Y1b58RHloQj3bFSJj4gAkx3lVn4wKB9vJ5w6SZk');
+  runApp(ChangeNotifierProvider(
+    create: (context) => SessionProvider(),
+    child: MyApp(),
   ));
 }
 
@@ -56,7 +55,7 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => CameraPage(),
         '/scenario_sel': (context) => ScenarioSelection(),
-        '/task_group_page' : (context) => TaskGroupPage(),
+        '/task_group_page': (context) => TaskGroupPage(),
         '/settings': (context) => SettingsPage(),
         '/about': (context) => AboutPage(),
         '/account_setup_greeting': (context) => AccountSetupGreeting(),
@@ -65,7 +64,6 @@ class MyApp extends StatelessWidget {
         '/account_setup_2': (context) => AccountSetup2(),
         '/task_pass': (context) => TaskPassed(),
         '/task_failed': (context) => TaskFailed(),
-
       },
     );
   }
