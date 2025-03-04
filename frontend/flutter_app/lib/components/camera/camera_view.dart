@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:flutter_app/services/audio_recording_service.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -29,6 +30,7 @@ class CameraView extends StatefulWidget {
 class _CameraViewState extends State<CameraView> {
   static List<CameraDescription> _cameras = [];
   CameraController? _controller;
+  final AudioRecordingService _audioService = AudioRecordingService();
   int _cameraIndex = -1;
   double _currentZoomLevel = 1.0;
   double _minAvailableZoom = 1.0;
@@ -41,8 +43,64 @@ class _CameraViewState extends State<CameraView> {
   @override
   void initState() {
     super.initState();
-
+    _audioService.initialize();
     _initialize();
+  }
+
+  @override
+  void dispose() {
+    _stopLiveFeed();
+    _audioService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_audioService.isRecording) {
+      await _audioService.stopRecording();
+      _showUploadDialog();
+    } else {
+      await _audioService.startRecording();
+    }
+    setState(() {});
+  }
+
+  void _showUploadDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Upload Recording'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Would you like to upload this recording?'),
+            SizedBox(height: 10),
+            Text('File path:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(_audioService.audioFilePath ?? 'No file path available'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _uploadRecording();
+            },
+            child: Text('Upload'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _uploadRecording() async {
+    final filePath = _audioService.audioFilePath;
+    if (filePath == null) return;
+    
+    // TODO: Implement Supabase upload using storage_service.dart
   }
 
   void _initialize() async {
@@ -60,11 +118,11 @@ class _CameraViewState extends State<CameraView> {
     }
   }
 
-  @override
-  void dispose() {
-    _stopLiveFeed();
-    super.dispose();
-  }
+ // @override
+  //void dispose() {
+   // _stopLiveFeed();
+  //  super.dispose();
+ // }
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +153,7 @@ class _CameraViewState extends State<CameraView> {
           _detectionViewModeToggle(),
           _zoomControl(),
           _exposureControl(),
+          _recordingControl(),
         ],
       ),
     );
@@ -205,6 +264,24 @@ class _CameraViewState extends State<CameraView> {
     ),
   );
 
+  Widget _recordingControl() => Positioned(
+    bottom: 80,
+    left: MediaQuery.of(context).size.width / 2 - 25,
+    child: SizedBox(
+      height: 50.0,
+      width: 50.0,
+      child: FloatingActionButton(
+        heroTag: Object(),
+        onPressed: _toggleRecording,
+        backgroundColor: _audioService.isRecording ? Colors.red : Colors.black54,
+        child: Icon(
+          _audioService.isRecording ? Icons.stop : Icons.mic,
+          size: 25,
+        ),
+      ),
+    ),
+  );
+
   Widget _exposureControl() => Positioned(
     top: 40,
     right: 8,
@@ -260,7 +337,7 @@ class _CameraViewState extends State<CameraView> {
       camera,
       // Set to ResolutionPreset.high. Do NOT set it to ResolutionPreset.max because for some phones does NOT work.
       ResolutionPreset.high,
-      enableAudio: false,
+      enableAudio: true,
       imageFormatGroup: Platform.isAndroid
           ? ImageFormatGroup.nv21
           : ImageFormatGroup.bgra8888,
