@@ -191,7 +191,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: MediaQuery.of(context).size.width * 0.9,
                 child: TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Enter your password",
                     labelStyle: TextStyle(
@@ -228,7 +228,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: MediaQuery.of(context).size.width * 0.9,
                 child: TextField(
                   controller: _confirmPasswordController,
-                  obscureText: true,
+                  obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: "Confirm password",
                     labelStyle: TextStyle(
