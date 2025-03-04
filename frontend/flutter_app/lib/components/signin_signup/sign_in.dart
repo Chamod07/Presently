@@ -232,7 +232,7 @@ class _SignInPageState extends State<SignInPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signInWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(380, 50),
+                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: const Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -287,7 +287,7 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(380, 50),
+                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
