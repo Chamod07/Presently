@@ -5,10 +5,53 @@ class AccountSetup1 extends StatefulWidget {
   const AccountSetup1({super.key});
 
   @override
-  State<AccountSetup1> createState() => _AccountSetup2State();
+  State<AccountSetup1> createState() => _AccountSetup1State();
 }
 
-class _AccountSetup2State extends State<AccountSetup1> {
+class _AccountSetup1State extends State<AccountSetup1> {
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  bool _firstNameError = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _firstNameController.addListener(() {
+      if (_firstNameError && _firstNameController.text.trim().isNotEmpty) {
+        setState(() {
+          _firstNameError = false;
+          _errorMessage = null;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    super.dispose();
+  }
+
+  void _continue() {
+    setState(() {
+      _firstNameError = _firstNameController.text.trim().isEmpty;
+      _errorMessage = _firstNameError ? 'First name is required' : null;
+    });
+
+    if (!_firstNameError) {
+      String firstName = _firstNameController.text.trim();
+      String lastName = _lastNameController.text.trim();
+
+      Navigator.pushNamed(
+        context,
+        '/account_setup_2',
+        arguments: {'firstName': firstName, 'lastName': lastName},
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,6 +76,7 @@ class _AccountSetup2State extends State<AccountSetup1> {
                   Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
                     TextField(
+                      controller: _firstNameController,
                       decoration: InputDecoration(
                         labelText: "First Name",
                         labelStyle: TextStyle(
@@ -40,10 +84,20 @@ class _AccountSetup2State extends State<AccountSetup1> {
                           color: Color(0xFFBDBDBD),
                         ),
                         border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0x26000000)
+                          borderSide: BorderSide(
+                            color: _firstNameError ? Colors.red : Color(0x26000000),
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0x26000000)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF7400B8)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        errorText: _errorMessage,
                       ),
                     ),
                   ),
@@ -51,6 +105,7 @@ class _AccountSetup2State extends State<AccountSetup1> {
                   Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
                     TextField(
+                      controller: _lastNameController,
                       decoration: InputDecoration(
                         labelText: "Last Name",
                         labelStyle: TextStyle(
@@ -66,9 +121,8 @@ class _AccountSetup2State extends State<AccountSetup1> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/account_setup_2');
-                    }, style: ElevatedButton.styleFrom(
+                    onPressed: _continue,
+                    style: ElevatedButton.styleFrom(
                     minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                     backgroundColor: Color(0xFF7400B8),
                     shape: RoundedRectangleBorder(
