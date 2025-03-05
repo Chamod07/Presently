@@ -15,6 +15,10 @@ class _HomePageState extends State<HomePage> {
   final supabase = Supabase.instance.client;
 
   @override
+  void initState() {
+    super.initState();
+    Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase();
+  } // load sessions from supabase
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

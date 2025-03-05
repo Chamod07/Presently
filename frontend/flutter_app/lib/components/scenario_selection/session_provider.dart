@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 class SessionProvider with ChangeNotifier{
+  final supabase = Supabase.instance.client;
   String? _selectedPresentationType;
   String? _selectedPresentationGoal;
   String? _selectedName;
@@ -29,5 +32,48 @@ class SessionProvider with ChangeNotifier{
     _selectedPresentationGoal = null;
     _selectedName = null;
     notifyListeners();
+  }
+  //save session in supabase
+  Future<void> saveToSupabase(String sessionName) async{
+    final userId = supabase.auth.currentUser?.id;
+    if(userId == null) return;
+
+    try{
+      await supabase.from('Session').insert({
+        'name': sessionName,
+        'presentation_type': _selectedPresentationType,
+        'presentation_goal': _selectedPresentationGoal,
+        'user_id': userId,
+      });
+    }
+    catch(e){
+      print('Error saving session: $e');
+    }
+  }
+  //load sessions from supabase
+  Future<void> loadSessionsFromSupabase() async{
+    final userId = supabase.auth.currentUser?.id;
+    if(userId == null) return;
+
+    try{
+      final response = await supabase
+          .from('Session')
+          .select()
+          .eq('user_id', userId);
+
+      List<dynamic> data = response as List<dynamic>;
+      List<String> dbSessions = data.map((s) => s['name'] as String).toList();
+
+      for (String session in dbSessions){
+        if(!_sessions.contains(session)){
+          _sessions.add(session);
+        }
+      }
+
+      notifyListeners();
+    }
+    catch(e){
+      print('Error loading sessions: $e');
+    }
   }
 }
