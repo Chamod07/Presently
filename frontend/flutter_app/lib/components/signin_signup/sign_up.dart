@@ -22,20 +22,6 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscureConfirmPassword = true;
   String? errorText;
 
-  Future<bool> checkIfEmailExists(String email) async {
-    try {
-      await supabase.auth.signInWithOtp(
-        email: email,
-      );
-      return true; // If no error is thrown, email exists
-    } catch (e) {
-      if (e.toString().contains('Email rate limit exceeded')) {
-        return true; // Email exists but rate limited
-      }
-      return false; // Email doesn't exist
-    }
-  }
-
   Future<void> signUpWithEmail() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
@@ -49,42 +35,16 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      // First check if email exists
-      final emailExists = await checkIfEmailExists(_emailController.text.trim());
-
-      if (emailExists) {
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Account Already Exists'),
-                content: const Text('An account with this email already exists. Please sign in instead.'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/sign_in');
-                    },
-                    child: const Text('Go to Sign In'),
-                  ),
-                ],
-              );
-            },
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-      }
-
-      // If email doesn't exist, proceed with signup
       final AuthResponse res = await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      if (res.session == null) {
+      if (res.session != null) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/account_setup_1');
+        }
+      } else {
         if (mounted) {
           _emailController.clear();
           _passwordController.clear();
@@ -96,12 +56,12 @@ class _SignUpPageState extends State<SignUpPage> {
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('Verification Required'),
-                content: const Text('A verification email has been sent. Please verify your email to complete Sign up'),
+                content: const Text('A verification email has been sent. Please verify your email to complete sign-up.'),
                 actions: [
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/sign_in');
+                      Navigator.pushReplacementNamed(context, '/account_setup_title');
                     },
                     child: const Text('OK'),
                   ),
@@ -109,10 +69,6 @@ class _SignUpPageState extends State<SignUpPage> {
               );
             },
           );
-        }
-      } else {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
         }
       }
     } catch (e) {
