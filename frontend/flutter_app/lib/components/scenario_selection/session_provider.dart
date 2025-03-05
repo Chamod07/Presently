@@ -39,10 +39,10 @@ class SessionProvider with ChangeNotifier{
     if(userId == null) return;
 
     try{
-      await supabase.from('Session').insert({
-        'name': sessionName,
-        'presentation_type': _selectedPresentationType,
-        'presentation_goal': _selectedPresentationGoal,
+      await supabase.from('Sessions').insert({
+        'session_name': sessionName,
+        'session_type': _selectedPresentationType,
+        'session_goal': _selectedPresentationGoal,
         'user_id': userId,
       });
     }
@@ -57,7 +57,7 @@ class SessionProvider with ChangeNotifier{
 
     try{
       final response = await supabase
-          .from('Session')
+          .from('Sessions')
           .select()
           .eq('user_id', userId);
 
