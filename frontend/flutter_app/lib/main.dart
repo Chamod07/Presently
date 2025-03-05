@@ -31,8 +31,8 @@ void main() async {
 
   try {
     await supabaseService.initialize(
-      supabaseUrl: 'YOUR_ACTUAL_SUPABASE_URL', // Replace with your actual URL
-      supabaseKey: 'YOUR_ACTUAL_SUPABASE_KEY', // Replace with your actual key
+      supabaseUrl: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
+      supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MzA1MTIsImV4cCI6MjA1NjQwNjUxMn0.wH9-Y1b58RHloQj3bFSJj4gAkx3lVn4wKB9vJ5w6SZk',
     );
     print('Supabase initialized successfully');
   } catch (e) {
