@@ -29,7 +29,7 @@ app.add_middleware(
 
 app.include_router(task_assign_router, prefix="/api/task-assign", tags=["task assign"])
 app.include_router(auth.router, prefix="/api/auth")
-app.include_router(upload.router)
+app.include_router(upload.router, prefix="/api/upload")
 app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["grammar"])
 app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 
