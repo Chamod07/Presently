@@ -75,6 +75,7 @@ flutter:
   assets:
      - images/google_720255.png
      - images/SignIn_SignUp.png
+     - images/SignIn_SignUp-removebg-preview.png
      - images/OnboardGreet_AccountSetupTitle.png
      - images/Task_Pass.png
      - images/Task_Fail.png
