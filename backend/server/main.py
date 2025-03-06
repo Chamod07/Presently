@@ -14,7 +14,7 @@ load_dotenv()  # Load environment variables from .env
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+# SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 app = FastAPI(title="Presently Backend")
 

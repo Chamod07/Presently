@@ -21,6 +21,11 @@ class _AccountSetup2State extends State<AccountSetup2> {
   ];
   @override
   Widget build(BuildContext context) {
+    final args =
+    ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
+    String firstName = args?['firstName'] ?? "";
+    String lastName = args?['lastName'] ?? "";
+
     return Scaffold(
         body: SafeArea(
             child: Column(
@@ -33,32 +38,6 @@ class _AccountSetup2State extends State<AccountSetup2> {
                         width: 240),
                   ),
                   const SizedBox(height: 20),
-                  Text("How old are you?",
-                    style: TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 34,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(width: MediaQuery.of(context).size.width * 0.9,
-                    child:
-                    TextField(
-                      keyboardType: TextInputType.number, //only allows numbers
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly], //only allows numbers
-                      decoration: InputDecoration(
-                        labelText: "Age",
-                        labelStyle: TextStyle(
-                          fontFamily: "Roboto",
-                          color: Color(0xFFBDBDBD),
-                        ),
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0x26000000)
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 20),
                   Text("I am a ...",
                     style: TextStyle(
@@ -97,7 +76,7 @@ class _AccountSetup2State extends State<AccountSetup2> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/account_setup_greeting');
+                      Navigator.pushNamed(context, '/account_setup_greeting', arguments: {'firstName': firstName, 'lastName': lastName});
                     }, style: ElevatedButton.styleFrom(
                     minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                     backgroundColor: Color(0xFF7400B8),

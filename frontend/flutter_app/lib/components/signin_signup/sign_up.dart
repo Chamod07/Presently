@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '/services/supabase_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -8,9 +9,9 @@ class SignUpPage extends StatefulWidget {
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
-final supabase = Supabase.instance.client;
-
 class _SignUpPageState extends State<SignUpPage> {
+  // Use the service to access the client
+  final _supabaseService = SupabaseService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -21,20 +22,6 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? errorText;
-
-  Future<bool> checkIfEmailExists(String email) async {
-    try {
-      await supabase.auth.signInWithOtp(
-        email: email,
-      );
-      return true; // If no error is thrown, email exists
-    } catch (e) {
-      if (e.toString().contains('Email rate limit exceeded')) {
-        return true; // Email exists but rate limited
-      }
-      return false; // Email doesn't exist
-    }
-  }
 
   Future<void> signUpWithEmail() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -49,42 +36,17 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      // First check if email exists
-      final emailExists = await checkIfEmailExists(_emailController.text.trim());
-
-      if (emailExists) {
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Account Already Exists'),
-                content: const Text('An account with this email already exists. Please sign in instead.'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/sign_in');
-                    },
-                    child: const Text('Go to Sign In'),
-                  ),
-                ],
-              );
-            },
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-      }
-
-      // If email doesn't exist, proceed with signup
-      final AuthResponse res = await supabase.auth.signUp(
+      // Use the client from the service
+      final AuthResponse res = await _supabaseService.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      if (res.session == null) {
+      if (res.session != null) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/account_setup_1');
+        }
+      } else {
         if (mounted) {
           _emailController.clear();
           _passwordController.clear();
@@ -96,12 +58,12 @@ class _SignUpPageState extends State<SignUpPage> {
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('Verification Required'),
-                content: const Text('A verification email has been sent. Please verify your email to complete Sign up'),
+                content: const Text('A verification email has been sent. Please verify your email to complete sign-up.'),
                 actions: [
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/sign_in');
+                      Navigator.pushReplacementNamed(context, '/account_setup_title');
                     },
                     child: const Text('OK'),
                   ),
@@ -109,10 +71,6 @@ class _SignUpPageState extends State<SignUpPage> {
               );
             },
           );
-        }
-      } else {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
         }
       }
     } catch (e) {
@@ -191,7 +149,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: MediaQuery.of(context).size.width * 0.9,
                 child: TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Enter your password",
                     labelStyle: TextStyle(
@@ -200,11 +158,11 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
-                          _obscureConfirmPassword = !_obscurePassword;
+                          _obscurePassword = !_obscurePassword;
                         });
                       },
                     ),
@@ -228,7 +186,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: MediaQuery.of(context).size.width * 0.9,
                 child: TextField(
                   controller: _confirmPasswordController,
-                  obscureText: true,
+                  obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: "Confirm password",
                     labelStyle: TextStyle(
@@ -237,11 +195,11 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
-                          _obscurePassword = !_obscurePassword;
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
                         });
                       },
                     ),
