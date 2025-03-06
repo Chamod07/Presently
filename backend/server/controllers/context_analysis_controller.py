@@ -1,17 +1,16 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends, Query
+from services.auth_service import get_current_user
 from services.gemini_context_service import GeminiContextAnalyzer
 import uuid
 from models.user_report_model import UserReport
 from services import storage_service
-from fastapi import Query
 import datetime
-import uuid
 from fastapi import status
 
 router = APIRouter()
 analyzer = GeminiContextAnalyzer()
 
-@router.post("/analyze")
+@router.post("/analyze", dependencies=[Depends(get_current_user)])
 async def analyze_presentation(request: Request):
     """Analyze a presentation transcription and store results in Supabase"""
     try:
@@ -19,15 +18,17 @@ async def analyze_presentation(request: Request):
         transcription = body.get("transcription")
         report_id = body.get("reportId")
         topic = body.get("topic", "")
-        
+        user = request.state.user
+        user_id = user.id
+
         if not transcription or not report_id:
             raise HTTPException(status_code=400, detail="transcription and reportId are required")
-        
+
         try:
             uuid.UUID(report_id, version=4)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid reportId format")
-        
+
         analysis_results = analyzer.analyze_presentation(transcription, topic)
 
         user_report = UserReport(
@@ -37,7 +38,7 @@ async def analyze_presentation(request: Request):
             subScoresContext=analysis_results["content_analysis"],
             weaknessTopicsContext=analysis_results["weakness_topics"],
             createdAt=datetime.datetime.now().isoformat(),
-            userId="130761fb-86ba-4a34-8bc3-0414c9ef91e6"
+            userId=user_id
         )
         data = user_report.dict()
 
@@ -69,19 +70,19 @@ async def analyze_presentation(request: Request):
         print(f"\nError during analysis: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/score")
-async def get_overall_score(report_id: str = Query(..., title="Report ID")):
+@router.get("/score", dependencies=[Depends(get_current_user)])
+async def get_overall_score(request: Request, report_id: str = Query(..., title="Report ID")):
     """Get the overall score of a specific analysis by Report ID"""
     response = storage_service.supabase.table("UserReport").select("scoreContext").eq("reportId", report_id).execute()
 
     if not response.data:
         raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
-
+    user = request.state.user
     overall_score = response.data[0]["scoreContext"]
     print("\nReturning Overall Score:", overall_score)
-    return {"overall_score": overall_score}
+    return {"overall_score": overall_score, "user" : user}
 
-@router.get("/sub_scores")
+@router.get("/sub_scores", dependencies=[Depends(get_current_user)])
 async def get_summery_score(report_id: str = Query(..., title="Report ID")):
     """Get the content analysis scores of a specific analysis by Report ID"""
     response = storage_service.supabase.table("UserReport").select("subScoresContext").eq("reportId", report_id).execute()
@@ -93,7 +94,7 @@ async def get_summery_score(report_id: str = Query(..., title="Report ID")):
     print("\nReturning Content Analysis:", sub_scores_context)
     return {"content_analysis": sub_scores_context}
 
-@router.get("/weaknesses")
+@router.get("/weaknesses", dependencies=[Depends(get_current_user)])
 async def get_weaknesses(report_id: str = Query(..., title="Report ID")):
     """Get the weakness analysis from a specific analysis by Report ID"""
     response = storage_service.supabase.table("UserReport").select("weaknessTopicsContext").eq("reportId", report_id).execute()
@@ -106,7 +107,7 @@ async def get_weaknesses(report_id: str = Query(..., title="Report ID")):
     return {"weakness_topics": weakness_topics_context}
 
 
-@router.get("/reports")
+@router.get("/reports", dependencies=[Depends(get_current_user)])
 async def list_reports(limit: int = Query(10, title="Limit"), offset: int = Query(0, title="Offset")):
     """List all reports with pagination"""
     response = storage_service.supabase.table("UserReport").select("*").range(offset, offset + limit - 1).execute()
@@ -117,7 +118,7 @@ async def list_reports(limit: int = Query(10, title="Limit"), offset: int = Quer
     return response.data
 
 
-@router.delete("/report/delete/{reportId}")
+@router.delete("/report/delete/{reportId}", dependencies=[Depends(get_current_user)])
 async def delete_report(reportId: str):
     """Remove a report"""
     response = storage_service.supabase.table("UserReport").delete().eq("reportId", reportId).execute()
@@ -129,7 +130,7 @@ async def delete_report(reportId: str):
 
     #confirmation needs to be added.
 
-@router.get("/health")
+@router.get("/health",dependencies=[Depends(get_current_user)])
 async def health_check_context():
     """Check if the API is running"""
     return {"status": "healthy"}
