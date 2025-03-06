@@ -42,6 +42,10 @@ dependencies:
   google_mlkit_pose_detection: ^0.10.0
   google_mlkit_commons: ^0.6.1
   path: ^1.8.3
+  flutter_dotenv: ^5.2.1
+  http: ^1.2.0
+  flutter_secure_storage: ^8.1.0
+
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
@@ -81,6 +85,7 @@ flutter:
      - images/Body_Language_Summary.png
      - images/Audio_Summary.png
      - images/Emotion_Summary.png
+     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

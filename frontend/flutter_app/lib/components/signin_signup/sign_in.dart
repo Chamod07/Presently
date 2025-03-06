@@ -3,7 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+  const SignInPage({Key? key}) : super(key: key);
 
   @override
   State<SignInPage> createState() => _SignInPageState();
@@ -18,13 +18,51 @@ class _SignInPageState extends State<SignInPage> {
   bool _obscurePassword = true;
   bool emailError = false;
   bool passwordError = false;
-  String ? errorText;
+  String? errorText;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<bool> isFirstTimeLogin(String userId) async {
+    try {
+      final userResponse = await supabase
+          .from('auth.users')
+          .select('last_sign_in_at')
+          .eq('id', userId)
+          .single();
+
+      return userResponse['last_sign_in_at'] == null;
+    } catch (e) {
+      print('Error checking first-time login status: $e');
+      return true;
+    }
+  }
+
+  void navigateAfterLogin(String userId) async {
+    if (!mounted) return;
+
+    try {
+      final isFirstLogin = await isFirstTimeLogin(userId);
+
+      if (isFirstLogin) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/account_setup_title');
+        }
+      } else {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } catch (e) {
+      print('Navigation error: $e');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
   }
 
   Future<void> signInWithEmail() async {
@@ -48,18 +86,15 @@ class _SignInPageState extends State<SignInPage> {
       );
 
       if (res.session != null) {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
+        final userId = res.user!.id;
+        navigateAfterLogin(userId);
       } else {
         throw 'Invalid credentials';
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorText = e.toString().contains('invalid credentials')
-              ? 'Invalid email or password'
-              : 'An error occurred during sign in';
+          errorText = e.toString();
         });
       }
     } finally {
@@ -104,7 +139,8 @@ class _SignInPageState extends State<SignInPage> {
         );
 
         if (response.session != null && mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          final userId = response.user!.id;
+          navigateAfterLogin(userId);
         }
       }
     } catch (e) {
@@ -126,6 +162,7 @@ class _SignInPageState extends State<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Rest of your build method remains the same
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -148,7 +185,7 @@ class _SignInPageState extends State<SignInPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              if(errorText != null)
+              if (errorText != null)
                 Text(
                   errorText!,
                   style: const TextStyle(
@@ -169,20 +206,19 @@ class _SignInPageState extends State<SignInPage> {
                       color: Color(0xFFBDBDBD),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : const Color(0x26000000)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: emailError ? Colors.red :  Color(0x26000000),
-                      ),
                       borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : const Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: emailError ? Colors.red : Color(0xFF7400B8),
-                      ),
                       borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : const Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -199,31 +235,30 @@ class _SignInPageState extends State<SignInPage> {
                       fontFamily: "Roboto",
                       color: Color(0xFFBDBDBD),
                     ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: passwordError ? Colors.red : const Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: passwordError ? Colors.red : const Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: passwordError ? Colors.red : const Color(0xFF7400B8)),
+                    ),
+                    suffixIcon: GestureDetector(
+                      onTap: () {
                         setState(() {
                           _obscurePassword = !_obscurePassword;
                         });
                       },
-                    ),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: passwordError ? Colors.red : Color(0x26000000),
+                      child: Icon(
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: passwordError ? Colors.red : Color(0xFF7400B8),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
@@ -232,7 +267,8 @@ class _SignInPageState extends State<SignInPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signInWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(380, 50),
+                  minimumSize:
+                  Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: const Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -250,48 +286,38 @@ class _SignInPageState extends State<SignInPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(child:
-                  Divider(
-                    color: const Color(0xFFF5F5F7),
-                    thickness: 1,
-                    endIndent: 10,
-                  )
-                  ),
-                  Text('or',
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontFamily: 'Roboto',
+              GestureDetector(
+                onTap: () {
+                  signInWithGoogle();
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.grey,
+                      width: 1,
                     ),
                   ),
-                  Expanded(child:
-                  Divider(
-                    color: const Color(0xFFF5F5F7),
-                    thickness: 1,
-                    indent: 10,
-                  )
+                  padding: const EdgeInsets.all(12),
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'images/google_720255.png',
+                        height: 24,
+                        width: 24,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Sign in with Google',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : signInWithGoogle,
-                icon: Image.asset('images/google_720255.png',
-                    height: 20, width: 20),
-                label: const Text(
-                  "Continue with Google",
-                  style: TextStyle(
-                    fontFamily: 'Roboto',
-                    color: Color(0xFF333333),
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(380, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  side: const BorderSide(color: Color(0x26000000)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -312,7 +338,6 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -320,3 +345,5 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 }
+
+

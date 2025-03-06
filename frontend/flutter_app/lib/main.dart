@@ -19,21 +19,29 @@ import 'package:flutter_app/components/onboarding/account_setup_greeting.dart';
 import 'package:flutter_app/components/onboarding/account_setup_title.dart';
 import 'package:flutter_app/components/onboarding/account_setup_1.dart';
 import 'package:flutter_app/components/onboarding/account_setup_2.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 late List<CameraDescription> cameras;
 
 void main() async {
+  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
   await Supabase.initialize(
-      url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njk5MTYsImV4cCI6MjA1NDE0NTkxNn0.oLOOe0DcRv9kdAyGwiM-3LRW0-nyz3X-z7ufOVFtsJw'
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
+
   runApp(
-      ChangeNotifierProvider(
-        create: (context) => SessionProvider(),
-        child: MyApp(),
-  ));
+    ChangeNotifierProvider(
+      create: (context) => SessionProvider(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -65,7 +73,6 @@ class MyApp extends StatelessWidget {
         '/account_setup_2': (context) => AccountSetup2(),
         '/task_pass': (context) => TaskPassed(),
         '/task_failed': (context) => TaskFailed(),
-
       },
     );
   }
