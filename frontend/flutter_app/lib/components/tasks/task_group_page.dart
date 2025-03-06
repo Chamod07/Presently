@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'task_list_page.dart'; // Import the TaskDetailPage
-import 'task_group.dart'; // Import the TaskGroup model
+import 'task_list_page.dart';
+import 'task_group.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/services/task_assign/task_group_service.dart';
 
 class TaskGroupPage extends StatefulWidget {
   const TaskGroupPage({Key? key}) : super(key: key);
@@ -16,45 +17,49 @@ class TaskGroupPage extends StatefulWidget {
 
 class _TaskGroupPageState extends State<TaskGroupPage> {
   File? _profileImage;
+  List<TaskGroup> taskGroups = [];
+  bool isLoading = true;
+  String? errorMessage;
 
-  final List<TaskGroup> taskGroups = [
-    TaskGroup(
-      title: "Machine Learning",
-      taskCount: 4,
-      progress: 0.65,
-      tasks: [
-        Task(title: "Power Pose Challenge", isCompleted: true),
-        Task(title: "Smooth Steady Stare", isCompleted: false),
-        Task(title: "Smooth Talker", isCompleted: false),
-        Task(title: "Filler Free Zone", isCompleted: false),
-      ],
-    ),
-    TaskGroup(
-      title: "Psychology Traits",
-      taskCount: 6,
-      progress: 0.50,
-      tasks: [
-        Task(title: " ", isCompleted: true),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-      ],
-    ),
-    TaskGroup(
-      title: "Development Behavior",
-      taskCount: 5,
-      progress: 0.40,
-      tasks: [
-        Task(title: " ", isCompleted: true),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-        Task(title: " ", isCompleted: false),
-      ],
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchTaskGroups();
+  }
+
+  Future<void> _fetchTaskGroups() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final TaskGroupService service = TaskGroupService();
+
+      try {
+        final fetchedTaskGroups = await service.getTaskGroups();
+        setState(() {
+          taskGroups = fetchedTaskGroups;
+          isLoading = false;
+        });
+      } catch (e) {
+        // This provides better error messaging to the user
+        setState(() {
+          taskGroups = []; // Clear any existing data
+          isLoading = false;
+          errorMessage =
+              'Unable to connect to the server. Please try again later.';
+        });
+        print('Error in fetch: $e');
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'An unexpected error occurred.';
+        isLoading = false;
+      });
+      print('Unexpected error: $e');
+    }
+  }
 
   Future<void> _pickProfileImage() async {
     final picker = ImagePicker();
@@ -67,8 +72,8 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
   }
 
   double _calculateOverallProgress() {
-    return taskGroups.fold<double>(
-        0.0, (sum, group) => sum + group.progress) /
+    if (taskGroups.isEmpty) return 0.0;
+    return taskGroups.fold<double>(0.0, (sum, group) => sum + group.progress) /
         taskGroups.length;
   }
 
@@ -213,7 +218,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
                 backgroundImage: _profileImage != null
                     ? FileImage(_profileImage!)
                     : const AssetImage('assets/default_profile.png')
-                as ImageProvider,
+                        as ImageProvider,
                 radius: 20,
               ),
             ),
@@ -229,50 +234,91 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
             const SizedBox(height: 16),
             // Task Groups Header with Count Circle
             Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Task Groups",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF7400B8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      "${taskGroups.length}",
-                      style: const TextStyle(
-                        color: Colors.white,
+                Row(
+                  children: [
+                    const Text(
+                      "Task Groups",
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Color(0xFF7400B8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          "${taskGroups.length}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                // Add refresh button
+                IconButton(
+                  icon: Icon(Icons.refresh),
+                  onPressed: _fetchTaskGroups,
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            // Task Groups List
+            // Task Groups List with loading indicator
             Expanded(
-              child: ListView.builder(
-                itemCount: taskGroups.length,
-                itemBuilder: (context, index) {
-                  return _buildTaskGroupCard(taskGroups[index]);
-                },
-              ),
+              child: _buildTaskGroupsList(),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: const NavBar (selectedIndex: 0),
+      bottomNavigationBar: const NavBar(selectedIndex: 0),
     );
+  }
+
+  Widget _buildTaskGroupsList() {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    } else if (errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              errorMessage!,
+              style: TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchTaskGroups,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    } else if (taskGroups.isEmpty) {
+      return const Center(
+        child: Text('No task groups available'),
+      );
+    } else {
+      return ListView.builder(
+        itemCount: taskGroups.length,
+        itemBuilder: (context, index) {
+          return _buildTaskGroupCard(taskGroups[index]);
+        },
+      );
+    }
   }
 }

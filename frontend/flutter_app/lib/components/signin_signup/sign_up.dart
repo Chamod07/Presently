@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '/services/supabase_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key});
@@ -8,9 +9,9 @@ class SignUpPage extends StatefulWidget {
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
-final supabase = Supabase.instance.client;
-
 class _SignUpPageState extends State<SignUpPage> {
+  // Use the service to access the client
+  final _supabaseService = SupabaseService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -25,7 +26,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final RegExp _emailRegExp = RegExp(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
   );
-
   Future<void> signUpWithEmail() async {
     bool hasErrors = false;
 
@@ -113,7 +113,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/sign_in');
+                      Navigator.pushReplacementNamed(context, '/account_setup_title');
                     },
                     child: const Text('OK'),
                   ),
@@ -255,6 +255,16 @@ class _SignUpPageState extends State<SignUpPage> {
                       color: Color(0xFFBDBDBD),
                       fontFamily: "Roboto",
                     ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
@@ -304,6 +314,16 @@ class _SignUpPageState extends State<SignUpPage> {
                     labelStyle: const TextStyle(
                       color: Color(0xFFBDBDBD),
                       fontFamily: "Roboto",
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '/services/supabase_service.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
@@ -9,9 +10,9 @@ class SignInPage extends StatefulWidget {
   State<SignInPage> createState() => _SignInPageState();
 }
 
-final supabase = Supabase.instance.client;
-
 class _SignInPageState extends State<SignInPage> {
+  // Use the service to access the client
+  final _supabaseService = SupabaseService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -80,7 +81,8 @@ class _SignInPageState extends State<SignInPage> {
     });
 
     try {
-      final AuthResponse res = await supabase.auth.signInWithPassword(
+      // Use the client from the service
+      final AuthResponse res = await _supabaseService.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -132,7 +134,8 @@ class _SignInPageState extends State<SignInPage> {
       final idToken = googleAuth.idToken;
 
       if (accessToken != null && idToken != null) {
-        final response = await supabase.auth.signInWithIdToken(
+        // Use the client from the service
+        final response = await _supabaseService.client.auth.signInWithIdToken(
           provider: OAuthProvider.google,
           idToken: idToken,
           accessToken: accessToken,
@@ -162,7 +165,6 @@ class _SignInPageState extends State<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Rest of your build method remains the same
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -267,8 +269,7 @@ class _SignInPageState extends State<SignInPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signInWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize:
-                  Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: const Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -288,7 +289,7 @@ class _SignInPageState extends State<SignInPage> {
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
-                  signInWithGoogle();
+                  signInWithGoogle();`
                 },
                 child: Container(
                   decoration: BoxDecoration(
@@ -298,25 +299,32 @@ class _SignInPageState extends State<SignInPage> {
                       width: 1,
                     ),
                   ),
-                  padding: const EdgeInsets.all(12),
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'images/google_720255.png',
-                        height: 24,
-                        width: 24,
-                      ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'Sign in with Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                    ],
+
+                  Expanded(child:
+                  Divider(
+                    color: const Color(0xFFF5F5F7),
+                    thickness: 1,
+                    indent: 10,
+                  )
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : signInWithGoogle,
+                icon: Image.asset('images/google_720255.png',
+                    height: 20, width: 20),
+                label: const Text(
+                  "Continue with Google",
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),

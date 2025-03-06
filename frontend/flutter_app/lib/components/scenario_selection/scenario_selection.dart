@@ -12,6 +12,7 @@ class ScenarioSelection extends StatefulWidget {
 class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
   String? _selectedPresentationType;
   String? _selectedPresentationGoal;
+  String? _selectedName;
 
 
   @override
@@ -28,7 +29,7 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,16 +188,43 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
                   ],
                 ),
               ),
-              Spacer(),
+
+
+              SizedBox(height: 16.0),
+              Text('3. Please provide a name for your session.',
+                style: TextStyle(fontSize: 17, fontFamily: 'Roboto'),
+              ),
+              SizedBox(height: 8.0),
+              Container(
+                padding: EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    hintText: 'Enter session name',
+                    border: InputBorder.none,
+                  ),
+                  style: TextStyle(fontFamily: 'Roboto', fontSize: 17),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedName = value; // Store the input value
+                    });
+                  },
+                ),
+              ),
+
               ElevatedButton(
                 onPressed: () {
                   // Handle form submission and navigation to the next screen
                   print('Selected presentation type: $_selectedPresentationType');
                   print('Selected presentation goal: $_selectedPresentationGoal');
+                  print('Selected presentation goal: $_selectedName');
                   Provider.of<SessionProvider>(context, listen: false)
-                      .startSession(_selectedPresentationType!, _selectedPresentationGoal!);
+                      .startSession(_selectedPresentationType!, _selectedPresentationGoal!, _selectedName!);
                   Provider.of<SessionProvider>(context, listen: false)
-                      .addSession('$_selectedPresentationType - $_selectedPresentationGoal'); // Add session to the list
+                      .addSession('$_selectedName'); // Add session to the list
                   Navigator.pushNamed(context, '/camera');
                 }, style: ElevatedButton.styleFrom(
                 minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),

@@ -13,13 +13,13 @@ import 'package:flutter_app/components/onboarding/welcome.dart';
 import 'package:flutter_app/components/signin_signup/sign_in.dart';
 import 'package:flutter_app/components/signin_signup/sign_up.dart';
 import 'package:flutter_app/components/tasks/task_passed.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/components/settings/settings.dart';
 import 'package:flutter_app/components/onboarding/account_setup_greeting.dart';
 import 'package:flutter_app/components/onboarding/account_setup_title.dart';
 import 'package:flutter_app/components/onboarding/account_setup_1.dart';
 import 'package:flutter_app/components/onboarding/account_setup_2.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '/services/supabase_service.dart';
 
 late List<CameraDescription> cameras;
 
@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => SummaryPage(),
         '/camera': (context) => CameraPage(),
         '/scenario_sel': (context) => ScenarioSelection(),
-        '/task_group_page' : (context) => TaskGroupPage(),
+        '/task_group_page': (context) => TaskGroupPage(),
         '/settings': (context) => SettingsPage(),
         '/about': (context) => AboutPage(),
         '/account_setup_greeting': (context) => AccountSetupGreeting(),

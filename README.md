@@ -15,9 +15,9 @@
 
 **Client:** Flutter, Dart
 
-**Server:** Node, Python
+**Server:** FastAPI, Python
 
-**Infrastructure:** Firebase
+**Infrastructure:** Supabase
 
 ## 📥 Getting Started
 
@@ -57,27 +57,20 @@ cd backend
 2. Install dependencies:
 
 ```bash
-npm install
+pip install fastapi uvicorn
 ```
 
 3. Start the development server:
 
 ```bash
-npm start
+uvicorn main:app --reload
 ```
 
-### 4. Configure Firebase
-1. Create a Firebase project in the [Firebase Console](https://console.firebase.google.com/).
-2. Add an Android app to the project.
-3. Replace the `google-services.json` (Android) files in the frontend directory.
-4. Update backend Firebase credentials:
-+ Set up Firebase Admin SDK and replace keys in `backend/config/firebaseConfig.js`.
-
-### 5. Run the Application
+### 4. Run the Application
 Ensure both the frontend and backend are running:
 
 + Use `flutter run` for the frontend.
-+ Use `npm start` for the backend.
++ Use `uvicorn main:app` for the backend.
 ## 👩‍💻 Workflow
 #### GitHub Workflow
 1. **Clone the repository:**
