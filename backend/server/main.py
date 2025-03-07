@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from controllers.task_assign_controller import router as task_assign_router
 from controllers.context_analysis_controller import router as context_router
 from controllers.grammar_analysis_controller import router as grammar_router
-from routers import auth, upload
+from routers import auth, upload, secure_routes
+
 
 load_dotenv()  # Load environment variables from .env
 
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(task_assign_router, prefix="/api/task-assign", tags=["task assign"])
 app.include_router(auth.router, prefix="/api/auth")
 app.include_router(upload.router)
+app.include_router(secure_routes.router, prefix="/api") #this endpoint is to test the jwt auth
 app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["grammar"])
 app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 

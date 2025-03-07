@@ -13,7 +13,7 @@ class GeminiGrammarAnalyzer:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
         
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-2.0-pro-exp-02-05')
 
     def analyze_grammar(self, transcription: str) -> Dict[str, Any]:
         """
