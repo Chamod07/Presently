@@ -39,7 +39,7 @@ class _AccountSetup2State extends State<AccountSetup2> {
                   ),
                   const SizedBox(height: 20),
                   const SizedBox(height: 20),
-                  Text("I am a ...",
+                  Text("Tell us more about you!",
                     style: TextStyle(
                       fontFamily: 'Roboto',
                       fontSize: 34,
@@ -50,7 +50,7 @@ class _AccountSetup2State extends State<AccountSetup2> {
                     child:
                     DropdownButtonFormField(
                       decoration: InputDecoration(
-                        labelText: "Select one from the given list",
+                        labelText: "I would describe myself as...",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -84,7 +84,7 @@ class _AccountSetup2State extends State<AccountSetup2> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                    child: const Text("Continue",
+                    child: const Text("Finish Setup",
                       style: TextStyle(fontSize: 17,
                           color: Colors.white,
                           fontFamily: 'Roboto'),

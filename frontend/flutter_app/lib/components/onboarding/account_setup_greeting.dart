@@ -8,7 +8,7 @@ class AccountSetupGreeting extends StatelessWidget{
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
     String firstName = args?['firstName'] ?? "User";
     String lastName = args?['lastName'] ?? "";
-    String displayName = lastName.isNotEmpty ? "$firstName $lastName" : firstName;
+    String displayName = lastName.isNotEmpty ? "$firstName" : firstName;
 
     return Scaffold(
       backgroundColor: Color(0x96B843FE),
@@ -22,25 +22,6 @@ class AccountSetupGreeting extends StatelessWidget{
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: Padding(
-                          padding: const EdgeInsets.all(2.0),
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/home');
-                            },
-                            child: const Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontFamily: 'Roboto',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                       const SizedBox(height: 40.0),
                       Text(
                         "Hello $displayName",
@@ -62,7 +43,7 @@ class AccountSetupGreeting extends StatelessWidget{
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 32.0),
                         child: Text(
-                          "Ready to take your presentation skills to the next level?",
+                          "Your journey to becoming a confident and captivating presenter starts now.",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white,
@@ -87,7 +68,7 @@ class AccountSetupGreeting extends StatelessWidget{
                             Navigator.pushNamed(context, '/home');
                           },
                           child: const Text(
-                            "Get Started",
+                            "I am ready!",
                             style: TextStyle(
                               color: Color(0xDB7400B8),
                               fontSize: 17,
