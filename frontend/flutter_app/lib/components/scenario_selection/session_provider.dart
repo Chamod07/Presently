@@ -63,7 +63,7 @@ class SessionProvider with ChangeNotifier {
           .eq('user_id', userId);
 
       List<dynamic> data = response as List<dynamic>;
-      List<String> dbSessions = data.map((s) => s['session_name'] as String).toList();
+      List<String> dbSessions = data.map((s) => s['name'] as String).toList();
 
       for (String session in dbSessions) {
         if (!_sessions.contains(session)) {

@@ -42,7 +42,6 @@ dependencies:
   google_mlkit_pose_detection: ^0.10.0
   google_mlkit_commons: ^0.6.1
   path: ^1.8.3
-  flutter_settings_screens: ^0.3.4
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
