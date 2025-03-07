@@ -95,6 +95,7 @@ class _CameraViewState extends State<CameraView> {
           _detectionViewModeToggle(),
           _zoomControl(),
           _exposureControl(),
+          _summaryButton(), // Add the summary button to the stack
         ],
       ),
     );
@@ -251,6 +252,45 @@ class _CameraViewState extends State<CameraView> {
           ),
         )
       ]),
+    ),
+  );
+
+  // New method to create the summary button
+  Widget _summaryButton() => Positioned(
+    bottom: 80, // Position it above the bottom controls
+    left: 0,
+    right: 0,
+    child: Center(
+      child: SizedBox(
+        height: 60.0,
+        width: 200.0,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF7400B8),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+          onPressed: () {
+            // Stop the camera feed and navigate to the summary page
+            _stopLiveFeed().then((_) {
+              Navigator.pushReplacementNamed(context, '/summary');
+            });
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.assessment, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'View Summary',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 

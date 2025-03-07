@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/summary/graph_display.dart';
+import 'package:flutter_app/providers/report_provider.dart';
+import 'package:provider/provider.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -10,7 +12,7 @@ class SummaryPage extends StatefulWidget {
 }
 
 class _SummaryPageState extends State<SummaryPage> {
-  bool _showTasks = true;
+  final PageController _pageController = PageController();
 
   @override
   Widget build(BuildContext context) {
@@ -19,222 +21,96 @@ class _SummaryPageState extends State<SummaryPage> {
         title: const Text("Summary"),
         centerTitle: true,
       ),
-      body: Column(
+      body: PageView(
+        controller: _pageController,
         children: [
-          SizedBox(height: 50),
-          Center(child:
-            const GraphDisplay(),
-          ),
-          SizedBox(height: 50),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ContextSummary(),
+          // GrammarSummary(), // Placeholder
+          // BodyLanguageSummary(), // Placeholder
+        ],
+      ),
+      bottomNavigationBar: const NavBar(selectedIndex: 0),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+}
+
+class ContextSummary extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => ReportProvider()..fetchReportData(),
+      child: Consumer<ReportProvider>(
+        builder: (context, provider, _) {
+          if (provider.loading) {
+            return Center(child: CircularProgressIndicator());
+          } else if (provider.errorMessage.isNotEmpty) {
+            return Center(child: Text(provider.errorMessage));
+          } else {
+            return Column(
               children: [
-                _buildToggleButton(
-                  text: "Tasks",
-                  isActive: _showTasks,
-                  onPressed: () {
-                    setState(() {
-                      _showTasks = true;
-                    });
-                  },
+                SizedBox(height: 50),
+                Center(
+                  child: GraphDisplay(score: (provider.report.score ?? 0) / 10),
                 ),
-                const SizedBox(width: 16),
-                _buildToggleButton(
-                  text: "Resources",
-                  isActive: !_showTasks,
-                  onPressed: () {
-                    setState(() {
-                      _showTasks = false;
-                    });
-                  },
+                SizedBox(height: 50),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: provider.report.weaknesses?.length ?? 0,
+                    itemBuilder: (context, index) {
+                      final weakness = provider.report.weaknesses![index];
+                      return Card(
+                        child: ExpansionTile(
+                          title: Text(weakness.topic ?? 'Unknown Weakness'),
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  if (weakness.examples != null)
+                                    for (String example in weakness.examples!)
+                                      Text('- $example'),
+                                  const SizedBox(height: 8),
+                                  const Text('Suggestions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  if (weakness.suggestions != null)
+                                    for (String suggestion in weakness.suggestions!)
+                                      Text('- $suggestion'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
-            ),
-          ),
-          Expanded(
-            child: _showTasks ? const TasksTab() : const ResourcesTab(),
-          ),
-        ],
-      ),
-      bottomNavigationBar: const NavBar (selectedIndex: 0,),
-    );
-  }
-
-  Widget _buildToggleButton({
-    required String text,
-    required bool isActive,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isActive ? Color(0xFF7400B8): Colors.grey[300],
-        foregroundColor: isActive ? Colors.white : Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            );
+          }
+        },
       ),
     );
   }
 }
 
-class TasksTab extends StatelessWidget {
-  const TasksTab({super.key});
-
+// Placeholder widgets for Grammar and Body Language
+class GrammarSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView(
-        children: [
-          ExpandableTile(
-            title: "Appeared Uneasy",
-            subtitle:
-            "It looks like you might have felt a bit nervous during practice. That's okay! Just take things one step at a time, and remember to breathe. You've got this!",
-          ),
-          const SizedBox(height: 10),
-          ExpandableTile(
-            title: "Lack of Eye Contact",
-            subtitle:
-            "Don't be afraid to look your audience or the camera in the eye. It shows confidence and helps you connect with them on a deeper level.",
-          ),
-          const SizedBox(height: 10),
-          ExpandableTile(
-            title: "Overuse of Fillers",
-            subtitle: "Engage in impromptu speaking exercises.",
-          ),
-        ],
-      ),
-    );
+    return Center(child: Text('Grammar Summary'));
   }
 }
 
-class ResourcesTab extends StatelessWidget {
-  const ResourcesTab({super.key});
-
+class BodyLanguageSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView(
-        children: [
-          _buildRoundedTile(
-            title: "Body Language for Presentations",
-            subtitle: "Communication Coach Alexander Lyon",
-            icon: Icons.video_library,
-          ),
-          const SizedBox(height: 10),
-          _buildRoundedTile(
-            title: "Body Language Tips",
-            subtitle: "Master the art of non-verbal communication.",
-            icon: Icons.video_library,
-          ),
-          const SizedBox(height: 10),
-          _buildRoundedTile(
-            title: "Voice Modulation Practice",
-            subtitle: "Enhance your vocal variety.",
-            icon: Icons.video_library,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoundedTile({
-    required String title,
-    required String subtitle,
-    IconData? icon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: icon != null ? Icon(icon) : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-    );
-  }
-}
-
-class ExpandableTile extends StatefulWidget {
-  final String title;
-  final String subtitle;
-
-  const ExpandableTile({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  _ExpandableTileState createState() => _ExpandableTileState();
-}
-
-class _ExpandableTileState extends State<ExpandableTile> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(widget.title),
-            trailing: IconButton(
-              icon: Icon(
-                _isExpanded ? Icons.remove : Icons.add,
-                color: Colors.purple,
-              ),
-              onPressed: () {
-                setState(() {
-                  _isExpanded = !_isExpanded;
-                });
-              },
-            ),
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          ),
-          if (_isExpanded)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                widget.subtitle,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-        ],
-      ),
-    );
+    return Center(child: Text('Body Language Summary'));
   }
 }
