@@ -13,7 +13,6 @@ import 'package:flutter_app/components/onboarding/welcome.dart';
 import 'package:flutter_app/components/signin_signup/sign_in.dart';
 import 'package:flutter_app/components/signin_signup/sign_up.dart';
 import 'package:flutter_app/components/tasks/task_passed.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/components/settings/settings.dart';
 import 'package:flutter_app/components/onboarding/account_setup_greeting.dart';
 import 'package:flutter_app/components/onboarding/account_setup_title.dart';
@@ -21,20 +20,32 @@ import 'package:flutter_app/components/onboarding/account_setup_1.dart';
 import 'package:flutter_app/components/onboarding/account_setup_2.dart';
 import 'package:flutter_app/screens/splash_screen.dart';
 import 'package:flutter_app/screens/error_page.dart';
+import '/services/supabase_service.dart';
 
 late List<CameraDescription> cameras;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-  await Supabase.initialize(
-      url: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MzA1MTIsImV4cCI6MjA1NjQwNjUxMn0.wH9-Y1b58RHloQj3bFSJj4gAkx3lVn4wKB9vJ5w6SZk',
+
+  // Initialize the Supabase service before running the app
+  final supabaseService = SupabaseService();
+
+  try {
+    await supabaseService.initialize(
+      supabaseUrl: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
+      supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MzA1MTIsImV4cCI6MjA1NjQwNjUxMn0.wH9-Y1b58RHloQj3bFSJj4gAkx3lVn4wKB9vJ5w6SZk',
       authOptions: const FlutterAuthClientOptions(
         authFlowType: AuthFlowType.pkce,
         autoRefreshToken: true,
       ));
+    );
+    print('Supabase initialized successfully');
+  } catch (e) {
+    print('Error initializing Supabase: $e');
+    // Handle initialization error appropriately
+  }
+  
   runApp(ChangeNotifierProvider(
     create: (context) => SessionProvider(),
     child: const MyApp(),

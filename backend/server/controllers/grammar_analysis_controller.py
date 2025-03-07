@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from services.gemini_grammar_service import GeminiGrammarAnalyzer
 from models.user_report_model import UserReport
 from services import storage_service
@@ -6,12 +6,13 @@ from fastapi import Query
 import datetime
 import uuid
 from fastapi import status
+from services.auth_service import get_current_user_id
 
 router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
 
 @router.post("/analyze")
-async def analyze_grammar(request: Request):
+async def analyze_grammar(request: Request, user_id: str = Depends(get_current_user_id)):
     """Analyze text for grammatical correctness and store results"""
     try:
         body = await request.json()
@@ -33,7 +34,7 @@ async def analyze_grammar(request: Request):
             reportId=report_id,
             reportTopic=topic,
             createdAt=datetime.datetime.now().isoformat(),
-            userId="130761fb-86ba-4a34-8bc3-0414c9ef91e6",  # Use the provided userId
+            userId=user_id,  # Use the user_id from auth instead of hardcoded value
             scoreGrammar=analysis_results["grammar_score"],
             subScoresGrammar=analysis_results["analysis"],
             weaknessTopicsGrammar=analysis_results["identified_issues"]
@@ -72,7 +73,7 @@ async def analyze_grammar(request: Request):
 
 
 @router.get("/score")
-async def get_grammar_score(report_id: str = Query(..., title="Report ID")):
+async def get_grammar_score(report_id: str = Query(..., title="Report ID"), user_id: str = Depends(get_current_user_id)):
     """Get the overall grammar score"""
     response = storage_service.supabase.table("UserReport").select("scoreGrammar").eq("reportId", report_id).execute()
 
@@ -87,7 +88,7 @@ async def get_grammar_score(report_id: str = Query(..., title="Report ID")):
 
 
 @router.get("/sub_scores")
-async def get_detailed_analysis(report_id: str = Query(..., title="Report ID")):
+async def get_detailed_analysis(report_id: str = Query(..., title="Report ID"), user_id: str = Depends(get_current_user_id)):
     """Get detailed analysis scores for grammar, structure, and word choice"""
     response = storage_service.supabase.table("UserReport").select("subScoresGrammar").eq("reportId", report_id).execute()
 
@@ -99,7 +100,7 @@ async def get_detailed_analysis(report_id: str = Query(..., title="Report ID")):
 
 
 @router.get("/weaknesses")
-async def get_identified_issues(report_id: str = Query(..., title="Report ID")):
+async def get_identified_issues(report_id: str = Query(..., title="Report ID"), user_id: str = Depends(get_current_user_id)):
     """Get list of identified grammar issues with suggestions"""
     response = storage_service.supabase.table("UserReport").select("weaknessTopicsGrammar").eq("reportId", report_id).execute()
 
@@ -110,6 +111,6 @@ async def get_identified_issues(report_id: str = Query(..., title="Report ID")):
     return {"identified_issues": identified_issues}
 
 @router.get("/health")
-async def health_check():
+async def health_check(user_id: str = Depends(get_current_user_id)):
     "Check if the API is running"
     return {"status": "healthy"}
