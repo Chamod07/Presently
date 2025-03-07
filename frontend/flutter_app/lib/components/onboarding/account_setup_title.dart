@@ -38,7 +38,7 @@ class AccountSetupTitle extends StatelessWidget{
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32.0),
                           child: const Text(
-                            "Tell us about yourself and we'll create your personalized path to confident, compelling presentations.",
+                            "Tell us about yourself and we will tailor Presently according to your personality",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
@@ -63,7 +63,7 @@ class AccountSetupTitle extends StatelessWidget{
                               Navigator.pushNamed(context, '/account_setup_1');
                             },
                             child: const Text(
-                              "Let's Begin!",
+                              "Get Started",
                               style: TextStyle(
                                 color: Color(0xDB7400B8),
                                 fontSize: 17,

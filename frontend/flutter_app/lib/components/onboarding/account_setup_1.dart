@@ -78,7 +78,7 @@ class _AccountSetup1State extends State<AccountSetup1> {
                     TextField(
                       controller: _firstNameController,
                       decoration: InputDecoration(
-                        labelText: "Your First Name",
+                        labelText: "First Name",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -107,7 +107,7 @@ class _AccountSetup1State extends State<AccountSetup1> {
                     TextField(
                       controller: _lastNameController,
                       decoration: InputDecoration(
-                        labelText: "Your Last Name",
+                        labelText: "Last Name",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
@@ -129,7 +129,7 @@ class _AccountSetup1State extends State<AccountSetup1> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                    child: const Text("Next Step",
+                    child: const Text("Continue",
                       style: TextStyle(fontSize: 17,
                           color: Colors.white,
                           fontFamily: 'Roboto'),

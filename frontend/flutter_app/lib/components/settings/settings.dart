@@ -12,14 +12,22 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  // Dark mode setting to check if dark mode is enabled
+  bool darkMode = false;
+  //Notification setting to check if notifications are enabled
+  bool notifications = false;
   // Create instance of SupabaseService
   final SupabaseService _supabaseService = SupabaseService();
+
+  final Color titleBackgroundColor = Colors.white;
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
-    Settings.init(cacheProvider: SharePreferenceCache());
+    Settings.init(
+        cacheProvider: SharePreferenceCache(),
+    );
 
     // Load saved preferences if available
   }
@@ -28,16 +36,22 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
         title: Text(
           'Settings',
-          style: TextStyle(fontSize: 20),
+          style: TextStyle(
+              fontSize: 20,
+              fontFamily: 'Roboto'
+          ),
         ),
+        centerTitle: true,
       ),
       body: SafeArea(
+
         child: ListView(
           children: [
             // User Profile Section
@@ -46,24 +60,37 @@ class _SettingsPageState extends State<SettingsPage> {
             // Account Settings Group
             SettingsGroup(
               title: 'Account',
+              //titleTextStyle: TextStyle(
+                //fontFamily: 'Roboto',
+                //fontSize: 20,
+              //),
               children: [
-                SimpleSettingsTile(
-                  title: 'Change Password',
-                  subtitle: 'Update your password',
-                  leading: Icon(Icons.lock_outline),
-                  onTap: () => _showChangePasswordDialog(context),
+                Container(
+                  color: Colors.white,
+                  child: ListTile(
+                    title: Text('Change Password'),
+                    subtitle: Text('Update your password'),
+                    leading: Icon(Icons.lock_outline),
+                    onTap: () => _showChangePasswordDialog(context),
                 ),
-                SimpleSettingsTile(
-                  title: 'Change Email Address',
-                  subtitle: 'Update your email',
+                ),
+                Container(
+                  color: Colors.white,
+                  child: ListTile(
+                  title: Text('Change Email Address'),
+                  subtitle: Text('Update your email'),
                   leading: Icon(Icons.email_outlined),
                   onTap: () => _showChangeEmailDialog(context),
                 ),
-                SimpleSettingsTile(
-                  title: 'Delete Account',
-                  subtitle: 'Permanently delete your account',
-                  leading: Icon(Icons.delete_outline, color: Colors.red),
-                  onTap: () => _showDeleteAccountConfirmation(context),
+                ),
+                Container(
+                  color: Colors.white,
+                  child: ListTile(
+                    title: Text('Delete Account'),
+                    subtitle: Text('Permanently delete your account'),
+                    leading: Icon(Icons.delete_outline),
+                    onTap: () => _showDeleteAccountConfirmation(context),
+                ),
                 ),
               ],
             ),
@@ -72,27 +99,33 @@ class _SettingsPageState extends State<SettingsPage> {
             SettingsGroup(
               title: 'App Settings',
               children: [
-                SwitchSettingsTile(
-                  settingKey: 'dark_mode',
-                  title: 'Dark Mode',
-                  enabledLabel: 'Enabled',
-                  disabledLabel: 'Disabled',
-                  leading: Icon(Icons.dark_mode),
-                  onChange: (value) {
-                    setState(() {});
+                Container(
+                  color: Colors.white,
+                  child: SwitchListTile(
+                  title: Text('Dark Mode'),
+                  secondary: Icon(Icons.dark_mode),
+                  value: darkMode,
+                  onChanged: (value) {
+                    setState(() {
+                      darkMode = value;
+                    });
                     // TODO: Implement dark mode toggle
                   },
+                  ),
                 ),
-                SwitchSettingsTile(
-                  settingKey: 'notifications',
-                  title: 'Notifications',
-                  enabledLabel: 'Enabled',
-                  disabledLabel: 'Disabled',
-                  leading: Icon(Icons.notifications),
-                  onChange: (value) {
-                    setState(() {});
+                Container(
+                  color: Colors.white,
+                  child: SwitchListTile(
+                    title: Text('Notifications'),
+                    secondary: Icon(Icons.notifications),
+                    value: notifications,
+                    onChanged: (value) {
+                      setState(() {
+                        notifications = value;
+                      });
                     // TODO: Implement notification toggle
                   },
+                ),
                 ),
               ],
             ),
@@ -101,45 +134,61 @@ class _SettingsPageState extends State<SettingsPage> {
             SettingsGroup(
               title: 'Support & Info',
               children: [
-                SimpleSettingsTile(
-                  title: 'FAQ',
-                  subtitle: 'Frequently asked questions',
+                Container(
+                  color: Colors.white,
+                child:
+                ListTile(
+                  title: Text('FAQ'),
+                  subtitle: Text('Frequently asked questions'),
                   leading: Icon(Icons.question_answer_outlined),
                   onTap: () {
                     // Navigate to FAQ page
                   },
                 ),
-                SimpleSettingsTile(
-                  title: 'Contact Support',
-                  subtitle: 'Get help from our team',
-                  leading: Icon(Icons.support_agent_outlined),
-                  onTap: () {
+                ),
+                Container(
+                  color: Colors.white,
+                  child: ListTile(
+                    title: Text('Contact Support'),
+                    subtitle: Text('Get help from our team'),
+                    leading: Icon(Icons.support_agent_outlined),
+                    onTap: () {
                     // Navigate to support page or open email
                   },
                 ),
-                SimpleSettingsTile(
-                  title: 'Terms & Privacy Policy',
-                  subtitle: 'Legal information',
+                ),
+                Container(
+                  color: Colors.white,
+                  child: ListTile(
+                  title: Text('Terms & Privacy Policy'),
+                  subtitle: Text('Legal information'),
                   leading: Icon(Icons.policy_outlined),
                   onTap: () {
                     // Navigate to terms page
                   },
+                  ),
                 ),
-                SimpleSettingsTile(
-                  title: 'Help',
-                  subtitle: 'Get support and send feedback',
+                Container(
+                  color: Colors.white,
+                  child:  ListTile(
+                  title: Text('Help'),
+                  subtitle: Text('Get support and send feedback'),
                   leading: Icon(Icons.help_outline),
                   onTap: () {
                     // TODO: Implement help section
                   },
                 ),
-                SimpleSettingsTile(
-                  title: 'About',
-                  subtitle: 'Learn more about Presently',
+                ),
+                Container(
+                  color: Colors.white,
+                  child: ListTile(
+                  title: Text('About'),
+                  subtitle: Text('Learn more about Presently'),
                   leading: Icon(Icons.info_outline),
                   onTap: () {
                     Navigator.pushReplacementNamed(context, '/about');
                   },
+                ),
                 ),
               ],
             ),
@@ -150,7 +199,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize:
-                      Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -163,7 +212,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     if (context.mounted) {
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => SignInPage()),
-                        (route) => false,
+                            (route) => false,
                       );
                     }
                   } catch (error) {
@@ -171,7 +220,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content:
-                              Text('Error signing out: ${error.toString()}'),
+                          Text('Error signing out: ${error.toString()}'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -204,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
             alignment: Alignment.bottomRight,
             children: [
               CircleAvatar(
-                radius: 50,
+                radius: 69,
                 backgroundImage: AssetImage('assets/profile_placeholder.png'),
               ),
               GestureDetector(
@@ -222,38 +271,48 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Mariah Maldini',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            'Given name of user',
+            style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Roboto'
+            ),
           ),
           SizedBox(height: 8),
           Text(
             'Milan, Italy',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+                fontFamily: 'Roboto'
+            ),
           ),
           SizedBox(height: 8),
           Text(
-            'Visual Designer',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            'Given ',
+            style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey,
+                fontFamily: 'Roboto'
+            ),
           ),
-          SizedBox(height: 16),
-          Divider(thickness: 1),
         ],
       ),
     );
   }
 
   void _changeProfilePicture() async {
-    // TODO: Implement image picker and upload
+    // TODO Implement image picker and upload
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Profile picture change will be implemented soon')));
   }
 
   void _showChangePasswordDialog(BuildContext context) {
     final TextEditingController currentPasswordController =
-        TextEditingController();
+    TextEditingController();
     final TextEditingController newPasswordController = TextEditingController();
     final TextEditingController confirmPasswordController =
-        TextEditingController();
+    TextEditingController();
 
     showDialog(
       context: context,
@@ -384,7 +443,7 @@ class _SettingsPageState extends State<SettingsPage> {
               controller: passwordController,
               obscureText: true,
               decoration:
-                  InputDecoration(labelText: 'Enter your password to confirm'),
+              InputDecoration(labelText: 'Enter your password to confirm'),
             ),
           ],
         ),
@@ -405,7 +464,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => SignInPage()),
-                  (route) => false,
+                      (route) => false,
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
