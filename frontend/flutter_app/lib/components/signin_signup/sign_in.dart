@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/services/supabase_service.dart';
+import 'package:flutter_app/services/supabase_service.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -29,7 +29,7 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> _checkCurrentSession() async {
-    final session = supabase.auth.currentSession;
+    final session = _supabaseService.client.auth.currentSession;
     if (session != null && mounted) {
       // User already has an active session
       Navigator.pushReplacementNamed(context, '/home');
@@ -74,7 +74,8 @@ class _SignInPageState extends State<SignInPage> {
 
     try {
       // Use the client from the service
-      final AuthResponse res = await _supabaseService.client.auth.signInWithPassword(
+      final AuthResponse res =
+          await _supabaseService.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -146,14 +147,9 @@ class _SignInPageState extends State<SignInPage> {
           accessToken: accessToken,
         );
 
-      final response = await supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-
-      if (response.session != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        if (response.session != null && mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -292,7 +288,8 @@ class _SignInPageState extends State<SignInPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signInWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  minimumSize:
+                      Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: const Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -346,7 +343,8 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  minimumSize:
+                      Size(MediaQuery.of(context).size.width * 0.9, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),

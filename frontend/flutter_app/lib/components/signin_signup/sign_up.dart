@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_app/services/supabase_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -8,9 +9,9 @@ class SignUpPage extends StatefulWidget {
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
-final supabase = Supabase.instance.client;
-
 class _SignUpPageState extends State<SignUpPage> {
+  // Use the service to access the client consistently
+  final _supabaseService = SupabaseService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -30,7 +31,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _checkCurrentSession() async {
-    final session = supabase.auth.currentSession;
+    final session = _supabaseService.client.auth.currentSession;
     if (session != null && mounted) {
       // User already has an active session
       Navigator.pushReplacementNamed(context, '/home');
@@ -88,7 +89,7 @@ class _SignUpPageState extends State<SignUpPage> {
       debugPrint(
           'Attempting to sign up with email: ${_emailController.text.trim()}');
 
-      final AuthResponse res = await supabase.auth.signUp(
+      final AuthResponse res = await _supabaseService.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         // Use the correct parameter format based on the Supabase SDK version
