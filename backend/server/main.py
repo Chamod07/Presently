@@ -34,10 +34,5 @@ app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["gramma
 app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 
 if __name__ == "__main__":
-
-    print("SUPABASE_URL", SUPABASE_URL)
-    print("SUPABASE_KEY", SUPABASE_KEY)
-
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-

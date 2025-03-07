@@ -22,7 +22,56 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscureConfirmPassword = true;
   String? errorText;
 
+  @override
+  void initState() {
+    super.initState();
+    // Check if the user is already signed in when this page loads
+    _checkCurrentSession();
+  }
+
+  Future<void> _checkCurrentSession() async {
+    final session = supabase.auth.currentSession;
+    if (session != null && mounted) {
+      // User already has an active session
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
   Future<void> signUpWithEmail() async {
+    // Clear previous errors
+    setState(() {
+      emailError = false;
+      passwordError = false;
+      confirmPasswordError = false;
+      errorText = null;
+    });
+
+    // Validate email
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        emailError = true;
+        errorText = 'Please enter an email address';
+      });
+      return;
+    }
+
+    // Validate passwords
+    if (_passwordController.text.isEmpty) {
+      setState(() {
+        passwordError = true;
+        errorText = 'Please enter a password';
+      });
+      return;
+    }
+
+    if (_confirmPasswordController.text.isEmpty) {
+      setState(() {
+        confirmPasswordError = true;
+        errorText = 'Please confirm your password';
+      });
+      return;
+    }
+
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         passwordError = true;
@@ -38,14 +87,19 @@ class _SignUpPageState extends State<SignUpPage> {
       final AuthResponse res = await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        emailRedirectTo: 'io.supabase.flutterquickstart://login-callback/',
       );
 
-      if (res.session != null) {
-        if (mounted) {
+      if (res.session == null) {
+        throw 'Sign up failed';
+      }
+
+      if (mounted) {
+        if (res.session != null) {
+          // User is signed in immediately
           Navigator.pushReplacementNamed(context, '/account_setup_1');
-        }
-      } else {
-        if (mounted) {
+        } else {
+          // Email verification required
           _emailController.clear();
           _passwordController.clear();
           _confirmPasswordController.clear();
@@ -56,12 +110,13 @@ class _SignUpPageState extends State<SignUpPage> {
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('Verification Required'),
-                content: const Text('A verification email has been sent. Please verify your email to complete sign-up.'),
+                content: const Text(
+                    'A verification email has been sent. Please verify your email to complete sign-up.'),
                 actions: [
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/account_setup_title');
+                      Navigator.pushReplacementNamed(context, '/sign_in');
                     },
                     child: const Text('OK'),
                   ),
@@ -71,10 +126,19 @@ class _SignUpPageState extends State<SignUpPage> {
           );
         }
       }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          if (e.message.contains('email')) {
+            emailError = true;
+          }
+          errorText = 'Sign up failed: ${e.message}';
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorText = 'Sign up failed: ${e.toString()}';
+          errorText = 'An unexpected error occurred: ${e.toString()}';
         });
       }
     } finally {
@@ -129,15 +193,18 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -147,7 +214,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: MediaQuery.of(context).size.width * 0.9,
                 child: TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Enter your password",
                     labelStyle: TextStyle(
@@ -156,44 +223,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0xFF7400B8)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                child: TextField(
-                  controller: _confirmPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "Confirm password",
-                    labelStyle: TextStyle(
-                      color: Color(0xFFBDBDBD),
-                      fontFamily: "Roboto",
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -203,15 +235,69 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0xFF7400B8)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                child: TextField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: "Confirm password",
+                    labelStyle: TextStyle(
+                      color: Color(0xFFBDBDBD),
+                      fontFamily: "Roboto",
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: confirmPasswordError
+                              ? Colors.red
+                              : Color(0x26000000)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: confirmPasswordError
+                              ? Colors.red
+                              : Color(0x26000000)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: confirmPasswordError
+                              ? Colors.red
+                              : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -220,7 +306,8 @@ class _SignUpPageState extends State<SignUpPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signUpWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  minimumSize:
+                      Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -229,13 +316,13 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: _isLoading
                     ? CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                  "Continue",
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: Colors.white,
-                    fontFamily: 'Roboto',
-                  ),
-                ),
+                        "Continue",
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
               ),
               const SizedBox(height: 20),
               Row(
