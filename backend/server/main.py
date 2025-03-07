@@ -30,16 +30,11 @@ app.add_middleware(
 
 app.include_router(task_assign_router, prefix="/api/task-assign", tags=["task assign"])
 app.include_router(auth.router, prefix="/api/auth")
-app.include_router(upload.router)
+app.include_router(upload.router, prefix="/api/upload")
 app.include_router(secure_routes.router, prefix="/api") #this endpoint is to test the jwt auth
 app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["grammar"])
 app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 
 if __name__ == "__main__":
-
-    print("SUPABASE_URL", SUPABASE_URL)
-    print("SUPABASE_KEY", SUPABASE_KEY)
-
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-

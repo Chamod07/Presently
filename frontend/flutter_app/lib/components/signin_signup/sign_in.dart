@@ -22,6 +22,21 @@ class _SignInPageState extends State<SignInPage> {
   String? errorText;
 
   @override
+  void initState() {
+    super.initState();
+    // Check if the user is already signed in when this page loads
+    _checkCurrentSession();
+  }
+
+  Future<void> _checkCurrentSession() async {
+    final session = supabase.auth.currentSession;
+    if (session != null && mounted) {
+      // User already has an active session
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -29,11 +44,26 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> signInWithEmail() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    // Reset error states
+    setState(() {
+      emailError = false;
+      passwordError = false;
+      errorText = null;
+    });
+
+    // Validate input fields
+    if (_emailController.text.isEmpty) {
       setState(() {
-        emailError = _emailController.text.isEmpty;
-        passwordError = _passwordController.text.isEmpty;
-        errorText = 'Please fill in all fields';
+        emailError = true;
+        errorText = 'Please enter your email';
+      });
+      return;
+    }
+
+    if (_passwordController.text.isEmpty) {
+      setState(() {
+        passwordError = true;
+        errorText = 'Please enter your password';
       });
       return;
     }
@@ -49,19 +79,25 @@ class _SignInPageState extends State<SignInPage> {
         password: _passwordController.text,
       );
 
-      if (res.session != null) {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      } else {
-        throw 'Invalid credentials';
+      if (res.session != null && mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          if (e.message.toLowerCase().contains('invalid login credentials')) {
+            errorText = 'Invalid email or password';
+            emailError = true;
+            passwordError = true;
+          } else {
+            errorText = e.message;
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorText = e.toString().contains('invalid credentials')
-              ? 'Invalid email or password'
-              : 'An error occurred during sign in';
+          errorText = 'An unexpected error occurred: ${e.toString()}';
         });
       }
     } finally {
@@ -76,6 +112,7 @@ class _SignInPageState extends State<SignInPage> {
   Future<void> signInWithGoogle() async {
     setState(() {
       _isLoading = true;
+      errorText = null;
     });
 
     try {
@@ -89,9 +126,12 @@ class _SignInPageState extends State<SignInPage> {
         serverClientId: webClientId,
       );
 
+      // Sign out first to ensure we get the sign-in dialog
+      await googleSignIn.signOut();
+
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
-        throw 'Google sign in cancelled';
+        throw AuthException('User canceled Google sign-in');
       }
 
       final googleAuth = await googleUser.authentication;
@@ -106,16 +146,28 @@ class _SignInPageState extends State<SignInPage> {
           accessToken: accessToken,
         );
 
-        if (response.session != null && mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
+      final response = await supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      if (response.session != null && mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          errorText = e.message;
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorText = e.toString().contains('cancelled')
-              ? 'Sign in cancelled'
-              : 'Failed to sign in with Google';
+          errorText = e.toString().contains('canceled') ||
+                  e.toString().contains('cancelled')
+              ? 'Google sign-in was cancelled'
+              : 'Failed to sign in with Google: ${e.toString()}';
         });
       }
     } finally {
@@ -151,7 +203,7 @@ class _SignInPageState extends State<SignInPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              if(errorText != null)
+              if (errorText != null)
                 Text(
                   errorText!,
                   style: const TextStyle(
@@ -172,12 +224,13 @@ class _SignInPageState extends State<SignInPage> {
                       color: Color(0xFFBDBDBD),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0x26000000)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
-                        color: emailError ? Colors.red :  Color(0x26000000),
+                        color: emailError ? Colors.red : Color(0x26000000),
                       ),
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -204,7 +257,9 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -213,7 +268,9 @@ class _SignInPageState extends State<SignInPage> {
                       },
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0x26000000)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     enabledBorder: OutlineInputBorder(
@@ -244,37 +301,36 @@ class _SignInPageState extends State<SignInPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                  "Continue",
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: Colors.white,
-                    fontFamily: 'Roboto',
-                  ),
-                ),
+                        "Continue",
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child:
-                  Divider(
+                  Expanded(
+                      child: Divider(
                     color: const Color(0xFFF5F5F7),
                     thickness: 1,
                     endIndent: 10,
-                  )
-                  ),
-                  Text('or',
+                  )),
+                  Text(
+                    'or',
                     style: const TextStyle(
                       color: Colors.black,
                       fontFamily: 'Roboto',
                     ),
                   ),
-                  Expanded(child:
-                  Divider(
+                  Expanded(
+                      child: Divider(
                     color: const Color(0xFFF5F5F7),
                     thickness: 1,
                     indent: 10,
-                  )
-                  ),
+                  )),
                 ],
               ),
               const SizedBox(height: 20),
