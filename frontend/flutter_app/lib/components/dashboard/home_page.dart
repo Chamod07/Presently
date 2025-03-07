@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
     Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase();
   } // load sessions from supabase
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
       appBar: AppBar(
         // title: Text('Hello Mariah,'),
@@ -39,24 +40,38 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.logout),
             onPressed: () async {
               try {
-                await supabase.auth.signOut();
+                await Supabase.instance.client.auth.signOut();
+                // await Supabase.instance.client.auth.refreshSession();
+                // await Supabase.instance.client.auth.setSession(null);
+
+                final user = Supabase.instance.client.auth.currentUser;
+                debugPrint('User after sign out: $user');
+
+                if (user == null) {
+                  debugPrint('Successfully signed out.');
+                } else {
+                  debugPrint('User still exists, sign out failed.');
+                }
+
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (context) => SignInPage()),
-                    (route) => false,
+                        (route) => false,
                   );
                 }
-              }catch (error){
-                if (context.mounted){
+              } catch (error) {
+                debugPrint('Error signing out: $error');
+
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content: Text('Error signing out'),
-                        backgroundColor: Colors.red,
+                      content: Text('Error signing out'),
+                      backgroundColor: Colors.red,
                     ),
                   );
                 }
               }
-    }
+            },
           )
         ],
       ),
@@ -76,7 +91,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello Mariah,',
+                        'Hello ${user?.id},',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,

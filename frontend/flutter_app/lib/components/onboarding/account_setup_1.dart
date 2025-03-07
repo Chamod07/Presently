@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountSetup1 extends StatefulWidget {
   const AccountSetup1({super.key});
@@ -34,7 +34,7 @@ class _AccountSetup1State extends State<AccountSetup1> {
     super.dispose();
   }
 
-  void _continue() {
+  void _continue() async{
     setState(() {
       _firstNameError = _firstNameController.text.trim().isEmpty;
       _errorMessage = _firstNameError ? 'First name is required' : null;
@@ -43,12 +43,36 @@ class _AccountSetup1State extends State<AccountSetup1> {
     if (!_firstNameError) {
       String firstName = _firstNameController.text.trim();
       String lastName = _lastNameController.text.trim();
+      final user = Supabase.instance.client.auth.currentUser;
 
-      Navigator.pushNamed(
-        context,
-        '/account_setup_2',
-        arguments: {'firstName': firstName, 'lastName': lastName},
-      );
+      if (user != null) {
+        try {
+          // Update UserDetails table
+          final response = await Supabase.instance.client
+              .from('UserDetails')
+              .update({'firstName': firstName, 'lastName': lastName})
+              .eq('userId', user.id);
+
+          if (response.error != null) {
+            throw response.error!;
+          }
+
+          Navigator.pushNamed(
+            context,
+            '/account_setup_2',
+            arguments: {'firstName': firstName, 'lastName': lastName},
+          );
+        } catch (e) {
+          debugPrint('Error updating user details: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update details. Try again.')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User not found')),
+        );
+      }
     }
   }
 
