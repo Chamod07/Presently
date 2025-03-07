@@ -39,40 +39,6 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> signUpWithEmail() async {
-    // Clear previous errors
-    setState(() {
-      emailError = false;
-      passwordError = false;
-      confirmPasswordError = false;
-      errorText = null;
-    });
-
-    // Validate email
-    if (_emailController.text.trim().isEmpty) {
-      setState(() {
-        emailError = true;
-        errorText = 'Please enter an email address';
-      });
-      return;
-    }
-
-    // Validate passwords
-    if (_passwordController.text.isEmpty) {
-      setState(() {
-        passwordError = true;
-        errorText = 'Please enter a password';
-      });
-      return;
-    }
-
-    if (_confirmPasswordController.text.isEmpty) {
-      setState(() {
-        confirmPasswordError = true;
-        errorText = 'Please confirm your password';
-      });
-      return;
-    }
-
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         passwordError = true;
@@ -136,6 +102,9 @@ class _SignUpPageState extends State<SignUpPage> {
           // Make the error message more user-friendly
           errorText =
               'Something went wrong. Please check your internet connection and try again.';
+
+          errorText = 'Sign up failed: ${e.toString()}';
+
         });
       }
     } finally {
@@ -190,18 +159,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color: emailError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -232,21 +198,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color:
-                              passwordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color:
-                              passwordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color:
-                              passwordError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -277,24 +237,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color: confirmPasswordError
-                              ? Colors.red
-                              : Color(0x26000000)),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color: confirmPasswordError
-                              ? Colors.red
-                              : Color(0x26000000)),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                          color: confirmPasswordError
-                              ? Colors.red
-                              : Color(0xFF7400B8)),
+                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -303,8 +254,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signUpWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize:
-                      Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -313,13 +263,13 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: _isLoading
                     ? CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Continue",
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.white,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
+                  "Continue",
+                  style: TextStyle(
+                    fontSize: 17,
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               Row(

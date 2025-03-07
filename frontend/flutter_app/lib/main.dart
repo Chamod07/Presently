@@ -23,6 +23,7 @@ import 'package:flutter_app/screens/error_page.dart';
 import 'package:flutter_app/services/supabase_service.dart'; // Fixed import path
 import 'package:supabase_flutter/supabase_flutter.dart'; // Added missing import
 
+
 late List<CameraDescription> cameras;
 
 void main() async {
@@ -50,7 +51,7 @@ void main() async {
 
   runApp(ChangeNotifierProvider(
     create: (context) => SessionProvider(),
-    child: const MyApp(),
+    child: MyApp(),
   ));
 }
 
@@ -66,43 +67,23 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: Colors.white, // set background color to white
       ),
-      initialRoute: '/splash',
+      home: WelcomePage(),
       routes: {
-        '/splash': (context) => const SplashScreen(),
-        '/sign_in': (context) => const SignInPage(),
-        '/sign_up': (context) => const SignUpPage(),
+        '/sign_in': (context) => SignInPage(),
+        '/sign_up': (context) => SignUpPage(),
         '/home': (context) => HomePage(),
-        '/summary': (context) => const SummaryPage(),
+        '/summary': (context) => SummaryPage(),
         '/camera': (context) => CameraPage(),
-        '/scenario_sel': (context) => const ScenarioSelection(),
-        '/task_group_page': (context) => const TaskGroupPage(),
-        '/settings': (context) => const SettingsPage(),
-        '/about': (context) => const AboutPage(),
-        '/account_setup_greeting': (context) => const AccountSetupGreeting(),
-        '/account_setup_title': (context) => const AccountSetupTitle(),
-        '/account_setup_1': (context) => const AccountSetup1(),
-        '/account_setup_2': (context) => const AccountSetup2(),
-        '/task_pass': (context) => const TaskPassed(),
-        '/task_failed': (context) => const TaskFailed(),
-        '/welcome': (context) => const WelcomePage(),
-        '/error': (context) =>
-            const ErrorPage(message: 'Navigation error occurred'),
-      },
-      // Handle routes that aren't explicitly defined
-      onGenerateRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => ErrorPage(
-            message: 'Cannot navigate to ${settings.name}',
-          ),
-        );
-      },
-      // Fallback for navigation failures
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => const ErrorPage(
-            message: 'Navigation failed',
-          ),
-        );
+        '/scenario_sel': (context) => ScenarioSelection(),
+        '/task_group_page': (context) => TaskGroupPage(),
+        '/settings': (context) => SettingsPage(),
+        '/about': (context) => AboutPage(),
+        '/account_setup_greeting': (context) => AccountSetupGreeting(),
+        '/account_setup_title': (context) => AccountSetupTitle(),
+        '/account_setup_1': (context) => AccountSetup1(),
+        '/account_setup_2': (context) => AccountSetup2(),
+        '/task_pass': (context) => TaskPassed(),
+        '/task_failed': (context) => TaskFailed(),
       },
     );
   }

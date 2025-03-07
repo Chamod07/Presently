@@ -22,25 +22,6 @@ class AccountSetupGreeting extends StatelessWidget{
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: Padding(
-                          padding: const EdgeInsets.all(2.0),
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/home');
-                            },
-                            child: const Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontFamily: 'Roboto',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                       const SizedBox(height: 40.0),
                       Text(
                         "Hello $displayName",
@@ -87,7 +68,7 @@ class AccountSetupGreeting extends StatelessWidget{
                             Navigator.pushNamed(context, '/home');
                           },
                           child: const Text(
-                            "Get Started",
+                            "I am Ready!",
                             style: TextStyle(
                               color: Color(0xDB7400B8),
                               fontSize: 17,
