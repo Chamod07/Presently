@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
-import 'package:flutter_app/components/signin_signup/sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -35,29 +34,6 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
             },
           ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () async {
-              try {
-                await supabase.auth.signOut();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => SignInPage()),
-                    (route) => false,
-                  );
-                }
-              }catch (error){
-                if (context.mounted){
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Error signing out'),
-                        backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-    }
-          )
         ],
       ),
       body: Padding(
@@ -67,9 +43,6 @@ class _HomePageState extends State<HomePage> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                ),
                 SizedBox(width: 16.0),
                 Expanded(
                   child: Column(
@@ -162,7 +135,7 @@ class _HomePageState extends State<HomePage> {
                     itemBuilder: (context, index){
                       return _buildCard(
                         title: sessionProvider.sessions[index],
-                        navigateTo: '/session_page',
+                        navigateTo: '/summary',
                       );
                     },
                   );
