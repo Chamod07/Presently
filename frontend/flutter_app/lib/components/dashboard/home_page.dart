@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:provider/provider.dart';
+import '/services/supabase_service.dart';
 
 class HomePage extends StatefulWidget {
   @override
