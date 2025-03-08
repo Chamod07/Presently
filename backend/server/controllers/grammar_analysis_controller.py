@@ -35,9 +35,17 @@ async def analyze_grammar(request: Request, user_id: str = Depends(get_current_u
             reportTopic=topic,
             createdAt=datetime.datetime.now().isoformat(),
             userId=user_id,  # Use the user_id from auth instead of hardcoded value
-            scoreGrammar=analysis_results["grammar_score"],
-            subScoresGrammar=analysis_results["analysis"],
-            weaknessTopicsGrammar=analysis_results["identified_issues"]
+            scoreGrammar=float(analysis_results["grammar_score"]),
+            subScoresGrammar={
+                "grammaticalAccuracy": analysis_results["analysis"]["grammatical_accuracy"],
+                "sentenceStructure": analysis_results["analysis"]["sentence_structure"],
+                "wordChoice": analysis_results["analysis"]["word_choice"]
+            },
+            weaknessTopicsGrammar=[{
+                "topic": wt["topic"],
+                "examples": wt["examples"],
+                "suggestions": wt["suggestions"]
+            } for wt in analysis_results["weakness_topics"]]
         )
 
         data = user_report.dict()
@@ -48,10 +56,18 @@ async def analyze_grammar(request: Request, user_id: str = Depends(get_current_u
         if existing_report.data:
             # Update only grammar-related fields
             update_data = {
-                "scoreGrammar": analysis_results["grammar_score"],
-                "subScoresGrammar": analysis_results["analysis"],
-                "weaknessTopicsGrammar": analysis_results["identified_issues"],
-         #       "updatedAt": datetime.datetime.now().isoformat()
+                "scoreGrammar": float(analysis_results["grammar_score"]),
+                "subScoresGrammar": {
+                    "grammaticalAccuracy": analysis_results["analysis"]["grammatical_accuracy"],
+                    "sentenceStructure": analysis_results["analysis"]["sentence_structure"],
+                    "wordChoice": analysis_results["analysis"]["word_choice"]
+                },
+                "weaknessTopicsGrammar": [{
+                    "topic": wt["topic"],
+                    "examples": wt["examples"],
+                    "suggestions": wt["suggestions"]
+                } for wt in analysis_results["weakness_topics"]],
+                #"updatedAt": datetime.datetime.now().isoformat()
             }
             
             print(f"\nUpdating grammar fields for report {report_id}: {update_data}")
@@ -86,7 +102,6 @@ async def get_grammar_score(report_id: str = Query(..., title="Report ID"), user
     }
 
 
-
 @router.get("/sub_scores")
 async def get_detailed_analysis(report_id: str = Query(..., title="Report ID"), user_id: str = Depends(get_current_user_id)):
     """Get detailed analysis scores for grammar, structure, and word choice"""
@@ -101,14 +116,15 @@ async def get_detailed_analysis(report_id: str = Query(..., title="Report ID"), 
 
 @router.get("/weaknesses")
 async def get_identified_issues(report_id: str = Query(..., title="Report ID"), user_id: str = Depends(get_current_user_id)):
-    """Get list of identified grammar issues with suggestions"""
+    """Get list of identified grammar topics with examples and suggestions"""
     response = storage_service.supabase.table("UserReport").select("weaknessTopicsGrammar").eq("reportId", report_id).execute()
 
     if not response.data:
         raise HTTPException(status_code=404, detail="No grammar analysis results found")
 
-    identified_issues = response.data[0]["weaknessTopicsGrammar"]
-    return {"identified_issues": identified_issues}
+    weakness_topics = response.data[0]["weaknessTopicsGrammar"]
+    return {"weakness_topics": weakness_topics}
+
 
 @router.get("/health")
 async def health_check(user_id: str = Depends(get_current_user_id)):
