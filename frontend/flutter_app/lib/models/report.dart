@@ -1,13 +1,19 @@
 class Report {
-  final double? score;
+  final double? scoreContext;
+  final double? scoreGrammar; // new field
   final List<Weakness>? weaknesses;
+  final List<Weakness>? grammarWeaknesses;
 
-  Report({this.score, this.weaknesses});
+  Report({this.scoreContext, this.scoreGrammar, this.weaknesses, this.grammarWeaknesses});
 
   factory Report.fromJson(Map<String, dynamic> json) {
     return Report(
-      score: json['score'] as double?,
+      scoreContext: json['score'] as double?,
+      scoreGrammar: json['scoreGrammar'] as double?, // new property parse
       weaknesses: (json['weaknesses'] as List<dynamic>?)
+          ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      grammarWeaknesses: (json['weaknessTopicsGrammar'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );

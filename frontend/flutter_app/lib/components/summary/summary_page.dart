@@ -23,10 +23,9 @@ class _SummaryPageState extends State<SummaryPage> {
       ),
       body: PageView(
         controller: _pageController,
-        children: [
+        children: const [
           ContextSummary(),
-          // GrammarSummary(), // Placeholder
-          // BodyLanguageSummary(), // Placeholder
+          GrammarSummary(),
         ],
       ),
       bottomNavigationBar: const NavBar(selectedIndex: 0),
@@ -41,6 +40,7 @@ class _SummaryPageState extends State<SummaryPage> {
 }
 
 class ContextSummary extends StatelessWidget {
+  const ContextSummary({super.key});
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -56,7 +56,7 @@ class ContextSummary extends StatelessWidget {
               children: [
                 SizedBox(height: 50),
                 Center(
-                  child: GraphDisplay(score: (provider.report.score ?? 0) / 10),
+                  child: GraphDisplay(score: (provider.report.scoreContext ?? 0) / 10),
                 ),
                 SizedBox(height: 50),
                 Expanded(
@@ -100,11 +100,64 @@ class ContextSummary extends StatelessWidget {
   }
 }
 
-// Placeholder widgets for Grammar and Body Language
 class GrammarSummary extends StatelessWidget {
+  const GrammarSummary({super.key});
   @override
   Widget build(BuildContext context) {
-    return Center(child: Text('Grammar Summary'));
+    return ChangeNotifierProvider(
+      create: (context) => ReportProvider()..fetchReportData(),
+      child: Consumer<ReportProvider>(
+        builder: (context, provider, _) {
+          if (provider.loading) {
+            return Center(child: CircularProgressIndicator());
+          } else if (provider.errorMessage.isNotEmpty) {
+            return Center(child: Text(provider.errorMessage));
+          } else {
+            return Column(
+              children: [
+                SizedBox(height: 50),
+                Center(
+                  child: GraphDisplay(score: (provider.report.scoreGrammar ?? 0) / 10),
+                ),
+                SizedBox(height: 50),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: provider.report.grammarWeaknesses?.length ?? 0,
+                    itemBuilder: (context, index) {
+                      final weakness = provider.report.grammarWeaknesses![index];
+                      return Card(
+                        child: ExpansionTile(
+                          title: Text(weakness.topic ?? 'Grammar Issue'),
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  if (weakness.examples != null)
+                                    for (String example in weakness.examples!)
+                                      Text('- $example'),
+                                  const SizedBox(height: 8),
+                                  const Text('Suggestions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  if (weakness.suggestions != null)
+                                    for (String suggestion in weakness.suggestions!)
+                                      Text('- $suggestion'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          }
+        },
+      ),
+    );
   }
 }
 

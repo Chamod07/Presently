@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/report.dart';
 import 'package:flutter_app/services/http_service.dart';
+import 'package:flutter_app/config/config.dart';
 import 'dart:convert';
 
 class ReportProvider with ChangeNotifier {
@@ -21,30 +22,61 @@ class ReportProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('Fetching report data for report ID: $reportId');
+      
       // Fetch context score
-      final scoreResponse = await _httpService.get('http://192.168.1.5:8000/api/analyser/context/score?report_id=$reportId');
+      final scoreResponse = await _httpService.get(
+        '${Config.apiUrl}${Config.contextScoreEndpoint}?report_id=$reportId'
+      );
+      
       if (scoreResponse.statusCode == 200) {
         final scoreData = jsonDecode(scoreResponse.body);
-        _report = Report(score: scoreData['overall_score']?.toDouble());
+        _report = Report(scoreContext: scoreData['overall_score']?.toDouble());
+        debugPrint('Successfully fetched score: ${_report.scoreContext}');
       } else {
-        _errorMessage += 'Error fetching score: ${scoreResponse.statusCode}\\n';
+        _errorMessage += 'Error fetching score: ${scoreResponse.statusCode}\n';
+        debugPrint('Error fetching score: ${scoreResponse.statusCode}, ${scoreResponse.body}');
       }
 
       // Fetch context weaknesses
-      final weaknessResponse = await _httpService.get('http://192.168.1.5:8000/api/analyser/context/weaknesses?report_id=$reportId');
+      final weaknessResponse = await _httpService.get(
+        '${Config.apiUrl}${Config.contextWeaknessEndpoint}?report_id=$reportId'
+      );
+      
       if (weaknessResponse.statusCode == 200) {
         final weaknessData = jsonDecode(weaknessResponse.body);
         _report = Report(
-          score: _report.score, // Keep existing score
+          scoreContext: _report.scoreContext, // Keep existing score
           weaknesses: (weaknessData['weakness_topics'] as List<dynamic>?)
               ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
               .toList(),
         );
+        debugPrint('Successfully fetched weaknesses: ${_report.weaknesses?.length ?? 0}');
       } else {
-        _errorMessage += 'Error fetching weaknesses: ${weaknessResponse.statusCode}\\n';
+        _errorMessage += 'Error fetching weaknesses: ${weaknessResponse.statusCode}\n';
+        debugPrint('Error fetching weaknesses: ${weaknessResponse.statusCode}, ${weaknessResponse.body}');
+      }
+
+      // Fetch grammar weaknesses
+      final grammarResponse = await _httpService.get(
+        '${Config.apiUrl}${Config.grammarWeaknessEndpoint}?report_id=$reportId'
+      );
+      
+      if (grammarResponse.statusCode == 200) {
+        final grammarData = jsonDecode(grammarResponse.body);
+        _report = Report(
+          scoreContext: _report.scoreContext,
+          weaknesses: _report.weaknesses,
+          grammarWeaknesses: grammarData['identified_issues'],
+        );
+        debugPrint('Successfully fetched grammar weaknesses');
+      } else {
+        _errorMessage += 'Error fetching grammar: ${grammarResponse.statusCode}\n';
+        debugPrint('Error fetching grammar: ${grammarResponse.statusCode}, ${grammarResponse.body}');
       }
     } catch (e) {
       _errorMessage = 'An unexpected error occurred: $e';
+      debugPrint('Error in fetchReportData: $e');
     } finally {
       _loading = false;
       notifyListeners();
