@@ -43,6 +43,7 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       if (res.session != null) {
+        await _supabaseService.persistSession(res.session!); // Persist the session
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/account_setup_1');
         }

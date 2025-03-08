@@ -50,6 +50,7 @@ class _SignInPageState extends State<SignInPage> {
       );
 
       if (res.session != null) {
+        await _supabaseService.persistSession(res.session!); // Persist the session
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
@@ -105,12 +106,12 @@ class _SignInPageState extends State<SignInPage> {
           idToken: idToken,
           accessToken: accessToken,
         );
-
-        if (response.session != null && mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      }
-    } catch (e) {
+if (response.session != null && mounted) {
+  await _supabaseService.persistSession(response.session!); // Persist the session
+  Navigator.pushReplacementNamed(context, '/home');
+}
+}
+} catch (e) {
       if (mounted) {
         setState(() {
           errorText = e.toString().contains('cancelled')
