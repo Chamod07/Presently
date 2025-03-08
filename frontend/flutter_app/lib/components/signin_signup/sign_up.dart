@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_app/services/supabase_service.dart';
+import '/services/supabase_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -10,7 +10,7 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  // Use the service to access the client consistently
+  // Use the service to access the client
   final _supabaseService = SupabaseService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -22,21 +22,6 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    // Check if the user is already signed in when this page loads
-    _checkCurrentSession();
-  }
-
-  Future<void> _checkCurrentSession() async {
-    final session = _supabaseService.client.auth.currentSession;
-    if (session != null && mounted) {
-      // User already has an active session
-      Navigator.pushReplacementNamed(context, '/home');
-    }
-  }
 
   Future<void> signUpWithEmail() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -51,60 +36,47 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Debug log before sign-up
-      debugPrint(
-          'Attempting to sign up with email: ${_emailController.text.trim()}');
-
+      // Use the client from the service
       final AuthResponse res = await _supabaseService.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        // Use the correct parameter format based on the Supabase SDK version
-        data: {
-          'email_confirmed': true,
-        },
-        // No need for emailRedirectTo since we're bypassing email confirmation
       );
 
-      // Debug log after sign-up
-      debugPrint('Sign-up response received:');
-      debugPrint('User: ${res.user != null ? 'exists' : 'null'}');
-      debugPrint('Session: ${res.session != null ? 'exists' : 'null'}');
-
-      if (mounted) {
-        // Simplified logic: consider sign-up successful if we got a response with user
-        if (res.user != null) {
-          debugPrint('User created successfully');
-
-          // Always proceed to account setup regardless of session status
-          // No more email verification check
+      if (res.session != null) {
+        if (mounted) {
           Navigator.pushReplacementNamed(context, '/account_setup_1');
-        } else {
-          // Instead of throwing an error, show a meaningful message
-          setState(() {
-            errorText = 'Unable to create account. Please try again later.';
-          });
+        }
+      } else {
+        if (mounted) {
+          _emailController.clear();
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Verification Required'),
+                content: const Text('A verification email has been sent. Please verify your email to complete sign-up.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.pushReplacementNamed(context, '/account_setup_title');
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
         }
       }
-    } on AuthException catch (e) {
-      debugPrint('AuthException during sign-up: ${e.message}');
-      if (mounted) {
-        setState(() {
-          if (e.message.contains('email')) {
-            emailError = true;
-          }
-          errorText = 'Sign up failed: ${e.message}';
-        });
-      }
     } catch (e) {
-      debugPrint('Unexpected error during sign-up: $e');
       if (mounted) {
         setState(() {
-          // Make the error message more user-friendly
-          errorText =
-              'Something went wrong. Please check your internet connection and try again.';
-
           errorText = 'Sign up failed: ${e.toString()}';
-
         });
       }
     } finally {
@@ -186,9 +158,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -225,9 +195,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
