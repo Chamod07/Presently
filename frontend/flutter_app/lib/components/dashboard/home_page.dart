@@ -36,43 +36,6 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
             },
           ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () async {
-              try {
-                await Supabase.instance.client.auth.signOut();
-                // await Supabase.instance.client.auth.refreshSession();
-                // await Supabase.instance.client.auth.setSession(null);
-
-                final user = Supabase.instance.client.auth.currentUser;
-                debugPrint('User after sign out: $user');
-
-                if (user == null) {
-                  debugPrint('Successfully signed out.');
-                } else {
-                  debugPrint('User still exists, sign out failed.');
-                }
-
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => SignInPage()),
-                        (route) => false,
-                  );
-                }
-              } catch (error) {
-                debugPrint('Error signing out: $error');
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error signing out'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-          )
         ],
       ),
       body: Padding(
