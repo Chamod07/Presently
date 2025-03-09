@@ -35,7 +35,7 @@ dependencies:
   camera: ^0.10.5+9
   #firebase_auth: ^5.3.3
   fl_chart: ^0.70.2
-  image_picker: ^0.8.4+4
+  image_picker: ^1.1.2
   provider: ^6.1.2
   google_sign_in: ^6.2.2
   supabase_flutter: ^2.8.3

@@ -3,6 +3,7 @@ import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_app/services/home_page_service.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -12,26 +13,49 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final supabase = Supabase.instance.client;
+  final homePageService = HomePageService();
+  String ? firstName;
+  String ? avatarUrl;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase();
-  } // load sessions from supabase
+    Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase(); // load sessions from supabase
+    _loadHomePageData();
+  }
+
+  Future<void> _loadHomePageData() async{
+    setState(() => isLoading = true);
+
+    try{
+      final homePageData = await homePageService.getHomePageData();
+      if (homePageData != null && mounted){
+        setState(() {
+          firstName = homePageData['first_name'];
+          avatarUrl = homePageData['avatar_url'];
+
+        });
+      }
+    }
+    catch(e){
+      print('Error loading home page data: $e');
+    }
+    finally{
+      setState(() => isLoading = false);
+    }
+  }
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
+  //  final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
       appBar: AppBar(
-        // title: Text('Hello Mariah,'),
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: CircleAvatar(
               radius: 40,
-              backgroundImage: NetworkImage(
-                'https://via.placeholder.com/150',
-              ),
+              backgroundImage: NetworkImage(avatarUrl ?? 'https://via.placeholder.com/150'),
             ),
             onPressed: () {
             },
@@ -51,7 +75,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello Mariah,',
+                        'Hello ${firstName ?? 'User'} ,',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
