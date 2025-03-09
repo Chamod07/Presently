@@ -23,15 +23,67 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String ? profileImageUrl; // Profile image URL
 
+  String firstName = ''; // User's first name
+
+  String lastName = ''; // User's last name
+
+  String role = ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
+
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider: SharePreferenceCache(),
+      cacheProvider: SharePreferenceCache(),// Load saved preferences if available
     );
 
-    // Load saved preferences if available
+    //fetch user profile data
+    _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      setState(() {
+      });
+
+      final userId = _supabaseService.currentUserId;
+      if (userId == null) {
+        setState(() {
+        });
+        return;
+      }
+
+      final userDetailResponse = await _supabaseService.client
+          .from('UserDetails')
+          .select('firstName, lastName, role')
+          .eq('userId', userId)
+          .single();
+
+      final profileResponse = await _supabaseService.client
+          .from('Profile')
+          .select('avatar_url')
+          .eq('userId', userId)
+          .maybeSingle();
+
+      if(userDetailResponse != null){
+        setState(() {
+          firstName = userDetailResponse['firstName'] ?? '';
+          lastName = userDetailResponse['lastName'] ?? '';
+          role = userDetailResponse['role'] ?? '';
+        });
+      }
+
+      if (profileResponse != null) {
+        setState(() {
+          profileImageUrl = profileResponse['avatar_url'];
+        });
+      }
+
+    } catch (e) {
+      print('Error getting user profile: $e');
+      setState(() {
+      });
+    }
   }
 
   @override
@@ -275,22 +327,22 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Given name of user',
+            '$firstName $lastName',
             style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Roboto'
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            'Milan, Italy',
-            style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                fontFamily: 'Roboto'
-            ),
-          ),
+          //SizedBox(height: 8),
+          //Text(
+            //'Milan, Italy',
+            //style: TextStyle(
+              //  fontSize: 16,
+               // color: Colors.grey,
+               // fontFamily: 'Roboto'
+           // ),
+          //),
           SizedBox(height: 8),
           Text(
             'Given ',

@@ -1,4 +1,3 @@
-// task_group_page.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:io';
@@ -61,15 +60,15 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
     }
   }
 
-  Future<void> _pickProfileImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
-    }
-  }
+  // Future<void> _pickProfileImage() async {
+  //   final picker = ImagePicker();
+  //   final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  //   if (pickedFile != null) {
+  //     setState(() {
+  //       _profileImage = File(pickedFile.path);
+  //     });
+  //   }
+  // }
 
   double _calculateOverallProgress() {
     if (taskGroups.isEmpty) return 0.0;
@@ -210,19 +209,19 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
           onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
         actions: [
-          GestureDetector(
-            onTap: _pickProfileImage,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CircleAvatar(
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!)
-                    : const AssetImage('assets/default_profile.png')
-                        as ImageProvider,
-                radius: 20,
-              ),
-            ),
-          ),
+          // GestureDetector(
+          //   // onTap: _pickProfileImage,
+          //   child: Padding(
+          //     padding: const EdgeInsets.all(8.0),
+          //     // child: CircleAvatar(
+          //     //   backgroundImage: _profileImage != null
+          //     //       ? FileImage(_profileImage!)
+          //     //       : const AssetImage('assets/default_profile.png')
+          //     //           as ImageProvider,
+          //     //   radius: 20,
+          //     // ),
+          //   ),
+          // ),
         ],
       ),
       body: Padding(
