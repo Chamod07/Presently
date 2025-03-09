@@ -9,7 +9,7 @@ class Config {
   // Connection timeout in seconds
   static const int timeout = 30;
   
-  // API endpoints
+  // Original API endpoints (preserved as requested)
   static const String grammarWeaknessEndpoint = '/analyser/grammar/weaknesses';
   static const String grammarScoreEndPoint = '/analyser/grammar/score';
   static const String contextScoreEndpoint = '/analyser/context/score';

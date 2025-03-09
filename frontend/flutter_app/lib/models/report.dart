@@ -4,8 +4,33 @@ abstract class BaseReport {
   BaseReport({this.score, this.weaknesses});
 }
 
+// NEW: Combined report container that replaces the deprecated Report class
+class PresentationReport {
+  final ContextReport context;
+  final GrammarReport grammar;
+  final BodyLanguageReport bodyLanguage;
+  final VoiceAnalysisReport voice;
+
+  PresentationReport({
+    required this.context,
+    required this.grammar, 
+    required this.bodyLanguage,
+    required this.voice,
+  });
+
+  // Factory constructor to create an empty report
+  factory PresentationReport.empty() {
+    return PresentationReport(
+      context: ContextReport(),
+      grammar: GrammarReport(),
+      bodyLanguage: BodyLanguageReport(),
+      voice: VoiceAnalysisReport(),
+    );
+  }
+}
+
 // TODO: Remove deprecated class after full migration
-@Deprecated('Use specific report types instead')
+@Deprecated('Use PresentationReport instead')
 class Report {
   double? scoreContext;
   double? scoreGrammar;
@@ -20,8 +45,8 @@ class ContextReport extends BaseReport {
 
   factory ContextReport.fromJson(Map<String, dynamic> json) {
     return ContextReport(
-      score: json['score']?.toDouble(),
-      weaknesses: (json['weaknesses'] as List<dynamic>?)
+      score: json['overall_score']?.toDouble(),
+      weaknesses: (json['weakness_topics'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -34,7 +59,7 @@ class GrammarReport extends BaseReport {
   factory GrammarReport.fromJson(Map<String, dynamic> json) {
     return GrammarReport(
       score: json['grammar_score']?.toDouble(),
-      weaknesses: (json['weaknessTopicsGrammar'] as List<dynamic>?)
+      weaknesses: (json['weakness_topics'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -47,7 +72,7 @@ class BodyLanguageReport extends BaseReport {
   factory BodyLanguageReport.fromJson(Map<String, dynamic> json) {
     return BodyLanguageReport(
       score: json['pose_score']?.toDouble(),
-      weaknesses: (json['pose_weaknesses'] as List<dynamic>?)
+      weaknesses: (json['weakness_topics'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -60,7 +85,7 @@ class VoiceAnalysisReport extends BaseReport {
   factory VoiceAnalysisReport.fromJson(Map<String, dynamic> json) {
     return VoiceAnalysisReport(
       score: json['voice_score']?.toDouble(),
-      weaknesses: (json['voice_weaknesses'] as List<dynamic>?)
+      weaknesses: (json['weakness_topics'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );

@@ -6,11 +6,19 @@ import 'dart:convert';
 
 class ReportProvider with ChangeNotifier {
   final String reportId = '123e4567-e89b-12d3-a456-426614174000';
-  Report _report = Report();
+  
+  // Old report for backward compatibility
+  Report _legacyReport = Report();
+  // New report structure
+  PresentationReport _report = PresentationReport.empty();
+  
   bool _loading = false;
   String _errorMessage = '';
 
-  Report get report => _report;
+  // For backward compatibility
+  Report get legacyReport => _legacyReport;
+  // New getter
+  PresentationReport get report => _report;
   bool get loading => _loading;
   String get errorMessage => _errorMessage;
 
@@ -22,7 +30,25 @@ class ReportProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('Fetching report data for report ID: $reportId');
+      await Future.wait([
+        _fetchContextData(),
+        _fetchGrammarData(),
+        // Body language and voice API calls removed
+        // _fetchBodyLanguageData(),
+        // _fetchVoiceData(),
+      ]);
+    } catch (e) {
+      _errorMessage = 'An unexpected error occurred: $e';
+      debugPrint('Error in fetchReportData: $e');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchContextData() async {
+    try {
+      debugPrint('Fetching context data for report ID: $reportId');
       
       // Fetch context score
       final contextScoreResponse = await _httpService.get(
@@ -31,69 +57,186 @@ class ReportProvider with ChangeNotifier {
       
       if (contextScoreResponse.statusCode == 200) {
         final scoreData = jsonDecode(contextScoreResponse.body);
-        _report.scoreContext = scoreData['overall_score']?.toDouble();
-        debugPrint('Successfully fetched score: ${_report.scoreContext}');
+        final double? contextScore = scoreData['overall_score']?.toDouble();
+        
+        // Update legacy report
+        _legacyReport.scoreContext = contextScore;
+        
+        // Fetch context weaknesses
+        final weaknessResponse = await _httpService.get(
+          '${Config.apiUrl}${Config.contextWeaknessEndpoint}?report_id=$reportId'
+        );
+        
+        if (weaknessResponse.statusCode == 200) {
+          final weaknessData = jsonDecode(weaknessResponse.body);
+          final weaknesses = (weaknessData['weakness_topics'] as List<dynamic>?)
+                ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+                .toList();
+          
+          // Update legacy report
+          _legacyReport.contextWeaknesses = weaknesses;
+          
+          // Update new report structure
+          _report = PresentationReport(
+            context: ContextReport(score: contextScore, weaknesses: weaknesses),
+            grammar: _report.grammar,
+            bodyLanguage: _report.bodyLanguage,
+            voice: _report.voice,
+          );
+          
+          debugPrint('Successfully fetched context data');
+        } else {
+          _addError('Error fetching context weaknesses', weaknessResponse);
+        }
       } else {
-        _errorMessage += 'Error fetching score: ${contextScoreResponse.statusCode}\n';
-        debugPrint('Error fetching score: ${contextScoreResponse.statusCode}, ${contextScoreResponse.body}');
-      }
-
-      // Fetch context weaknesses
-      final weaknessResponse = await _httpService.get(
-        '${Config.apiUrl}${Config.contextWeaknessEndpoint}?report_id=$reportId'
-      );
-      
-      if (weaknessResponse.statusCode == 200) {
-        final weaknessData = jsonDecode(weaknessResponse.body);
-        _report.contextWeaknesses = (weaknessData['weakness_topics'] as List<dynamic>?)
-              ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
-              .toList();
-        debugPrint('Successfully fetched weaknesses: ${_report.contextWeaknesses?.length ?? 0}');
-      } else {
-        _errorMessage += 'Error fetching weaknesses: ${weaknessResponse.statusCode}\n';
-        debugPrint('Error fetching weaknesses: ${weaknessResponse.statusCode}, ${weaknessResponse.body}');
-      }
-
-      //Grammar data fetching happens below
-
-      // Fetch context score
-      final grammarScoreResponse = await _httpService.get(
-          '${Config.apiUrl}${Config.grammarScoreEndPoint}?report_id=$reportId'
-      );
-
-      double? grammarScore;
-      if (grammarScoreResponse.statusCode == 200) {
-        final scoreData = jsonDecode(grammarScoreResponse.body);
-        grammarScore = scoreData['grammar_score']?.toDouble();
-        debugPrint('Successfully fetched grammar score: $grammarScore');
-      } else {
-        _errorMessage += 'Error fetching grammar score: ${grammarScoreResponse.statusCode}\n';
-        debugPrint('Error fetching grammar score: ${grammarScoreResponse.statusCode}, ${grammarScoreResponse.body}');
-      }
-
-
-      // Fetch grammar weaknesses
-      final grammarResponse = await _httpService.get(
-        '${Config.apiUrl}${Config.grammarWeaknessEndpoint}?report_id=$reportId'
-      );
-      
-      if (grammarResponse.statusCode == 200) {
-        final grammarData = jsonDecode(grammarResponse.body);
-        _report.scoreGrammar = grammarScore;
-        _report.grammarWeaknesses = (grammarData['weakness_topics'] as List<dynamic>?)
-              ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
-              .toList();
-        debugPrint('Successfully fetched grammar weaknesses');
-      } else {
-        _errorMessage += 'Error fetching grammar: ${grammarResponse.statusCode}\n';
-        debugPrint('Error fetching grammar: ${grammarResponse.statusCode}, ${grammarResponse.body}');
+        _addError('Error fetching context score', contextScoreResponse);
       }
     } catch (e) {
-      _errorMessage = 'An unexpected error occurred: $e';
-      debugPrint('Error in fetchReportData: $e');
-    } finally {
-      _loading = false;
-      notifyListeners();
+      debugPrint('Error in _fetchContextData: $e');
+      _errorMessage += 'Error fetching context data: $e\n';
     }
+  }
+
+  Future<void> _fetchGrammarData() async {
+    try {
+      // Fetch grammar score
+      final grammarScoreResponse = await _httpService.get(
+        '${Config.apiUrl}${Config.grammarScoreEndPoint}?report_id=$reportId'
+      );
+
+      if (grammarScoreResponse.statusCode == 200) {
+        final scoreData = jsonDecode(grammarScoreResponse.body);
+        final double? grammarScore = scoreData['grammar_score']?.toDouble();
+        
+        // Update legacy report
+        _legacyReport.scoreGrammar = grammarScore;
+
+        // Fetch grammar weaknesses
+        final grammarResponse = await _httpService.get(
+          '${Config.apiUrl}${Config.grammarWeaknessEndpoint}?report_id=$reportId'
+        );
+        
+        if (grammarResponse.statusCode == 200) {
+          final grammarData = jsonDecode(grammarResponse.body);
+          final weaknesses = (grammarData['weakness_topics'] as List<dynamic>?)
+                ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+                .toList();
+          
+          // Update legacy report
+          _legacyReport.grammarWeaknesses = weaknesses;
+          
+          // Update new report structure
+          _report = PresentationReport(
+            context: _report.context,
+            grammar: GrammarReport(score: grammarScore, weaknesses: weaknesses),
+            bodyLanguage: _report.bodyLanguage,
+            voice: _report.voice,
+          );
+          
+          debugPrint('Successfully fetched grammar data');
+        } else {
+          _addError('Error fetching grammar weaknesses', grammarResponse);
+        }
+      } else {
+        _addError('Error fetching grammar score', grammarScoreResponse);
+      }
+    } catch (e) {
+      debugPrint('Error in _fetchGrammarData: $e');
+      _errorMessage += 'Error fetching grammar data: $e\n';
+    }
+  }
+
+  // Body language and voice data fetch methods commented out for future implementation
+  /*
+  Future<void> _fetchBodyLanguageData() async {
+    try {
+      // Fetch body language score
+      final poseScoreResponse = await _httpService.get(
+        '${Config.apiUrl}${Config.poseScoreEndpoint}?report_id=$reportId'
+      );
+
+      if (poseScoreResponse.statusCode == 200) {
+        final scoreData = jsonDecode(poseScoreResponse.body);
+        final double? poseScore = scoreData['pose_score']?.toDouble();
+
+        // Fetch body language weaknesses
+        final poseWeaknessResponse = await _httpService.get(
+          '${Config.apiUrl}${Config.poseWeaknessEndpoint}?report_id=$reportId'
+        );
+        
+        if (poseWeaknessResponse.statusCode == 200) {
+          final poseData = jsonDecode(poseWeaknessResponse.body);
+          final weaknesses = (poseData['weakness_topics'] as List<dynamic>?)
+                ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+                .toList();
+          
+          // Update new report structure
+          _report = PresentationReport(
+            context: _report.context,
+            grammar: _report.grammar,
+            bodyLanguage: BodyLanguageReport(score: poseScore, weaknesses: weaknesses),
+            voice: _report.voice,
+          );
+          
+          debugPrint('Successfully fetched body language data');
+        } else {
+          _addError('Error fetching body language weaknesses', poseWeaknessResponse);
+        }
+      } else {
+        _addError('Error fetching body language score', poseScoreResponse);
+      }
+    } catch (e) {
+      debugPrint('Error in _fetchBodyLanguageData: $e');
+      _errorMessage += 'Error fetching body language data: $e\n';
+    }
+  }
+
+  Future<void> _fetchVoiceData() async {
+    try {
+      // Fetch voice score
+      final voiceScoreResponse = await _httpService.get(
+        '${Config.apiUrl}${Config.voiceScoreEndpoint}?report_id=$reportId'
+      );
+
+      if (voiceScoreResponse.statusCode == 200) {
+        final scoreData = jsonDecode(voiceScoreResponse.body);
+        final double? voiceScore = scoreData['voice_score']?.toDouble();
+
+        // Fetch voice weaknesses
+        final voiceWeaknessResponse = await _httpService.get(
+          '${Config.apiUrl}${Config.voiceWeaknessEndpoint}?report_id=$reportId'
+        );
+        
+        if (voiceWeaknessResponse.statusCode == 200) {
+          final voiceData = jsonDecode(voiceWeaknessResponse.body);
+          final weaknesses = (voiceData['weakness_topics'] as List<dynamic>?)
+                ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+                .toList();
+          
+          // Update new report structure
+          _report = PresentationReport(
+            context: _report.context,
+            grammar: _report.grammar,
+            bodyLanguage: _report.bodyLanguage,
+            voice: VoiceAnalysisReport(score: voiceScore, weaknesses: weaknesses),
+          );
+          
+          debugPrint('Successfully fetched voice data');
+        } else {
+          _addError('Error fetching voice weaknesses', voiceWeaknessResponse);
+        }
+      } else {
+        _addError('Error fetching voice score', voiceScoreResponse);
+      }
+    } catch (e) {
+      debugPrint('Error in _fetchVoiceData: $e');
+      _errorMessage += 'Error fetching voice data: $e\n';
+    }
+  }
+  */
+
+  void _addError(String message, dynamic response) {
+    _errorMessage += '$message: ${response.statusCode}\n';
+    debugPrint('$message: ${response.statusCode}, ${response.body}');
   }
 }
