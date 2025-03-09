@@ -43,19 +43,18 @@ class _AccountSetup1State extends State<AccountSetup1> {
     if (!_firstNameError) {
       String firstName = _firstNameController.text.trim();
       String lastName = _lastNameController.text.trim();
-      final user = Supabase.instance.client.auth.currentUser;
+      final args = ModalRoute.of(context)!.settings.arguments as Map?;
+      String? userId = args?['userId'];
 
-      if (user != null) {
+      if (userId != null) {
         try {
           // Update UserDetails table
-          final response = await Supabase.instance.client
-              .from('UserDetails')
-              .update({'firstName': firstName, 'lastName': lastName})
-              .eq('userId', user.id);
+          final response = await Supabase.instance.client.from('UserDetails').update({'firstName': firstName, 'lastName': lastName}).eq('userId', userId).select();
 
-          if (response.error != null) {
-            throw response.error!;
+          if (response.isEmpty) {
+            throw Exception('Update failed, no matching user found.');
           }
+          debugPrint('Update successful: $response');
 
           Navigator.pushNamed(
             context,
