@@ -8,6 +8,7 @@ from controllers.task_assign_controller import router as task_assign_router
 from controllers.context_analysis_controller import router as context_router
 from controllers.grammar_analysis_controller import router as grammar_router
 from controllers.body_language_analysis_controller import router as body_language_router
+from controllers.voice_analysis_controller import router as voice_router
 from routers import auth, upload
 
 
@@ -35,6 +36,7 @@ app.include_router(upload.router)
 app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["grammar"])
 app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 app.include_router(body_language_router, prefix="/api/analyser/body-language", tags=["Body Language Analysis"])
+app.include_router(voice_router, prefix="/api/analyser/voice", tags=["Voice Analysis"])
 
 if __name__ == "__main__":
 
