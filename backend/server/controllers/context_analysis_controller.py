@@ -103,7 +103,7 @@ async def get_weaknesses(report_id: str = Query(..., title="Report ID"), user_id
         raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
 
     weakness_topics_context = response.data[0]["weaknessTopicsContext"]
-    print("\nReturning Weaknesses:", weakness_topics_context)
+    #print("\nReturning Weaknesses:", weakness_topics_context)
     return {"weakness_topics": weakness_topics_context}
 
 

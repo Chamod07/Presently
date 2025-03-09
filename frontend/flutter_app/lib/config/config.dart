@@ -11,6 +11,7 @@ class Config {
   
   // API endpoints
   static const String grammarWeaknessEndpoint = '/analyser/grammar/weaknesses';
+  static const String grammarScoreEndPoint = '/analyser/grammar/weaknesses';
   static const String contextScoreEndpoint = '/analyser/context/score';
   static const String contextWeaknessEndpoint = '/analyser/context/weaknesses';
 }

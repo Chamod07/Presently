@@ -18,7 +18,7 @@ class _SummaryPageState extends State<SummaryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Summary"),
+        title: const Text("Report summary"),
         centerTitle: true,
       ),
       body: PageView(
@@ -55,15 +55,16 @@ class ContextSummary extends StatelessWidget {
             return Column(
               children: [
                 SizedBox(height: 50),
+                Text("Context summary"),
                 Center(
                   child: GraphDisplay(score: (provider.report.scoreContext ?? 0) / 10),
                 ),
                 SizedBox(height: 50),
                 Expanded(
                   child: ListView.builder(
-                    itemCount: provider.report.weaknesses?.length ?? 0,
+                    itemCount: provider.report.contextWeaknesses?.length ?? 0,
                     itemBuilder: (context, index) {
-                      final weakness = provider.report.weaknesses![index];
+                      final weakness = provider.report.contextWeaknesses![index];
                       return Card(
                         child: ExpansionTile(
                           title: Text(weakness.topic ?? 'Unknown Weakness'),
@@ -115,6 +116,7 @@ class GrammarSummary extends StatelessWidget {
           } else {
             return Column(
               children: [
+                Text('Grammar Summary'),
                 SizedBox(height: 50),
                 Center(
                   child: GraphDisplay(score: (provider.report.scoreGrammar ?? 0) / 10),

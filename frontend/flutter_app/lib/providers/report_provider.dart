@@ -25,17 +25,17 @@ class ReportProvider with ChangeNotifier {
       debugPrint('Fetching report data for report ID: $reportId');
       
       // Fetch context score
-      final scoreResponse = await _httpService.get(
+      final contextScoreResponse = await _httpService.get(
         '${Config.apiUrl}${Config.contextScoreEndpoint}?report_id=$reportId'
       );
       
-      if (scoreResponse.statusCode == 200) {
-        final scoreData = jsonDecode(scoreResponse.body);
+      if (contextScoreResponse.statusCode == 200) {
+        final scoreData = jsonDecode(contextScoreResponse.body);
         _report = Report(scoreContext: scoreData['overall_score']?.toDouble());
         debugPrint('Successfully fetched score: ${_report.scoreContext}');
       } else {
-        _errorMessage += 'Error fetching score: ${scoreResponse.statusCode}\n';
-        debugPrint('Error fetching score: ${scoreResponse.statusCode}, ${scoreResponse.body}');
+        _errorMessage += 'Error fetching score: ${contextScoreResponse.statusCode}\n';
+        debugPrint('Error fetching score: ${contextScoreResponse.statusCode}, ${contextScoreResponse.body}');
       }
 
       // Fetch context weaknesses
@@ -47,15 +47,33 @@ class ReportProvider with ChangeNotifier {
         final weaknessData = jsonDecode(weaknessResponse.body);
         _report = Report(
           scoreContext: _report.scoreContext, // Keep existing score
-          weaknesses: (weaknessData['weakness_topics'] as List<dynamic>?)
+          contextWeaknesses: (weaknessData['weakness_topics'] as List<dynamic>?)
               ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
               .toList(),
         );
-        debugPrint('Successfully fetched weaknesses: ${_report.weaknesses?.length ?? 0}');
+        debugPrint('Successfully fetched weaknesses: ${_report.contextWeaknesses?.length ?? 0}');
       } else {
         _errorMessage += 'Error fetching weaknesses: ${weaknessResponse.statusCode}\n';
         debugPrint('Error fetching weaknesses: ${weaknessResponse.statusCode}, ${weaknessResponse.body}');
       }
+
+      //Grammar data fetching happens below
+
+      // Fetch context score
+      final grammarScoreResponse = await _httpService.get(
+          '${Config.apiUrl}${Config.grammarScoreEndPoint}?report_id=$reportId'
+      );
+
+      double? grammarScore;
+      if (grammarScoreResponse.statusCode == 200) {
+        final scoreData = jsonDecode(grammarScoreResponse.body);
+        grammarScore = scoreData['grammar_score']?.toDouble();
+        debugPrint('Successfully fetched grammar score: $grammarScore');
+      } else {
+        _errorMessage += 'Error fetching grammar score: ${grammarScoreResponse.statusCode}\n';
+        debugPrint('Error fetching grammar score: ${grammarScoreResponse.statusCode}, ${grammarScoreResponse.body}');
+      }
+
 
       // Fetch grammar weaknesses
       final grammarResponse = await _httpService.get(
@@ -66,8 +84,11 @@ class ReportProvider with ChangeNotifier {
         final grammarData = jsonDecode(grammarResponse.body);
         _report = Report(
           scoreContext: _report.scoreContext,
-          weaknesses: _report.weaknesses,
-          grammarWeaknesses: grammarData['identified_issues'],
+          contextWeaknesses: _report.contextWeaknesses,
+          scoreGrammar: grammarScore,
+          grammarWeaknesses: (grammarData['weakness_topics'] as List<dynamic>?)
+              ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+              .toList(),
         );
         debugPrint('Successfully fetched grammar weaknesses');
       } else {
