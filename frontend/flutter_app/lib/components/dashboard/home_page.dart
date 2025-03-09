@@ -22,6 +22,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         // title: Text('Hello Mariah,'),
+        backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -153,7 +154,10 @@ class _HomePageState extends State<HomePage> {
     required String title,
     required String navigateTo,
   }) {
-    return GestureDetector(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0
+    ),
+      child: GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, navigateTo);
       },
@@ -207,6 +211,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
