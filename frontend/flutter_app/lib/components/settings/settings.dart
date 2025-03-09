@@ -375,10 +375,10 @@ class _SettingsPageState extends State<SettingsPage> {
       .from('avatars')
       .getPublicUrl(fileName);
 
-      await _supabaseService.client.from('avatars').upsert({
+      await _supabaseService.client.from('Profile').upsert({
         'id': userId,
         'avatar_url': imageUrl,
-        'updated_at': DateTime.now().toIso8601String(),
+       // 'updated_at': DateTime.now().toIso8601String(),
       });
 
       setState(() {
