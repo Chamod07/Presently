@@ -1,8 +1,8 @@
 class Report {
-  final double? scoreContext;
-  final double? scoreGrammar; // new field
-  final List<Weakness>? contextWeaknesses;
-  final List<Weakness>? grammarWeaknesses;
+  double? scoreContext;
+  double? scoreGrammar;
+  List<Weakness>? contextWeaknesses;
+  List<Weakness>? grammarWeaknesses;
 
   Report({
     this.scoreContext,

@@ -31,7 +31,7 @@ class ReportProvider with ChangeNotifier {
       
       if (contextScoreResponse.statusCode == 200) {
         final scoreData = jsonDecode(contextScoreResponse.body);
-        _report = Report(scoreContext: scoreData['overall_score']?.toDouble());
+        _report.scoreContext = scoreData['overall_score']?.toDouble();
         debugPrint('Successfully fetched score: ${_report.scoreContext}');
       } else {
         _errorMessage += 'Error fetching score: ${contextScoreResponse.statusCode}\n';
@@ -45,12 +45,9 @@ class ReportProvider with ChangeNotifier {
       
       if (weaknessResponse.statusCode == 200) {
         final weaknessData = jsonDecode(weaknessResponse.body);
-        _report = Report(
-          scoreContext: _report.scoreContext, // Keep existing score
-          contextWeaknesses: (weaknessData['weakness_topics'] as List<dynamic>?)
+        _report.contextWeaknesses = (weaknessData['weakness_topics'] as List<dynamic>?)
               ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        );
+              .toList();
         debugPrint('Successfully fetched weaknesses: ${_report.contextWeaknesses?.length ?? 0}');
       } else {
         _errorMessage += 'Error fetching weaknesses: ${weaknessResponse.statusCode}\n';
@@ -82,14 +79,10 @@ class ReportProvider with ChangeNotifier {
       
       if (grammarResponse.statusCode == 200) {
         final grammarData = jsonDecode(grammarResponse.body);
-        _report = Report(
-          scoreContext: _report.scoreContext,
-          contextWeaknesses: _report.contextWeaknesses,
-          scoreGrammar: grammarScore,
-          grammarWeaknesses: (grammarData['weakness_topics'] as List<dynamic>?)
+        _report.scoreGrammar = grammarScore;
+        _report.grammarWeaknesses = (grammarData['weakness_topics'] as List<dynamic>?)
               ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        );
+              .toList();
         debugPrint('Successfully fetched grammar weaknesses');
       } else {
         _errorMessage += 'Error fetching grammar: ${grammarResponse.statusCode}\n';
