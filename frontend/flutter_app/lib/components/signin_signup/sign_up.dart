@@ -42,10 +42,12 @@ class _SignUpPageState extends State<SignUpPage> {
         password: _passwordController.text,
       );
 
-      if (res.session != null) {
+      if (res.user != null) {
+        String userId = res.user!.id;
         await _supabaseService.persistSession(res.session!); // Persist the session
+
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/account_setup_1');
+          Navigator.pushReplacementNamed(context, '/account_setup_1', arguments: {'userId': userId});
         }
       } else {
         if (mounted) {
