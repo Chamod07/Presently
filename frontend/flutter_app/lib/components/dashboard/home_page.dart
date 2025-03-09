@@ -19,6 +19,7 @@ class _HomePageState extends State<HomePage> {
     Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase();
   } // load sessions from supabase
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
       appBar: AppBar(
         // title: Text('Hello Mariah,'),
