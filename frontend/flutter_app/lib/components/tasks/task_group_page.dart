@@ -7,7 +7,7 @@ import 'task_list_page.dart';
 import 'task_group.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/services/task_assign/task_group_service.dart';
-import 'package:flutter_app/utils/image_utils.dart'; // Add this import
+import 'package:flutter_app/utils/image_utils.dart';
 
 class TaskGroupPage extends StatefulWidget {
   const TaskGroupPage({Key? key}) : super(key: key);
@@ -21,11 +21,53 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
   List<TaskGroup> taskGroups = [];
   bool isLoading = true;
   String? errorMessage;
+  // Add cache variables
+  static List<TaskGroup> _cachedTaskGroups = [];
+  static DateTime? _lastFetchTime;
+  static const Duration _cacheValidDuration = Duration(minutes: 5);
 
   @override
   void initState() {
     super.initState();
+    _loadTaskGroups();
+  }
+
+  Future<void> _loadTaskGroups() async {
+    // First check if we have valid cached data
+    if (_cachedTaskGroups.isNotEmpty &&
+        _lastFetchTime != null &&
+        DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration) {
+      // Use cached data if it's available and still valid
+      setState(() {
+        taskGroups = _cachedTaskGroups;
+        isLoading = false;
+      });
+      // Refresh in background without showing loading indicator
+      _refreshTaskGroupsInBackground();
+      return;
+    }
+
+    // If no valid cache, fetch data normally with loading indicator
     _fetchTaskGroups();
+  }
+
+  Future<void> _refreshTaskGroupsInBackground() async {
+    try {
+      final TaskGroupService service = TaskGroupService();
+      final fetchedTaskGroups = await service.getTaskGroups();
+
+      if (mounted) {
+        setState(() {
+          taskGroups = fetchedTaskGroups;
+          // Update cache
+          _cachedTaskGroups = fetchedTaskGroups;
+          _lastFetchTime = DateTime.now();
+        });
+      }
+    } catch (e) {
+      print('Background refresh error: $e');
+      // Don't update UI state or show error since this is a background operation
+    }
   }
 
   Future<void> _fetchTaskGroups() async {
@@ -39,25 +81,42 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
 
       try {
         final fetchedTaskGroups = await service.getTaskGroups();
-        setState(() {
-          taskGroups = fetchedTaskGroups;
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            taskGroups = fetchedTaskGroups;
+            isLoading = false;
+
+            // Update cache
+            _cachedTaskGroups = fetchedTaskGroups;
+            _lastFetchTime = DateTime.now();
+          });
+        }
       } catch (e) {
         // This provides better error messaging to the user
-        setState(() {
-          taskGroups = []; // Clear any existing data
-          isLoading = false;
-          errorMessage =
-              'Unable to connect to the server. Please try again later.';
-        });
+        if (mounted) {
+          setState(() {
+            // If we have cached data, show it instead of clearing everything
+            if (_cachedTaskGroups.isNotEmpty) {
+              taskGroups = _cachedTaskGroups;
+              errorMessage =
+                  'Using cached data. Unable to refresh from server.';
+            } else {
+              taskGroups = []; // Clear any existing data
+              errorMessage =
+                  'Unable to connect to the server. Please try again later.';
+            }
+            isLoading = false;
+          });
+        }
         print('Error in fetch: $e');
       }
     } catch (e) {
-      setState(() {
-        errorMessage = 'An unexpected error occurred.';
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = 'An unexpected error occurred.';
+          isLoading = false;
+        });
+      }
       print('Unexpected error: $e');
     }
   }
