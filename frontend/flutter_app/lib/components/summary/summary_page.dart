@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/summary/graph_display.dart';
+import 'package:flutter_app/providers/report_provider.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/report.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -10,231 +14,242 @@ class SummaryPage extends StatefulWidget {
 }
 
 class _SummaryPageState extends State<SummaryPage> {
-  bool _showTasks = true;
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  final List<String> _pageTitles = [
+    "Context Summary", 
+    "Grammar Summary",
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Summary"),
+        title: Text(_pageTitles[_currentPage]),
         centerTitle: true,
       ),
       body: Column(
         children: [
-          SizedBox(height: 50),
-          Center(child:
-            const GraphDisplay(),
-          ),
-          SizedBox(height: 50),
+          // Tab indicators
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildToggleButton(
-                  text: "Tasks",
-                  isActive: _showTasks,
-                  onPressed: () {
-                    setState(() {
-                      _showTasks = true;
-                    });
-                  },
-                ),
-                const SizedBox(width: 16),
-                _buildToggleButton(
-                  text: "Resources",
-                  isActive: !_showTasks,
-                  onPressed: () {
-                    setState(() {
-                      _showTasks = false;
-                    });
-                  },
-                ),
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(_pageTitles.length, (index) {
+                return _buildTabIndicator(index);
+              }),
+            ),
+          ),
+          // PageView with all report categories
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              children: const [
+                ContextSummary(),
+                GrammarSummary(),
+                // BodyLanguageSummary and VoiceAnalysisSummary removed
               ],
             ),
           ),
-          Expanded(
-            child: _showTasks ? const TasksTab() : const ResourcesTab(),
-          ),
         ],
       ),
-      bottomNavigationBar: const NavBar (selectedIndex: 0,),
+      bottomNavigationBar: const NavBar(selectedIndex: 0),
     );
   }
 
-  Widget _buildToggleButton({
-    required String text,
-    required bool isActive,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isActive ? Color(0xFF7400B8): Colors.grey[300],
-        foregroundColor: isActive ? Colors.white : Colors.black,
-        shape: RoundedRectangleBorder(
+  Widget _buildTabIndicator(int index) {
+    final isActive = index == _currentPage;
+    return GestureDetector(
+      onTap: () {
+        _pageController.animateToPage(
+          index,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? Color(0xFF7400B8) : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(20),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        child: Text(
+          _pageTitles[index].split(' ')[0], // Just show first word for compactness
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.black,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 }
 
-class TasksTab extends StatelessWidget {
-  const TasksTab({super.key});
-
+// Base class for all summary screens with common functionality
+abstract class BaseSummary extends StatelessWidget {
+  const BaseSummary({super.key});
+  
+  // Methods to be implemented by subclasses
+  String get title;
+  Widget buildContent(BuildContext context, ReportProvider provider);
+  double? getScore(ReportProvider provider);
+  List<Weakness>? getWeaknesses(ReportProvider provider);
+  
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView(
-        children: [
-          ExpandableTile(
-            title: "Appeared Uneasy",
-            subtitle:
-            "It looks like you might have felt a bit nervous during practice. That's okay! Just take things one step at a time, and remember to breathe. You've got this!",
-          ),
-          const SizedBox(height: 10),
-          ExpandableTile(
-            title: "Lack of Eye Contact",
-            subtitle:
-            "Don't be afraid to look your audience or the camera in the eye. It shows confidence and helps you connect with them on a deeper level.",
-          ),
-          const SizedBox(height: 10),
-          ExpandableTile(
-            title: "Overuse of Fillers",
-            subtitle: "Engage in impromptu speaking exercises.",
-          ),
-        ],
+    return ChangeNotifierProvider(
+      create: (context) => ReportProvider()..fetchReportData(),
+      child: Consumer<ReportProvider>(
+        builder: (context, provider, _) {
+          if (provider.loading) {
+            return Center(child: CircularProgressIndicator());
+          } else if (provider.errorMessage.isNotEmpty) {
+            return Center(child: Text(provider.errorMessage));
+          } else {
+            return Column(
+              children: [
+                SizedBox(height: 20),
+                Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                SizedBox(height: 20),
+                Center(
+                  child: GraphDisplay(score: (getScore(provider) ?? 0) / 10),
+                ),
+                SizedBox(height: 20),
+                Expanded(
+                  child: buildWeaknessList(context, provider),
+                ),
+              ],
+            );
+          }
+        },
       ),
     );
   }
-}
-
-class ResourcesTab extends StatelessWidget {
-  const ResourcesTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView(
-        children: [
-          _buildRoundedTile(
-            title: "Body Language for Presentations",
-            subtitle: "Communication Coach Alexander Lyon",
-            icon: Icons.video_library,
-          ),
-          const SizedBox(height: 10),
-          _buildRoundedTile(
-            title: "Body Language Tips",
-            subtitle: "Master the art of non-verbal communication.",
-            icon: Icons.video_library,
-          ),
-          const SizedBox(height: 10),
-          _buildRoundedTile(
-            title: "Voice Modulation Practice",
-            subtitle: "Enhance your vocal variety.",
-            icon: Icons.video_library,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoundedTile({
-    required String title,
-    required String subtitle,
-    IconData? icon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: icon != null ? Icon(icon) : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-    );
-  }
-}
-
-class ExpandableTile extends StatefulWidget {
-  final String title;
-  final String subtitle;
-
-  const ExpandableTile({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  _ExpandableTileState createState() => _ExpandableTileState();
-}
-
-class _ExpandableTileState extends State<ExpandableTile> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(widget.title),
-            trailing: IconButton(
-              icon: Icon(
-                _isExpanded ? Icons.remove : Icons.add,
-                color: Colors.purple,
+  
+  Widget buildWeaknessList(BuildContext context, ReportProvider provider) {
+    final weaknesses = getWeaknesses(provider);
+    if (weaknesses == null || weaknesses.isEmpty) {
+      return Center(child: Text('No weaknesses found.'));
+    }
+    
+    return ListView.builder(
+      itemCount: weaknesses.length,
+      itemBuilder: (context, index) {
+        final weakness = weaknesses[index];
+        return Card(
+          child: ExpansionTile(
+            title: Text(weakness.topic ?? 'Unknown Issue'),
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    if (weakness.examples != null)
+                      for (String example in weakness.examples!)
+                        Text('- $example'),
+                    const SizedBox(height: 8),
+                    const Text('Suggestions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    if (weakness.suggestions != null)
+                      for (String suggestion in weakness.suggestions!)
+                        Text('- $suggestion'),
+                  ],
+                ),
               ),
-              onPressed: () {
-                setState(() {
-                  _isExpanded = !_isExpanded;
-                });
-              },
-            ),
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ],
           ),
-          if (_isExpanded)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                widget.subtitle,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
+
+class ContextSummary extends BaseSummary {
+  const ContextSummary({super.key});
+  
+  @override
+  String get title => 'Context Summary';
+  
+  @override
+  double? getScore(ReportProvider provider) => provider.report.context.score;
+  
+  @override
+  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.context.weaknesses;
+  
+  @override
+  Widget buildContent(BuildContext context, ReportProvider provider) {
+    // Additional custom UI for context summary if needed
+    return Container();
+  }
+}
+
+class GrammarSummary extends BaseSummary {
+  const GrammarSummary({super.key});
+  @override
+  String get title => 'Grammar Summary';
+  
+  @override
+  double? getScore(ReportProvider provider) => provider.report.grammar.score;
+  
+  @override
+  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.grammar.weaknesses;
+  
+  @override
+  Widget buildContent(BuildContext context, ReportProvider provider) {
+    // Additional custom UI for grammar summary if needed
+    return Container();
+  }
+}
+
+// Keeping these classes but commenting them out for future implementation
+/*
+class BodyLanguageSummary extends BaseSummary {
+  const BodyLanguageSummary({super.key});
+  
+  @override
+  String get title => 'Body Language';
+  
+  @override
+  double? getScore(ReportProvider provider) => provider.report.bodyLanguage.score;
+  
+  @override
+  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.bodyLanguage.weaknesses;
+  
+  @override
+  Widget buildContent(BuildContext context, ReportProvider provider) {
+    // Additional custom UI for body language summary if needed
+    return Container();
+  }
+}
+
+class VoiceAnalysisSummary extends BaseSummary {
+  const VoiceAnalysisSummary({super.key});
+  
+  @override
+  String get title => 'Voice Analysis';
+  
+  @override
+  double? getScore(ReportProvider provider) => provider.report.voice.score;
+  
+  @override
+  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.voice.weaknesses;
+  
+  @override
+  Widget buildContent(BuildContext context, ReportProvider provider) {
+    // Additional custom UI for voice analysis summary if needed
+    return Container();
+  }
+}
+*/
