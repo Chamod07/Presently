@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountSetup2 extends StatefulWidget {
   const AccountSetup2({super.key});
@@ -10,7 +10,7 @@ class AccountSetup2 extends StatefulWidget {
 }
 
 class _AccountSetup2State extends State<AccountSetup2> {
-  String? selectDropDown;
+  String? selectedRole;
 
   final List<String> userStatus = [
     'Student',
@@ -19,13 +19,41 @@ class _AccountSetup2State extends State<AccountSetup2> {
     'Young Professional',
     'Other'
   ];
-  @override
-  Widget build(BuildContext context) {
-    final args =
-    ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
+
+  void _continue() async {
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
     String firstName = args?['firstName'] ?? "";
     String lastName = args?['lastName'] ?? "";
+    String? userId = args?['userId'];
 
+    if (userId != null && selectedRole != null) {
+      try {
+        final response = await Supabase.instance.client.from('UserDetails').update({'role': selectedRole}).eq('userId', userId).select();
+
+        if (response.isEmpty) {
+          throw Exception('Update failed, no matching user found.');
+        }
+        debugPrint('Role update successful: $response');
+
+        Navigator.pushNamed(context, '/account_setup_greeting', arguments: {
+          'firstName': firstName,
+          'lastName': lastName,
+        });
+      } catch (e) {
+        debugPrint('Error updating user role: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update role. Try again.')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select a role before continuing.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
         body: SafeArea(
             child: Column(
@@ -68,16 +96,15 @@ class _AccountSetup2State extends State<AccountSetup2> {
                       }).toList(),
                       onChanged: (String? newValue){
                         setState(() {
-                          selectDropDown = newValue;
+                          selectedRole = newValue;
                         });
                       },
                     ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/account_setup_greeting', arguments: {'firstName': firstName, 'lastName': lastName});
-                    }, style: ElevatedButton.styleFrom(
+                    onPressed: _continue,
+                    style: ElevatedButton.styleFrom(
                     minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                     backgroundColor: Color(0xFF7400B8),
                     shape: RoundedRectangleBorder(

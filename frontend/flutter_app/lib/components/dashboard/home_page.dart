@@ -121,10 +121,10 @@ class _HomePageState extends State<HomePage> {
               if (sessionProvider.sessions.isEmpty) {
                 return Center(
                   child: Text(
-                    'No sessions available! Please start a new session',
+                    'No sessions available! \nPlease start a new session',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 18,
                       color: Colors.grey,
                       fontFamily: 'Roboto',
                     ),
