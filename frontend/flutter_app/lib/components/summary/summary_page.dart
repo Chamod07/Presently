@@ -19,6 +19,8 @@ class _SummaryPageState extends State<SummaryPage> {
   final List<String> _pageTitles = [
     "Context Summary", 
     "Grammar Summary",
+    "Body Language",
+    "Voice Analysis",
   ];
 
   @override
@@ -52,7 +54,8 @@ class _SummaryPageState extends State<SummaryPage> {
               children: const [
                 ContextSummary(),
                 GrammarSummary(),
-                // BodyLanguageSummary and VoiceAnalysisSummary removed
+                BodyLanguageSummary(),
+                VoiceAnalysisSummary(),
               ],
             ),
           ),
@@ -213,8 +216,6 @@ class GrammarSummary extends BaseSummary {
   }
 }
 
-// Keeping these classes but commenting them out for future implementation
-/*
 class BodyLanguageSummary extends BaseSummary {
   const BodyLanguageSummary({super.key});
   
@@ -229,7 +230,6 @@ class BodyLanguageSummary extends BaseSummary {
   
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
-    // Additional custom UI for body language summary if needed
     return Container();
   }
 }
@@ -248,8 +248,6 @@ class VoiceAnalysisSummary extends BaseSummary {
   
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
-    // Additional custom UI for voice analysis summary if needed
     return Container();
   }
 }
-*/
