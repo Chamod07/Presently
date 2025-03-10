@@ -271,16 +271,16 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
         ),
         actions: [
           GestureDetector(
-            onTap: _pickProfileImage,
+            onTap: () => Navigator.pushNamed(context, '/settings'),
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                radius: 20, // Adjust size as needed
+                radius: 20,
                 backgroundColor: Colors.grey[300],
                 child: Icon(
-                  Icons.person,
+                  Icons.settings,
                   color: Colors.grey[700],
-                  size: 20, // Adjust size as needed
+                  size: 20,
                 ),
               ),
             ),
