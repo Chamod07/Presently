@@ -2,7 +2,7 @@ name: flutter_app
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -66,7 +66,6 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -74,15 +73,15 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-     - images/google_720255.png
-     - images/SignIn_SignUp.png
-     - images/SignIn_SignUp-removebg-preview.png
-     - images/OnboardGreet_AccountSetupTitle.png
-     - images/Task_Pass.png
-     - images/Task_Fail.png
-     - images/Body_Language_Summary.png
-     - images/Audio_Summary.png
-     - images/Emotion_Summary.png
+    - images/google_720255.png
+    - images/SignIn_SignUp.png
+    - images/SignIn_SignUp-removebg-preview.png
+    - images/OnboardGreet_AccountSetupTitle.png
+    - images/Task_Pass.png
+    - images/Task_Fail.png
+    - images/Body_Language_Summary.png
+    - images/Audio_Summary.png
+    - images/Emotion_Summary.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -96,14 +95,14 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-     - family: Cookie
-       fonts:
-         - asset: fonts/Cookie-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-     - family: Roboto
-       fonts:
-         - asset: fonts/Roboto-Medium.ttf
+    - family: Cookie
+      fonts:
+        - asset: fonts/Cookie-Regular.ttf
+    #       - asset: fonts/Schyler-Italic.ttf
+    #         style: italic
+    - family: Roboto
+      fonts:
+        - asset: fonts/Roboto-Medium.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
   #

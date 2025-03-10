@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/services/supabase_service.dart';
+import 'package:flutter_app/services/supabase/supabase_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -10,7 +10,7 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  // Use the service to access the client
+  // Use the service to access the client consistently
   final _supabaseService = SupabaseService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -23,7 +23,56 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscureConfirmPassword = true;
   String? errorText;
 
+  @override
+  void initState() {
+    super.initState();
+    // Check if the user is already signed in when this page loads
+    _checkCurrentSession();
+  }
+
+  Future<void> _checkCurrentSession() async {
+    final hasValidSession = await _supabaseService.hasValidSession();
+    if (hasValidSession && mounted) {
+      // User already has an active session
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
   Future<void> signUpWithEmail() async {
+    // Clear previous errors
+    setState(() {
+      emailError = false;
+      passwordError = false;
+      confirmPasswordError = false;
+      errorText = null;
+    });
+
+    // Validate email
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        emailError = true;
+        errorText = 'Please enter an email address';
+      });
+      return;
+    }
+
+    // Validate passwords
+    if (_passwordController.text.isEmpty) {
+      setState(() {
+        passwordError = true;
+        errorText = 'Please enter a password';
+      });
+      return;
+    }
+
+    if (_confirmPasswordController.text.isEmpty) {
+      setState(() {
+        confirmPasswordError = true;
+        errorText = 'Please confirm your password';
+      });
+      return;
+    }
+
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         passwordError = true;
@@ -36,48 +85,63 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Use the client from the service
+      // Debug log before sign-up
+      debugPrint(
+          'Attempting to sign up with email: ${_emailController.text.trim()}');
+
+// Modified sign-up approach with better error handling
       final AuthResponse res = await _supabaseService.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        // Simplified data object
+        data: {
+          'email_confirmed': true,
+        },
+        // No need for emailRedirectTo since we're bypassing email confirmation
       );
 
-      if (res.user != null) {
-        String userId = res.user!.id;
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/account_setup_1', arguments: {'userId': userId});
-        }
-      } else {
-        if (mounted) {
-          _emailController.clear();
-          _passwordController.clear();
-          _confirmPasswordController.clear();
+      // Detailed debug logging
+      debugPrint('Sign-up response received:');
+      debugPrint('User: ${res.user != null ? res.user!.id : 'null'}');
+      debugPrint('Session: ${res.session != null ? 'active' : 'null'}');
 
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Verification Required'),
-                content: const Text('A verification email has been sent. Please verify your email to complete sign-up.'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.pushReplacementNamed(context, '/account_setup_title');
-                    },
-                    child: const Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
+      if (res.user == null) {
+        debugPrint('No user returned in response');
+        throw Exception('User creation failed');
+      }
+
+      if (mounted) {
+        // Simplified logic: consider sign-up successful if we got a response with user
+        if (res.user != null) {
+          debugPrint('User created successfully');
+
+          // Always proceed to account setup regardless of session status
+          // No more email verification check
+          Navigator.pushReplacementNamed(context, '/account_setup_1');
+        } else {
+          // Instead of throwing an error, show a meaningful message
+          setState(() {
+            errorText = 'Unable to create account. Please try again later.';
+          });
         }
       }
-    } catch (e) {
+    } on AuthException catch (e) {
+      debugPrint('AuthException during sign-up: ${e.message}');
       if (mounted) {
         setState(() {
-          errorText = 'Sign up failed: ${e.toString()}';
+          if (e.message.contains('email')) {
+            emailError = true;
+          }
+          errorText = 'Sign up failed: ${e.message}';
+        });
+      }
+    } catch (e) {
+      debugPrint('Unexpected error during sign-up: $e');
+      if (mounted) {
+        setState(() {
+          // Make the error message more user-friendly
+          errorText =
+              'Something went wrong. Please check your internet connection and try again.';
         });
       }
     } finally {
@@ -132,15 +196,18 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: emailError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(
+                          color: emailError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -159,7 +226,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -169,15 +238,21 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: passwordError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(
+                          color:
+                              passwordError ? Colors.red : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -196,7 +271,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -206,15 +283,24 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: confirmPasswordError
+                              ? Colors.red
+                              : Color(0x26000000)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0x26000000)),
+                      borderSide: BorderSide(
+                          color: confirmPasswordError
+                              ? Colors.red
+                              : Color(0x26000000)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: confirmPasswordError ? Colors.red : Color(0xFF7400B8)),
+                      borderSide: BorderSide(
+                          color: confirmPasswordError
+                              ? Colors.red
+                              : Color(0xFF7400B8)),
                     ),
                   ),
                 ),
@@ -223,7 +309,8 @@ class _SignUpPageState extends State<SignUpPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : signUpWithEmail,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  minimumSize:
+                      Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -232,13 +319,13 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: _isLoading
                     ? CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                  "Continue",
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: Colors.white,
-                    fontFamily: 'Roboto',
-                  ),
-                ),
+                        "Continue",
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
               ),
               const SizedBox(height: 20),
               Row(
