@@ -106,6 +106,7 @@ class _SignUpPageState extends State<SignUpPage> {
       debugPrint('Session: ${res.session != null ? 'active' : 'null'}');
 
       if (res.user == null) {
+        await _supabaseService.persistSession(res.session!); // Persist the session
         debugPrint('No user returned in response');
         throw Exception('User creation failed');
       }
