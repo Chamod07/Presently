@@ -1,7 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// A service class that provides a centralized Supabase client instance
-/// for the application.
+/// and authentication functionality for the application.
 class SupabaseService {
   /// Singleton instance of the SupabaseService
   static final SupabaseService _instance = SupabaseService._internal();
@@ -42,7 +43,8 @@ class SupabaseService {
 
   /// Get the Supabase client instance
   SupabaseClient get client {
-    assert(_initialized, 'Supabase must be initialized before accessing the client');
+    assert(_initialized,
+        'Supabase must be initialized before accessing the client');
     return Supabase.instance.client;
   }
 
@@ -54,4 +56,46 @@ class SupabaseService {
 
   /// Check if a user is signed in
   bool get isSignedIn => currentUser != null;
+
+  /// Get current session if available
+  Session? get currentSession =>
+      _initialized ? client.auth.currentSession : null;
+
+  /// Check if session is valid and not expired
+  Future<bool> hasValidSession() async {
+    if (!isSignedIn) return false;
+
+    try {
+      final session = currentSession;
+
+      if (session == null) return false;
+
+      // Check if token is expired
+      if (session.isExpired) {
+        // Try to refresh the session
+        try {
+          await client.auth.refreshSession();
+          return client.auth.currentSession != null;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error checking session: $e');
+      return false;
+    }
+  }
+
+  /// Listen to auth state changes
+  Stream<AuthState> get authStateChanges =>
+      _initialized ? client.auth.onAuthStateChange : Stream.empty();
+
+  /// Sign out
+  Future<void> signOut() async {
+    if (_initialized) {
+      await client.auth.signOut();
+    }
+  }
 }

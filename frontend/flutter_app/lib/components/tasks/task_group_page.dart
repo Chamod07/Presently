@@ -1,3 +1,4 @@
+// task_group_page.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:io';
@@ -6,6 +7,7 @@ import 'task_list_page.dart';
 import 'task_group.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/services/task_assign/task_group_service.dart';
+import 'package:flutter_app/utils/image_utils.dart'; // Add this import
 
 class TaskGroupPage extends StatefulWidget {
   const TaskGroupPage({Key? key}) : super(key: key);
@@ -60,15 +62,15 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
     }
   }
 
-  // Future<void> _pickProfileImage() async {
-  //   final picker = ImagePicker();
-  //   final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-  //   if (pickedFile != null) {
-  //     setState(() {
-  //       _profileImage = File(pickedFile.path);
-  //     });
-  //   }
-  // }
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
 
   double _calculateOverallProgress() {
     if (taskGroups.isEmpty) return 0.0;
@@ -209,19 +211,21 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
           onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
         actions: [
-          // GestureDetector(
-          //   // onTap: _pickProfileImage,
-          //   child: Padding(
-          //     padding: const EdgeInsets.all(8.0),
-          //     // child: CircleAvatar(
-          //     //   backgroundImage: _profileImage != null
-          //     //       ? FileImage(_profileImage!)
-          //     //       : const AssetImage('assets/default_profile.png')
-          //     //           as ImageProvider,
-          //     //   radius: 20,
-          //     // ),
-          //   ),
-          // ),
+          GestureDetector(
+            onTap: _pickProfileImage,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CircleAvatar(
+                radius: 20, // Adjust size as needed
+                backgroundColor: Colors.grey[300],
+                child: Icon(
+                  Icons.person,
+                  color: Colors.grey[700],
+                  size: 20, // Adjust size as needed
+                ),
+              ),
+            ),
+          ),
         ],
       ),
       body: Padding(

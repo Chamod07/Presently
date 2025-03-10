@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/supabase_service.dart';
+import '../../services/supabase/supabase_service.dart';
 
 class SessionProvider with ChangeNotifier {
   final _supabaseService = SupabaseService();
@@ -14,7 +14,8 @@ class SessionProvider with ChangeNotifier {
   String? get selectedName => _selectedName;
 
   //session data update
-  void startSession(String presentationType, String presentationGoal, String sessionName) {
+  void startSession(
+      String presentationType, String presentationGoal, String sessionName) {
     _selectedPresentationType = presentationType;
     _selectedPresentationGoal = presentationGoal;
     _selectedName = sessionName;

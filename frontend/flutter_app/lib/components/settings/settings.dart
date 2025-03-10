@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/services/supabase_service.dart';
+import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -14,76 +12,24 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  // Dark mode setting to check if dark mode is enabled
+  bool darkMode = false;
+  //Notification setting to check if notifications are enabled
+  bool notifications = false;
+  // Create instance of SupabaseService
+  final SupabaseService _supabaseService = SupabaseService();
 
-  bool darkMode = false; // Dark mode setting to check if dark mode is enabled
-
-  bool notifications = false; //Notification setting to check if notifications are enabled
-
-  final SupabaseService _supabaseService = SupabaseService(); // Create instance of SupabaseService
-
-  String ? profileImageUrl; // Profile image URL
-
-  String firstName = ''; // User's first name
-
-  String lastName = ''; // User's last name
-
-  String role = ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
+  final Color titleBackgroundColor = Colors.white;
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider: SharePreferenceCache(),// Load saved preferences if available
+      cacheProvider: SharePreferenceCache(),
     );
 
-    //fetch user profile data
-    _fetchUserProfile();
-  }
-
-  Future<void> _fetchUserProfile() async {
-    try {
-      setState(() {
-      });
-
-      final userId = _supabaseService.currentUserId;
-      if (userId == null) {
-        setState(() {
-        });
-        return;
-      }
-
-      final userDetailResponse = await _supabaseService.client
-          .from('UserDetails')
-          .select('firstName, lastName, role')
-          .eq('userId', userId)
-          .single();
-
-      final profileResponse = await _supabaseService.client
-          .from('Profile')
-          .select('avatar_url')
-          .eq('userId', userId)
-          .maybeSingle();
-
-      if(userDetailResponse != null){
-        setState(() {
-          firstName = userDetailResponse['firstName'] ?? '';
-          lastName = userDetailResponse['lastName'] ?? '';
-          role = userDetailResponse['role'] ?? '';
-        });
-      }
-
-      if (profileResponse != null) {
-        setState(() {
-          profileImageUrl = profileResponse['avatar_url'];
-        });
-      }
-
-    } catch (e) {
-      print('Error getting user profile: $e');
-      setState(() {
-      });
-    }
+    // Load saved preferences if available
   }
 
   @override
@@ -97,15 +43,11 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         title: Text(
           'Settings',
-          style: TextStyle(
-              fontSize: 20,
-              fontFamily: 'Roboto'
-          ),
+          style: TextStyle(fontSize: 20, fontFamily: 'Roboto'),
         ),
         centerTitle: true,
       ),
       body: SafeArea(
-
         child: ListView(
           children: [
             // User Profile Section
@@ -190,8 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Container(
                   color: Colors.white,
-                  child:
-                  ListTile(
+                  child: ListTile(
                     title: Text('FAQ'),
                     subtitle: Text('Frequently asked questions'),
                     leading: Icon(Icons.question_answer_outlined),
@@ -224,7 +165,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 Container(
                   color: Colors.white,
-                  child:  ListTile(
+                  child: ListTile(
                     title: Text('Help'),
                     subtitle: Text('Get support and send feedback'),
                     leading: Icon(Icons.help_outline),
@@ -253,7 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize:
-                  Size(MediaQuery.of(context).size.width * 0.9, 50),
+                      Size(MediaQuery.of(context).size.width * 0.9, 50),
                   backgroundColor: Color(0xFF7400B8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -266,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     if (context.mounted) {
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => SignInPage()),
-                            (route) => false,
+                        (route) => false,
                       );
                     }
                   } catch (error) {
@@ -274,7 +215,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content:
-                          Text('Error signing out: ${error.toString()}'),
+                              Text('Error signing out: ${error.toString()}'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -308,9 +249,12 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               CircleAvatar(
                 radius: 69,
-                backgroundImage: profileImageUrl != null
-                    ? NetworkImage(profileImageUrl!)
-                    : AssetImage('assets/profile_placeholder.png') as ImageProvider,
+                backgroundColor: Colors.grey[300],
+                child: Icon(
+                  Icons.person,
+                  size: 70,
+                  color: Colors.grey[700],
+                ),
               ),
               GestureDetector(
                 onTap: _changeProfilePicture,
@@ -327,30 +271,23 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SizedBox(height: 16),
           Text(
-            '$firstName $lastName',
+            'Given name of user',
             style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Roboto'
-            ),
+                fontFamily: 'Roboto'),
           ),
-          //SizedBox(height: 8),
-          //Text(
-            //'Milan, Italy',
-            //style: TextStyle(
-              //  fontSize: 16,
-               // color: Colors.grey,
-               // fontFamily: 'Roboto'
-           // ),
-          //),
+          SizedBox(height: 8),
+          Text(
+            'Milan, Italy',
+            style: TextStyle(
+                fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
+          ),
           SizedBox(height: 8),
           Text(
             'Given ',
             style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-                fontFamily: 'Roboto'
-            ),
+                fontSize: 18, color: Colors.grey, fontFamily: 'Roboto'),
           ),
         ],
       ),
@@ -358,111 +295,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _changeProfilePicture() async {
-    showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context){
-         return SafeArea(
-           child: Column(
-             mainAxisSize: MainAxisSize.min,
-             children: <Widget>[
-               ListTile(
-                 leading: Icon(Icons.photo_library),
-                 title: Text('Choose from gallery'),
-                 onTap: () {
-                   _pickImage(ImageSource.gallery);
-                   Navigator.pop(context);
-                 },
-               ),
-                ListTile(
-                  leading: Icon(Icons.photo_camera),
-                  title: Text('Take a photo'),
-                  onTap: () {
-                    _pickImage(ImageSource.camera);
-                    Navigator.pop(context);
-                  },
-                ),
-             ],
-           ),
-         );
-        }
-        );
-
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    try{
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source, maxWidth: 800, imageQuality: 85);
-      if (image == null) return;
-
-      // loading indicator
-      if(!context.mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context){
-          return Center(child: CircularProgressIndicator());
-        },
-      );
-
-      //upload to supabase storage
-      final userId = _supabaseService.currentUserId;
-      if(userId == null) {
-        Navigator.of(context).pop(); // close loading indicator
-        _showErrorMessage('User not logged in');
-        return;
-      }
-
-      final String fileExt = image.path.split('.').last;
-      final fileName = 'profile_$userId.$fileExt';
-      final file = File(image.path);
-
-      await _supabaseService.client
-          .storage
-          .from('avatars')
-          .upload(fileName, file, fileOptions: FileOptions(upsert: true));
-
-      final imageUrl = _supabaseService.client
-      .storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
-      await _supabaseService.client.from('Profile').upsert({
-        'id': userId,
-        'avatar_url': imageUrl,
-       // 'updated_at': DateTime.now().toIso8601String(),
-      });
-
-      setState(() {
-        profileImageUrl = imageUrl;
-      });
-
-      if(context.mounted){
-        Navigator.of(context).pop(); // close loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Profile picture updated successfully'))
-        );
-      }
-    } catch (e){
-      if(context.mounted){
-        Navigator.of(context).pop(); // close loading indicator
-        _showErrorMessage('Error updating profile picture: $e');
-      }
-    }
-  }
-
-  void _showErrorMessage(String message){
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red)
-    );
+    // TODO Implement image picker and upload
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Profile picture change will be implemented soon')));
   }
 
   void _showChangePasswordDialog(BuildContext context) {
     final TextEditingController currentPasswordController =
-    TextEditingController();
+        TextEditingController();
     final TextEditingController newPasswordController = TextEditingController();
     final TextEditingController confirmPasswordController =
-    TextEditingController();
+        TextEditingController();
 
     showDialog(
       context: context,
@@ -593,7 +436,7 @@ class _SettingsPageState extends State<SettingsPage> {
               controller: passwordController,
               obscureText: true,
               decoration:
-              InputDecoration(labelText: 'Enter your password to confirm'),
+                  InputDecoration(labelText: 'Enter your password to confirm'),
             ),
           ],
         ),
@@ -614,7 +457,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => SignInPage()),
-                      (route) => false,
+                  (route) => false,
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(

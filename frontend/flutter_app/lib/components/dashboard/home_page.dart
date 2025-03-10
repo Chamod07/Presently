@@ -3,8 +3,7 @@ import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_app/services/home_page_service.dart';
-
+import 'package:flutter_app/utils/image_utils.dart'; // Add this import
 
 class HomePage extends StatefulWidget {
   @override
@@ -13,52 +12,32 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final supabase = Supabase.instance.client;
-  final homePageService = HomePageService();
-  String ? firstName;
-  String ? avatarUrl;
-  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase(); // load sessions from supabase
-    _loadHomePageData();
-  }
+    Provider.of<SessionProvider>(context, listen: false)
+        .loadSessionsFromSupabase();
+  } // load sessions from supabase
 
-  Future<void> _loadHomePageData() async{
-    setState(() => isLoading = true);
-
-    try{
-      final homePageData = await homePageService.getHomePageData();
-      if (homePageData != null && mounted){
-        setState(() {
-          firstName = homePageData['first_name'];
-          avatarUrl = homePageData['avatar_url'];
-
-        });
-      }
-    }
-    catch(e){
-      print('Error loading home page data: $e');
-    }
-    finally{
-      setState(() => isLoading = false);
-    }
-  }
   Widget build(BuildContext context) {
-  //  final user = Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        // title: Text('Hello Mariah,'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: CircleAvatar(
               radius: 40,
-              backgroundImage: NetworkImage(avatarUrl ?? 'https://via.placeholder.com/150'),
+              backgroundColor: Colors.grey[300],
+              child: Icon(
+                Icons.person,
+                color: Colors.grey[700],
+                size: 40,
+              ),
             ),
-            onPressed: () {
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -75,11 +54,10 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello ${firstName ?? 'User'} ,',
+                        'Hello Mariah,',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
-
                         ),
                       ),
                       SizedBox(height: 4.0),
@@ -96,7 +74,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             SizedBox(height: 15.0),
-
             Row(
               children: [
                 ElevatedButton(
@@ -124,7 +101,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -137,41 +115,38 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-
             SizedBox(height: 15.0),
-
-            Expanded(
-              child: Consumer<SessionProvider>(
-                builder: (context, sessionProvider, child){
-                  if(sessionProvider.sessions.isEmpty){
-                    return Center(
-                      child: Text(
-                        'No sessions available! Please start a new session',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.grey,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: sessionProvider.sessions.length,
-                    itemBuilder: (context, index){
-                      return _buildCard(
-                        title: sessionProvider.sessions[index],
-                        navigateTo: '/summary',
-                      );
-                    },
+            Expanded(child: Consumer<SessionProvider>(
+                builder: (context, sessionProvider, child) {
+              if (sessionProvider.sessions.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No sessions available! Please start a new session',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: Colors.grey,
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                );
+              }
+              return ListView.builder(
+                itemCount: sessionProvider.sessions.length,
+                itemBuilder: (context, index) {
+                  return _buildCard(
+                    title: sessionProvider.sessions[index],
+                    navigateTo: '/summary',
                   );
-                }
-              )
-            ),
+                },
+              );
+            })),
           ],
         ),
       ),
-      bottomNavigationBar: const NavBar (selectedIndex: 0,),
+      bottomNavigationBar: const NavBar(
+        selectedIndex: 0,
+      ),
     );
   }
 
@@ -179,10 +154,7 @@ class _HomePageState extends State<HomePage> {
     required String title,
     required String navigateTo,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0
-    ),
-      child: GestureDetector(
+    return GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, navigateTo);
       },
@@ -236,7 +208,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-      ),
       ),
     );
   }
