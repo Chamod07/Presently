@@ -47,6 +47,66 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _showRenameDialog(String currentName) {
+    final TextEditingController controller = TextEditingController(text: currentName);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Rename Session'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: 'Enter new name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(fontFamily: 'Roboto', color: Colors.black)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty && controller.text != currentName) {
+                  Provider.of<SessionProvider>(context, listen: false)
+                      .renameSession(currentName, controller.text);
+                }
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF7400B8)),
+              child: Text('Save', style: TextStyle(fontFamily: 'Roboto', color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmation(String sessionName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Session'),
+          content: Text('Are you sure you want to delete "$sessionName"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Provider.of<SessionProvider>(context, listen: false)
+                    .deleteSession(sessionName);
+                Navigator.pop(context);
+              },
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -235,9 +295,45 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            Icon(
+            PopupMenuButton<String>(
+              color: Colors.white,
+            icon: Icon(
               Icons.more_vert,
               color: Colors.grey,
+            ),
+              onSelected:(value){
+                if(value == 'delete'){
+                  _showDeleteConfirmation(title);
+                }
+                else if(value == 'rename'){
+                  _showRenameDialog(title);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'rename',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 18),
+                      SizedBox(width: 8),
+                  Text('Rename',
+                  style: TextStyle(color: Colors.black, fontFamily: 'Roboto'),
+                  ),
+                  ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 18),
+                      SizedBox(width: 8),
+                  Text('Delete',
+                  style: TextStyle(color: Colors.black, fontFamily: 'Roboto')),
+                ],
+                ),
+                ),
+        ],
             ),
           ],
         ),

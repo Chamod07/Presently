@@ -95,4 +95,45 @@ class SessionProvider with ChangeNotifier {
       print('Error loading sessions: $e');
     }
   }
+
+  Future<void> renameSession(String oldName, String newName) async {
+    final index = _sessions.indexOf(oldName);
+    if (index != -1) {
+      _sessions[index] = newName;
+      notifyListeners();
+
+      // Update in Supabase
+      final userId = _supabaseService.currentUserId;
+      if (userId != null) {
+        try {
+          await _supabaseService.client
+              .from('Sessions')
+              .update({'session_name': newName})
+              .eq('user_id', userId)
+              .eq('session_name', oldName);
+        } catch (e) {
+          print('Error renaming session in Supabase: $e');
+        }
+      }
+    }
+  }
+
+  Future<void> deleteSession(String sessionName) async {
+    _sessions.remove(sessionName);
+    notifyListeners();
+
+    // Delete from Supabase
+    final userId = _supabaseService.currentUserId;
+    if (userId != null) {
+      try {
+        await _supabaseService.client
+            .from('Sessions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('session_name', sessionName);
+      } catch (e) {
+        print('Error deleting session from Supabase: $e');
+      }
+    }
+  }
 }
