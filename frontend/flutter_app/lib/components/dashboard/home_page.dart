@@ -3,7 +3,7 @@ import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter_app/utils/image_utils.dart'; // Add this import
 
 class HomePage extends StatefulWidget {
   @override
@@ -16,8 +16,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    Provider.of<SessionProvider>(context, listen: false).loadSessionsFromSupabase();
+    Provider.of<SessionProvider>(context, listen: false)
+        .loadSessionsFromSupabase();
   } // load sessions from supabase
+
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
@@ -28,12 +30,14 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: CircleAvatar(
               radius: 40,
-              backgroundImage: NetworkImage(
-                'https://via.placeholder.com/150',
+              backgroundColor: Colors.grey[300],
+              child: Icon(
+                Icons.person,
+                color: Colors.grey[700],
+                size: 40,
               ),
             ),
-            onPressed: () {
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -54,7 +58,6 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
-
                         ),
                       ),
                       SizedBox(height: 4.0),
@@ -71,7 +74,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             SizedBox(height: 15.0),
-
             Row(
               children: [
                 ElevatedButton(
@@ -99,7 +101,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -112,41 +115,38 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-
             SizedBox(height: 15.0),
-
-            Expanded(
-              child: Consumer<SessionProvider>(
-                builder: (context, sessionProvider, child){
-                  if(sessionProvider.sessions.isEmpty){
-                    return Center(
-                      child: Text(
-                        'No sessions available! Please start a new session',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.grey,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: sessionProvider.sessions.length,
-                    itemBuilder: (context, index){
-                      return _buildCard(
-                        title: sessionProvider.sessions[index],
-                        navigateTo: '/summary',
-                      );
-                    },
+            Expanded(child: Consumer<SessionProvider>(
+                builder: (context, sessionProvider, child) {
+              if (sessionProvider.sessions.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No sessions available! Please start a new session',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: Colors.grey,
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                );
+              }
+              return ListView.builder(
+                itemCount: sessionProvider.sessions.length,
+                itemBuilder: (context, index) {
+                  return _buildCard(
+                    title: sessionProvider.sessions[index],
+                    navigateTo: '/summary',
                   );
-                }
-              )
-            ),
+                },
+              );
+            })),
           ],
         ),
       ),
-      bottomNavigationBar: const NavBar (selectedIndex: 0,),
+      bottomNavigationBar: const NavBar(
+        selectedIndex: 0,
+      ),
     );
   }
 

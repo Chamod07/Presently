@@ -18,7 +18,8 @@ import 'package:flutter_app/components/onboarding/account_setup_greeting.dart';
 import 'package:flutter_app/components/onboarding/account_setup_title.dart';
 import 'package:flutter_app/components/onboarding/account_setup_1.dart';
 import 'package:flutter_app/components/onboarding/account_setup_2.dart';
-import '/services/supabase_service.dart';
+import 'package:flutter_app/components/screens/splash_screen.dart';
+import 'services/supabase/supabase_service.dart';
 
 late List<CameraDescription> cameras;
 
@@ -32,7 +33,8 @@ void main() async {
   try {
     await supabaseService.initialize(
       supabaseUrl: 'https://hxgnhmpjovjjsouffhqc.supabase.co',
-      supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MzA1MTIsImV4cCI6MjA1NjQwNjUxMn0.wH9-Y1b58RHloQj3bFSJj4gAkx3lVn4wKB9vJ5w6SZk',
+      supabaseKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4Z25obXBqb3ZqanNvdWZmaHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MzA1MTIsImV4cCI6MjA1NjQwNjUxMn0.wH9-Y1b58RHloQj3bFSJj4gAkx3lVn4wKB9vJ5w6SZk',
     );
     print('Supabase initialized successfully');
   } catch (e) {
@@ -58,8 +60,10 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: Colors.white, // set background color to white
       ),
-      home: WelcomePage(),
+      initialRoute: '/splash',
       routes: {
+        '/splash': (context) => SplashScreen(),
+        '/welcome': (context) => WelcomePage(),
         '/sign_in': (context) => SignInPage(),
         '/sign_up': (context) => SignUpPage(),
         '/home': (context) => HomePage(),

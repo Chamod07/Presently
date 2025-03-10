@@ -7,6 +7,7 @@ import 'task_list_page.dart';
 import 'task_group.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/services/task_assign/task_group_service.dart';
+import 'package:flutter_app/utils/image_utils.dart'; // Add this import
 
 class TaskGroupPage extends StatefulWidget {
   const TaskGroupPage({Key? key}) : super(key: key);
@@ -215,11 +216,13 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!)
-                    : const AssetImage('assets/default_profile.png')
-                        as ImageProvider,
-                radius: 20,
+                radius: 20, // Adjust size as needed
+                backgroundColor: Colors.grey[300],
+                child: Icon(
+                  Icons.person,
+                  color: Colors.grey[700],
+                  size: 20, // Adjust size as needed
+                ),
               ),
             ),
           ),
