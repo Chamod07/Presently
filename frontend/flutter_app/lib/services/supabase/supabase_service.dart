@@ -17,6 +17,16 @@ class SupabaseService {
   /// Private constructor for singleton pattern
   SupabaseService._internal();
 
+  Future<void> persistSession(Session session) async {
+    await _storage.write(key: 'access_token', value: session.accessToken);
+    await _storage.write(key: 'refresh_token', value: session.refreshToken);
+  }
+
+  Future<void> clearSession() async {
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+  }
+
   /// Flag to track if Supabase has been initialized
   bool _initialized = false;
 

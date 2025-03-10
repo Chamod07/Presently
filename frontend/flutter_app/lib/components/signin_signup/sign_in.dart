@@ -72,24 +72,22 @@ class _SignInPageState extends State<SignInPage> {
       _isLoading = true;
     });
 
-    try {
-      // Use the client from the service
-      final AuthResponse res =
-          await _supabaseService.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      if (res.session != null) {
-        await _supabaseService.persistSession(res.session!); // Persist the session
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+      try {
+        // Use the client from the service
+        final AuthResponse res = 
+            await _supabaseService.client.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+        
+        if (res.session != null) {
+          await _supabaseService.persistSession(res.session!);
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          throw 'Invalid credentials';
         }
-      } else {
-        throw 'Invalid credentials';
-      if (res.session != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
     } on AuthException catch (e) {
       if (mounted) {
         setState(() {
