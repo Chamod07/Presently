@@ -8,7 +8,7 @@ class AccountSetupGreeting extends StatelessWidget{
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
     String firstName = args?['firstName'] ?? "User";
     String lastName = args?['lastName'] ?? "";
-    String displayName = lastName.isNotEmpty ? "$firstName $lastName" : firstName;
+    String displayName = firstName.isNotEmpty ? firstName : firstName;
 
     return Scaffold(
       backgroundColor: Color(0x96B843FE),
