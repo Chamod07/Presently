@@ -60,8 +60,6 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/app_icon.png" # Path to your custom icon
-  adaptive_icon_background: "#FFFFFF" # Optional: background color for adaptive icons
-  # adaptive_icon_foreground: "assets/icons/app_icon_foreground.png" # Optional: foreground image for adaptive icons
 
 flutter:
   # The following line ensures that the Material Icons font is

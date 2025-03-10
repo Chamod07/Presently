@@ -278,7 +278,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
                 radius: 20,
                 backgroundColor: Colors.grey[300],
                 child: Icon(
-                  Icons.settings,
+                  Icons.person, // Changed from settings to person icon
                   color: Colors.grey[700],
                   size: 20,
                 ),
