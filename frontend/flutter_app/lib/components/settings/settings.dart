@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
+import 'package:image_picker/image_picker.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -338,9 +340,102 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _changeProfilePicture() async {
-    // TODO Implement image picker and upload
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Profile picture change will be implemented soon')));
+    showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context){
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.photo_library),
+                  title: Text('Choose from gallery'),
+                  onTap: () {
+                    _pickImage(ImageSource.gallery);
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.photo_camera),
+                  title: Text('Take a photo'),
+                  onTap: () {
+                    _pickImage(ImageSource.camera);
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+    );
+
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try{
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source, maxWidth: 800, imageQuality: 85);
+      if (image == null) return;
+
+      // loading indicator
+      if(!context.mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context){
+          return Center(child: CircularProgressIndicator());
+        },
+      );
+
+      //upload to supabase storage
+      final userId = _supabaseService.currentUserId;
+      if(userId == null) {
+        Navigator.of(context).pop(); // close loading indicator
+        _showErrorMessage('User not logged in');
+        return;
+      }
+
+      final String fileExt = image.path.split('.').last;
+      final fileName = 'profile_$userId.$fileExt';
+      final file = File(image.path);
+
+      await _supabaseService.client
+          .storage
+          .from('avatars')
+          .upload(fileName, file, fileOptions: FileOptions(upsert: true));
+
+      final imageUrl = _supabaseService.client
+          .storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+
+      await _supabaseService.client.from('Profile').upsert({
+        'userId': userId,
+        'avatar_url': imageUrl,
+      });
+
+      setState(() {
+        profileImageUrl = imageUrl;
+      });
+
+      if(context.mounted){
+        Navigator.of(context).pop(); // close loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profile picture updated successfully'))
+        );
+      }
+    } catch (e){
+      if(context.mounted){
+        Navigator.of(context).pop(); // close loading indicator
+        _showErrorMessage('Error updating profile picture: $e');
+      }
+    }
+  }
+
+  void _showErrorMessage(String message){
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red)
+    );
   }
 
   void _showChangePasswordDialog(BuildContext context) {
