@@ -12,24 +12,64 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Dark mode setting to check if dark mode is enabled
-  bool darkMode = false;
-  //Notification setting to check if notifications are enabled
-  bool notifications = false;
-  // Create instance of SupabaseService
-  final SupabaseService _supabaseService = SupabaseService();
 
-  final Color titleBackgroundColor = Colors.white;
+  bool darkMode = false; // Dark mode setting to check if dark mode is enabled
+
+  bool notifications = false; //Notification setting to check if notifications are enabled
+
+  final SupabaseService _supabaseService = SupabaseService(); // Create instance of SupabaseService
+
+  String profileImageUrl = ''; // User's profile image URL
+
+  String firstName = ''; // User's first name
+
+  String lastName = ''; // User's last name
+
+  String role = ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider: SharePreferenceCache(),
+      cacheProvider: SharePreferenceCache(), // Load saved preferences if available
     );
+    _fetchUserProfile();
+  }
 
-    // Load saved preferences if available
+  Future<void> _fetchUserProfile() async {
+    try {
+      final userId = _supabaseService.currentUserId;
+      if (userId == null) {
+        print('User ID is null');
+        return;
+      }
+      final userDetailResponse = await _supabaseService.client
+          .from('UserDetails')
+          .select('firstName, lastName, role')
+          .eq('userId', userId)
+          .single();
+
+      final profileResponse = await _supabaseService.client
+          .from('Profile')
+          .select('avatar_url')
+          .eq('userId', userId)
+          .maybeSingle();
+
+      setState(() {
+        if (userDetailResponse != null) {
+          firstName = userDetailResponse['firstName'] ?? '';
+          lastName = userDetailResponse['lastName'] ?? '';
+          role = userDetailResponse['role'] ?? '';
+        }
+        if (profileResponse != null) {
+          profileImageUrl = profileResponse['avatar_url'] ?? '';
+        }
+      });
+    }
+    catch (e) {
+      print('Error fetching user profile: $e');
+    }
   }
 
   @override
@@ -250,11 +290,14 @@ class _SettingsPageState extends State<SettingsPage> {
               CircleAvatar(
                 radius: 69,
                 backgroundColor: Colors.grey[300],
-                child: Icon(
+                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? NetworkImage(profileImageUrl)
+                    : null,
+                child: (profileImageUrl == null || profileImageUrl!.isEmpty) ? Icon(
                   Icons.person,
                   size: 70,
                   color: Colors.grey[700],
-                ),
+                ) : null,
               ),
               GestureDetector(
                 onTap: _changeProfilePicture,
@@ -271,21 +314,21 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Given name of user',
+            '$firstName $lastName',
             style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Roboto'),
           ),
+         // SizedBox(height: 8),
+          //Text(
+            //'Milan, Italy',
+            //style: TextStyle(
+              //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
+          //),
           SizedBox(height: 8),
           Text(
-            'Milan, Italy',
-            style: TextStyle(
-                fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Given ',
+            '$role',
             style: TextStyle(
                 fontSize: 18, color: Colors.grey, fontFamily: 'Roboto'),
           ),

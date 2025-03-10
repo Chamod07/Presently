@@ -1,4 +1,4 @@
-import 'package:flutter_app/services/supabase_service.dart';
+import 'package:flutter_app/services/supabase/supabase_service.dart';
 
 class HomePageService {
   final SupabaseService _supabaseService = SupabaseService();
@@ -26,14 +26,14 @@ class HomePageService {
 
       return{
         'first_name': profileResponse['firstName'] ?? 'User',
-        'avatar_url': avatarResponse?['avatar_url'] ?? 'https://via.placeholder.com/150',
+        'avatar_url': avatarResponse?['avatar_url'],
       };
     }
     catch(e){
       print('Error getting home page data: $e');
       return {
       'first_name': 'User',
-        'avatar_url': 'https://via.placeholder.com/150',
+        'avatar_url': null ,
       };
     }
   }
