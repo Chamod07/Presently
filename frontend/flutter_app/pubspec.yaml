@@ -35,7 +35,7 @@ dependencies:
   camera: ^0.10.5+9
   #firebase_auth: ^5.3.3
   fl_chart: ^0.70.2
-  image_picker: ^0.8.4+4
+  image_picker: ^1.1.2
   provider: ^6.1.2
   google_sign_in: ^6.2.2
   supabase_flutter: ^2.8.3
@@ -59,14 +59,10 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
-  image_path: "images/Presently_app_icon.png"
+  image_path: "assets/icons/app_icon.png" # Path to your custom icon
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

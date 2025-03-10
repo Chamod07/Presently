@@ -77,16 +77,25 @@ class _AccountSetup2State extends State<AccountSetup2> {
                   Container(width: MediaQuery.of(context).size.width * 0.9,
                     child:
                     DropdownButtonFormField(
+                      dropdownColor: Colors.white,
                       decoration: InputDecoration(
                         labelText: "I describe myself as a...",
                         labelStyle: TextStyle(
                           fontFamily: "Roboto",
                           color: Color(0xFFBDBDBD),
                         ),
+                        filled: true,
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderSide: BorderSide(color: Color(0x26000000)),
                           borderRadius: BorderRadius.circular(10),
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0x26000000)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF7400B8)),
+                        )
                       ),
                       items: userStatus.map((String state){
                         return DropdownMenuItem<String>(

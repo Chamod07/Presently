@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
+import 'package:image_picker/image_picker.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -12,24 +14,64 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Dark mode setting to check if dark mode is enabled
-  bool darkMode = false;
-  //Notification setting to check if notifications are enabled
-  bool notifications = false;
-  // Create instance of SupabaseService
-  final SupabaseService _supabaseService = SupabaseService();
 
-  final Color titleBackgroundColor = Colors.white;
+  bool darkMode = false; // Dark mode setting to check if dark mode is enabled
+
+  bool notifications = false; //Notification setting to check if notifications are enabled
+
+  final SupabaseService _supabaseService = SupabaseService(); // Create instance of SupabaseService
+
+  String profileImageUrl = ''; // User's profile image URL
+
+  String firstName = ''; // User's first name
+
+  String lastName = ''; // User's last name
+
+  String role = ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider: SharePreferenceCache(),
+      cacheProvider: SharePreferenceCache(), // Load saved preferences if available
     );
+    _fetchUserProfile();
+  }
 
-    // Load saved preferences if available
+  Future<void> _fetchUserProfile() async {
+    try {
+      final userId = _supabaseService.currentUserId;
+      if (userId == null) {
+        print('User ID is null');
+        return;
+      }
+      final userDetailResponse = await _supabaseService.client
+          .from('UserDetails')
+          .select('firstName, lastName, role')
+          .eq('userId', userId)
+          .single();
+
+      final profileResponse = await _supabaseService.client
+          .from('Profile')
+          .select('avatar_url')
+          .eq('userId', userId)
+          .maybeSingle();
+
+      setState(() {
+        if (userDetailResponse != null) {
+          firstName = userDetailResponse['firstName'] ?? '';
+          lastName = userDetailResponse['lastName'] ?? '';
+          role = userDetailResponse['role'] ?? '';
+        }
+        if (profileResponse != null) {
+          profileImageUrl = profileResponse['avatar_url'] ?? '';
+        }
+      });
+    }
+    catch (e) {
+      print('Error fetching user profile: $e');
+    }
   }
 
   @override
@@ -250,11 +292,14 @@ class _SettingsPageState extends State<SettingsPage> {
               CircleAvatar(
                 radius: 69,
                 backgroundColor: Colors.grey[300],
-                child: Icon(
+                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? NetworkImage(profileImageUrl)
+                    : null,
+                child: (profileImageUrl == null || profileImageUrl!.isEmpty) ? Icon(
                   Icons.person,
                   size: 70,
                   color: Colors.grey[700],
-                ),
+                ) : null,
               ),
               GestureDetector(
                 onTap: _changeProfilePicture,
@@ -271,21 +316,21 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Given name of user',
+            '$firstName $lastName',
             style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Roboto'),
           ),
+         // SizedBox(height: 8),
+          //Text(
+            //'Milan, Italy',
+            //style: TextStyle(
+              //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
+          //),
           SizedBox(height: 8),
           Text(
-            'Milan, Italy',
-            style: TextStyle(
-                fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Given ',
+            '$role',
             style: TextStyle(
                 fontSize: 18, color: Colors.grey, fontFamily: 'Roboto'),
           ),
@@ -295,9 +340,102 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _changeProfilePicture() async {
-    // TODO Implement image picker and upload
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Profile picture change will be implemented soon')));
+    showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context){
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.photo_library),
+                  title: Text('Choose from gallery'),
+                  onTap: () {
+                    _pickImage(ImageSource.gallery);
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.photo_camera),
+                  title: Text('Take a photo'),
+                  onTap: () {
+                    _pickImage(ImageSource.camera);
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+    );
+
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try{
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source, maxWidth: 800, imageQuality: 85);
+      if (image == null) return;
+
+      // loading indicator
+      if(!context.mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context){
+          return Center(child: CircularProgressIndicator());
+        },
+      );
+
+      //upload to supabase storage
+      final userId = _supabaseService.currentUserId;
+      if(userId == null) {
+        Navigator.of(context).pop(); // close loading indicator
+        _showErrorMessage('User not logged in');
+        return;
+      }
+
+      final String fileExt = image.path.split('.').last;
+      final fileName = 'profile_$userId.$fileExt';
+      final file = File(image.path);
+
+      await _supabaseService.client
+          .storage
+          .from('avatars')
+          .upload(fileName, file, fileOptions: FileOptions(upsert: true));
+
+      final imageUrl = _supabaseService.client
+          .storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+
+      await _supabaseService.client.from('Profile').upsert({
+        'userId': userId,
+        'avatar_url': imageUrl,
+      });
+
+      setState(() {
+        profileImageUrl = imageUrl;
+      });
+
+      if(context.mounted){
+        Navigator.of(context).pop(); // close loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profile picture updated successfully'))
+        );
+      }
+    } catch (e){
+      if(context.mounted){
+        Navigator.of(context).pop(); // close loading indicator
+        _showErrorMessage('Error updating profile picture: $e');
+      }
+    }
+  }
+
+  void _showErrorMessage(String message){
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red)
+    );
   }
 
   void _showChangePasswordDialog(BuildContext context) {

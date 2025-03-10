@@ -17,7 +17,7 @@ class _SummaryPageState extends State<SummaryPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final List<String> _pageTitles = [
-    "Context Summary", 
+    "Context Summary",
     "Grammar Summary",
     "Body Language",
     "Voice Analysis",
@@ -27,6 +27,7 @@ class _SummaryPageState extends State<SummaryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
         title: Text(_pageTitles[_currentPage]),
         centerTitle: true,
       ),
@@ -82,7 +83,8 @@ class _SummaryPageState extends State<SummaryPage> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          _pageTitles[index].split(' ')[0], // Just show first word for compactness
+          _pageTitles[index]
+              .split(' ')[0], // Just show first word for compactness
           style: TextStyle(
             color: isActive ? Colors.white : Colors.black,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
@@ -102,13 +104,13 @@ class _SummaryPageState extends State<SummaryPage> {
 // Base class for all summary screens with common functionality
 abstract class BaseSummary extends StatelessWidget {
   const BaseSummary({super.key});
-  
+
   // Methods to be implemented by subclasses
   String get title;
   Widget buildContent(BuildContext context, ReportProvider provider);
   double? getScore(ReportProvider provider);
   List<Weakness>? getWeaknesses(ReportProvider provider);
-  
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -123,7 +125,9 @@ abstract class BaseSummary extends StatelessWidget {
             return Column(
               children: [
                 SizedBox(height: 20),
-                Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(title,
+                    style:
+                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 SizedBox(height: 20),
                 Center(
                   child: GraphDisplay(score: (getScore(provider) ?? 0) / 10),
@@ -139,13 +143,13 @@ abstract class BaseSummary extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget buildWeaknessList(BuildContext context, ReportProvider provider) {
     final weaknesses = getWeaknesses(provider);
     if (weaknesses == null || weaknesses.isEmpty) {
       return Center(child: Text('No weaknesses found.'));
     }
-    
+
     return ListView.builder(
       itemCount: weaknesses.length,
       itemBuilder: (context, index) {
@@ -159,12 +163,14 @@ abstract class BaseSummary extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('Examples:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     if (weakness.examples != null)
                       for (String example in weakness.examples!)
                         Text('- $example'),
                     const SizedBox(height: 8),
-                    const Text('Suggestions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('Suggestions:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     if (weakness.suggestions != null)
                       for (String suggestion in weakness.suggestions!)
                         Text('- $suggestion'),
@@ -181,16 +187,17 @@ abstract class BaseSummary extends StatelessWidget {
 
 class ContextSummary extends BaseSummary {
   const ContextSummary({super.key});
-  
+
   @override
   String get title => 'Context Summary';
-  
+
   @override
   double? getScore(ReportProvider provider) => provider.report.context.score;
-  
+
   @override
-  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.context.weaknesses;
-  
+  List<Weakness>? getWeaknesses(ReportProvider provider) =>
+      provider.report.context.weaknesses;
+
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
     // Additional custom UI for context summary if needed
@@ -202,13 +209,14 @@ class GrammarSummary extends BaseSummary {
   const GrammarSummary({super.key});
   @override
   String get title => 'Grammar Summary';
-  
+
   @override
   double? getScore(ReportProvider provider) => provider.report.grammar.score;
-  
+
   @override
-  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.grammar.weaknesses;
-  
+  List<Weakness>? getWeaknesses(ReportProvider provider) =>
+      provider.report.grammar.weaknesses;
+
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
     // Additional custom UI for grammar summary if needed
