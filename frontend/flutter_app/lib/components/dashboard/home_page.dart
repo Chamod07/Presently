@@ -3,6 +3,7 @@ import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_app/services/home_page/home_page_service.dart';
 import 'package:flutter_app/utils/image_utils.dart'; // Add this import
 
 class HomePage extends StatefulWidget {
@@ -12,30 +13,120 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final supabase = Supabase.instance.client;
+  final homePageService = HomePageService();
+  String ? firstName;
+  String ? avatarUrl;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     Provider.of<SessionProvider>(context, listen: false)
-        .loadSessionsFromSupabase();
-  } // load sessions from supabase
+        .loadSessionsFromSupabase();  // load sessions from supabase
+    _loadHomePageData();
+  }
+
+  Future<void> _loadHomePageData() async{
+    setState(() => isLoading = true);
+
+    try{
+      final homePageData = await homePageService.getHomePageData();
+      if (homePageData != null && mounted){
+        setState(() {
+          firstName = homePageData['first_name'];
+          avatarUrl = homePageData['avatar_url'];
+
+        });
+      }
+    }
+    catch(e){
+      print('Error loading home page data: $e');
+    }
+    finally{
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _showRenameDialog(String currentName) {
+    final TextEditingController controller = TextEditingController(text: currentName);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Rename Session'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: 'Enter new name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(fontFamily: 'Roboto', color: Colors.black)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty && controller.text != currentName) {
+                  Provider.of<SessionProvider>(context, listen: false)
+                      .renameSession(currentName, controller.text);
+                }
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF7400B8)),
+              child: Text('Save', style: TextStyle(fontFamily: 'Roboto', color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmation(String sessionName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Session'),
+          content: Text('Are you sure you want to delete "$sessionName"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Provider.of<SessionProvider>(context, listen: false)
+                    .deleteSession(sessionName);
+                Navigator.pop(context);
+              },
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
       appBar: AppBar(
-        // title: Text('Hello Mariah,'),
+        backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: CircleAvatar(
               radius: 40,
               backgroundColor: Colors.grey[300],
-              child: Icon(
+              backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
+              ? NetworkImage(avatarUrl!)
+                  : null,
+              child: (avatarUrl == null || avatarUrl!.isEmpty) ?
+              Icon(
                 Icons.person,
                 color: Colors.grey[700],
                 size: 40,
-              ),
+              )
+              : null,
             ),
             onPressed: () {},
           ),
@@ -54,7 +145,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello Mariah,',
+                        'Hello ${firstName ?? 'User'},',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
@@ -121,10 +212,10 @@ class _HomePageState extends State<HomePage> {
               if (sessionProvider.sessions.isEmpty) {
                 return Center(
                   child: Text(
-                    'No sessions available! Please start a new session',
+                    'No sessions available! \nPlease start a new session',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 18,
                       color: Colors.grey,
                       fontFamily: 'Roboto',
                     ),
@@ -154,7 +245,9 @@ class _HomePageState extends State<HomePage> {
     required String title,
     required String navigateTo,
   }) {
-    return GestureDetector(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child:GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, navigateTo);
       },
@@ -202,13 +295,50 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            Icon(
+            PopupMenuButton<String>(
+              color: Colors.white,
+            icon: Icon(
               Icons.more_vert,
               color: Colors.grey,
+            ),
+              onSelected:(value){
+                if(value == 'delete'){
+                  _showDeleteConfirmation(title);
+                }
+                else if(value == 'rename'){
+                  _showRenameDialog(title);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'rename',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 18),
+                      SizedBox(width: 8),
+                  Text('Rename',
+                  style: TextStyle(color: Colors.black, fontFamily: 'Roboto'),
+                  ),
+                  ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 18),
+                      SizedBox(width: 8),
+                  Text('Delete',
+                  style: TextStyle(color: Colors.black, fontFamily: 'Roboto')),
+                ],
+                ),
+                ),
+        ],
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }

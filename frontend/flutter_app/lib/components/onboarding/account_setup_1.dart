@@ -59,7 +59,7 @@ class _AccountSetup1State extends State<AccountSetup1> {
           Navigator.pushNamed(
             context,
             '/account_setup_2',
-            arguments: {'firstName': firstName, 'lastName': lastName},
+            arguments: {'firstName': firstName, 'lastName': lastName, 'userId': userId},
           );
         } catch (e) {
           debugPrint('Error updating user details: $e');

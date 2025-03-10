@@ -106,6 +106,7 @@ class _SignUpPageState extends State<SignUpPage> {
       debugPrint('Session: ${res.session != null ? 'active' : 'null'}');
 
       if (res.user == null) {
+        await _supabaseService.persistSession(res.session!); // Persist the session
         debugPrint('No user returned in response');
         throw Exception('User creation failed');
       }
@@ -114,10 +115,11 @@ class _SignUpPageState extends State<SignUpPage> {
         // Simplified logic: consider sign-up successful if we got a response with user
         if (res.user != null) {
           debugPrint('User created successfully');
+          String userId = res.user!.id;
 
           // Always proceed to account setup regardless of session status
           // No more email verification check
-          Navigator.pushReplacementNamed(context, '/account_setup_1');
+          Navigator.pushReplacementNamed(context, '/account_setup_1', arguments: {'userId': userId});
         } else {
           // Instead of throwing an error, show a meaningful message
           setState(() {

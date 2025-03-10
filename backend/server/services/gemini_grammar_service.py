@@ -26,8 +26,8 @@ class GeminiGrammarAnalyzer:
             Dict containing grammar analysis results including scores and feedback
         """
         
-        prompt = """You are a professional grammar and language expert. Analyze this presentation transcription for grammar, sentence structure, and word choice. Provide detailed feedback.
-        
+        prompt = """You are a professional grammar and language expert. Analyze this presentation transcription for grammar, sentence structure, and word choice. Provide detailed feedback grouped by topic.
+
         Generate a JSON response with the following structure exactly:
         {
             "grammar_score": <number between 0-10>,
@@ -37,22 +37,21 @@ class GeminiGrammarAnalyzer:
                 "sentence_structure": <number between 0-10>,
                 "word_choice": <number between 0-10>
             },
-            "identified_issues": [
+            "weakness_topics": [
                 {
-                    "type": "<error type: grammar/structure/word-choice>",
-                    "error": "<actual error from transcription>",
-                    "suggestion": "<correction suggestion>",
-                    "explanation": "<why this is an error>"
+                    "topic": "<grammar topic>",
+                    "examples": ["<specific example from transcription>"],
+                    "suggestions": ["<actionable improvement suggestion>"]
                 }
             ]
         }
 
         Key requirements:
-        1. Identify and analyze grammar errors, sentence structure issues, and word choice problems
+        1. Group grammar issues by topic (e.g., Subject-Verb Agreement, Tense Consistency)
         2. All scores must be numerical values only
         3. Each identified issue must include the exact problematic text from the transcription
         4. Suggestions must be specific and actionable
-        5. Include clear explanations for why each issue is problematic
+        5. Include clear explanations in the suggestions
         
         Transcription to analyze:
         {transcription}
@@ -100,12 +99,15 @@ def main():
         for metric, score in result['analysis'].items():
             print(f"{metric.replace('_', ' ').title()}: {score}/10")
         
-        print("\nIdentified Issues:")
-        for issue in result['identified_issues']:
-            print(f"\nType: {issue['type']}")
-            print(f"Error: {issue['error']}")
-            print(f"Suggestion: {issue['suggestion']}")
-            print(f"Explanation: {issue['explanation']}")
+        print("\nIdentified Weaknesses:")
+        for topic in result['weakness_topics']:
+            print(f"\nTopic: {topic['topic']}")
+            print("Examples:")
+            for example in topic['examples']:
+                print(f"- {example}")
+            print("Suggestions:")
+            for suggestion in topic['suggestions']:
+                print(f"- {suggestion}")
     
     except Exception as e:
         print(f"Error during analysis: {str(e)}")

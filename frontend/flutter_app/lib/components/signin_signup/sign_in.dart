@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/services/supabase/supabase_service.dart';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -74,17 +72,22 @@ class _SignInPageState extends State<SignInPage> {
       _isLoading = true;
     });
 
-    try {
-      // Use the client from the service
-      final AuthResponse res =
-          await _supabaseService.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      if (res.session != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      try {
+        // Use the client from the service
+        final AuthResponse res = 
+            await _supabaseService.client.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+        
+        if (res.session != null) {
+          await _supabaseService.persistSession(res.session!);
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          throw 'Invalid credentials';
+        }
     } on AuthException catch (e) {
       if (mounted) {
         setState(() {
@@ -119,166 +122,53 @@ class _SignInPageState extends State<SignInPage> {
     });
 
     try {
-      debugPrint('Starting Google sign-in process');
+      const webClientId =
+          '54044305887-0cl2lddi9hjremm4o5evdng9d7ardjes.apps.googleusercontent.com';
+      const iosClientId =
+          '54044305887-l8mqfssark4jlbsru5dt8pu85vpjvh2h.apps.googleusercontent.com';
 
-      // Configure Google Sign-In with required scopes for token retrieval
-      GoogleSignIn googleSignIn;
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: iosClientId,
+        serverClientId: webClientId,
+      );
 
-      // Define proper scopes needed for authentication tokens
-      final List<String> scopes = [
-        'email',
-        'profile',
-        'openid', // Important for ID tokens
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-      ];
+      // Sign out first to ensure we get the sign-in dialog
+      await googleSignIn.signOut();
 
-      if (Platform.isAndroid) {
-        debugPrint(
-            'Initializing Google Sign-In for Android with enhanced scopes');
-        googleSignIn = GoogleSignIn(
-          scopes: scopes,
-          forceCodeForRefreshToken: true,
-        );
-
-        // Log package name for debugging
-        final clientId = await googleSignIn.clientId;
-        debugPrint('Android clientId: ${clientId ?? "undefined"}');
-      } else if (kIsWeb) {
-        const webClientId =
-            '54044305887-0cl2lddi9hjremm4o5evdng9d7ardjes.apps.googleusercontent.com';
-        debugPrint('Initializing Google Sign-In for Web');
-        googleSignIn = GoogleSignIn(
-          clientId: webClientId,
-          scopes: scopes,
-        );
-      } else if (Platform.isIOS) {
-        const iosClientId =
-            '54044305887-l8mqfssark4jlbsru5dt8pu85vpjvh2h.apps.googleusercontent.com';
-        debugPrint('Initializing Google Sign-In for iOS');
-        googleSignIn = GoogleSignIn(
-          clientId: iosClientId,
-          scopes: scopes,
-        );
-      } else {
-        debugPrint('Unsupported platform for Google Sign-In');
-        throw Exception('Unsupported platform for Google Sign-In');
-      }
-
-      // Clear any existing sessions
-      debugPrint('Signing out of previous Google session if any');
-      await googleSignIn.signOut().catchError((error) {
-        debugPrint('Error during Google signOut: $error');
-      });
-
-      debugPrint('Attempting to sign in with Google');
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
-        debugPrint('User cancelled the Google sign-in');
         throw AuthException('User canceled Google sign-in');
       }
 
-      debugPrint('Google sign-in successful for: ${googleUser.email}');
-      debugPrint('User ID: ${googleUser.id}');
-      debugPrint('Display Name: ${googleUser.displayName}');
-
-      // More robust token retrieval with retry
-      debugPrint('Retrieving Google authentication tokens...');
-      GoogleSignInAuthentication? googleAuth;
-
-      try {
-        googleAuth = await googleUser.authentication;
-        debugPrint('Authentication object retrieved successfully');
-      } catch (e) {
-        debugPrint('Error retrieving authentication: $e');
-        // Try one more time after a short delay
-        await Future.delayed(Duration(seconds: 1));
-        debugPrint('Retrying token retrieval...');
-        googleAuth = await googleUser.authentication;
-      }
-
+      final googleAuth = await googleUser.authentication;
       final accessToken = googleAuth.accessToken;
       final idToken = googleAuth.idToken;
 
-      // Detailed token debugging
-      if (accessToken == null) {
-        debugPrint(
-            '⚠️ ACCESS TOKEN IS NULL - This is required for Supabase authentication');
-      } else {
-        debugPrint('✓ Access token retrieved (length: ${accessToken.length})');
-      }
-
-      if (idToken == null) {
-        debugPrint(
-            '⚠️ ID TOKEN IS NULL - This is required for Supabase authentication');
-      } else {
-        debugPrint('✓ ID token retrieved (length: ${idToken.length})');
-      }
-
-      if (accessToken == null || idToken == null) {
-        debugPrint(
-            'Token retrieval failed. Possible OAuth configuration issues.');
-        throw AuthException(
-            'Failed to get authentication tokens. Please check your Google Cloud Console configuration.');
-      }
-
-      debugPrint('Signing in to Supabase with Google tokens');
-      final response = await _supabaseService.client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-
-      debugPrint(
-          'Supabase sign-in response received: ${response.session != null ? 'session created' : 'no session'}');
-
-      if (response.session != null && mounted) {
-        debugPrint('Navigating to home after successful sign-in');
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        debugPrint('No session created after Supabase sign-in');
-        throw AuthException('Failed to create session');
-      }
-    } on AuthException catch (e) {
-      debugPrint('AuthException during Google sign-in: ${e.message}');
+      if (accessToken != null && idToken != null) {
+        // Use the client from the service
+        final response = await _supabaseService.client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+if (response.session != null && mounted) {
+  await _supabaseService.persistSession(response.session!); // Persist the session
+  Navigator.pushReplacementNamed(context, '/home');
+}
+}
+} on AuthException catch (e) {
       if (mounted) {
         setState(() {
           errorText = e.message;
         });
       }
     } catch (e) {
-      debugPrint(
-          'Detailed exception during Google sign-in: ${e.runtimeType} - $e');
-
-      // Handle PlatformException specifically
-      final errorMessage = e.toString();
-      String detailedError;
-
-      if (errorMessage.contains('PlatformException') &&
-          errorMessage.contains('10:')) {
-        // Specific handling for error code 10
-        detailedError =
-            'Google Sign-In configuration error (10). Please verify that:\n'
-            '1. Your app\'s package name matches the one in Google Cloud Console\n'
-            '2. SHA-1 certificate fingerprint is added to your Google Cloud project\n'
-            '3. The OAuth consent screen is properly configured';
-
-        // Additional debug info
-        debugPrint(
-            'ERROR 10: Your Android app signature might not be registered in the Google Cloud Console.');
-        debugPrint(
-            'Verify the SHA-1 and package name in your Google Cloud Console project.');
-      } else if (errorMessage.contains('canceled') ||
-          errorMessage.contains('cancelled')) {
-        detailedError = 'Google sign-in was cancelled';
-      } else {
-        detailedError = 'Failed to sign in with Google: $e';
-      }
-
       if (mounted) {
         setState(() {
-          errorText = detailedError;
+          errorText = e.toString().contains('canceled') ||
+                  e.toString().contains('cancelled')
+              ? 'Google sign-in was cancelled'
+              : 'Failed to sign in with Google: ${e.toString()}';
         });
       }
     } finally {
@@ -288,30 +178,6 @@ class _SignInPageState extends State<SignInPage> {
         });
       }
     }
-  }
-
-  String _extractPlatformExceptionMessage(String errorString) {
-    // Try to extract the most meaningful part of the platform exception
-    if (errorString.contains('message:')) {
-      final start = errorString.indexOf('message:') + 'message:'.length;
-      final end = errorString.indexOf(',', start);
-      if (end > start) {
-        return errorString.substring(start, end).trim();
-      }
-    }
-
-    // Check for common error patterns
-    if (errorString.contains('10:')) {
-      return 'OAuth configuration error: The OAuth client wasn\'t properly configured. Verify SHA certificate and package name in Google Cloud Console.';
-    } else if (errorString.contains('12501')) {
-      return 'The user canceled the sign-in flow (error 12501)';
-    } else if (errorString.contains('10')) {
-      return 'There was a problem with the Google Services configuration';
-    } else if (errorString.contains('network_error')) {
-      return 'Network error. Please check your internet connection';
-    }
-
-    return 'Unknown error occurred. Please try again later';
   }
 
   @override

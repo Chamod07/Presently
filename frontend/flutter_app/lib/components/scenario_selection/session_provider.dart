@@ -36,21 +36,44 @@ class SessionProvider with ChangeNotifier {
   }
 
   //save session in supabase
-  Future<void> saveToSupabase(String sessionName) async {
+  Future<String?> saveToSupabase() async {
     final userId = _supabaseService.currentUserId;
-    if (userId == null) return;
+    if (userId == null) return "User not logged in";
 
     try {
       await _supabaseService.client.from('Sessions').insert({
-        'session_name': sessionName,
+        'session_name': _selectedName,
         'session_type': _selectedPresentationType,
         'session_goal': _selectedPresentationGoal,
         'user_id': userId,
       });
+      return null; // Success, no error
     } catch (e) {
-      print('Error saving session: $e');
+      return 'Error saving session: $e';
     }
   }
+
+  // Helper method to show error dialog
+  void showErrorDialog(BuildContext context, String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(errorMessage),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   //load sessions from supabase
   Future<void> loadSessionsFromSupabase() async {
@@ -64,17 +87,53 @@ class SessionProvider with ChangeNotifier {
           .eq('user_id', userId);
 
       List<dynamic> data = response as List<dynamic>;
-      List<String> dbSessions = data.map((s) => s['name'] as String).toList();
-
-      for (String session in dbSessions) {
-        if (!_sessions.contains(session)) {
-          _sessions.add(session);
-        }
-      }
+      _sessions.clear(); //clear existing sessions before loading new sessions
+      _sessions.addAll(data.map((s) => s['session_name'] as String).toList()); //add sessions for current user
 
       notifyListeners();
     } catch (e) {
       print('Error loading sessions: $e');
+    }
+  }
+
+  Future<void> renameSession(String oldName, String newName) async {
+    final index = _sessions.indexOf(oldName);
+    if (index != -1) {
+      _sessions[index] = newName;
+      notifyListeners();
+
+      // Update in Supabase
+      final userId = _supabaseService.currentUserId;
+      if (userId != null) {
+        try {
+          await _supabaseService.client
+              .from('Sessions')
+              .update({'session_name': newName})
+              .eq('user_id', userId)
+              .eq('session_name', oldName);
+        } catch (e) {
+          print('Error renaming session in Supabase: $e');
+        }
+      }
+    }
+  }
+
+  Future<void> deleteSession(String sessionName) async {
+    _sessions.remove(sessionName);
+    notifyListeners();
+
+    // Delete from Supabase
+    final userId = _supabaseService.currentUserId;
+    if (userId != null) {
+      try {
+        await _supabaseService.client
+            .from('Sessions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('session_name', sessionName);
+      } catch (e) {
+        print('Error deleting session from Supabase: $e');
+      }
     }
   }
 }

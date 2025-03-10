@@ -216,7 +216,7 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
               ),
 
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   // Handle form submission and navigation to the next screen
                   print('Selected presentation type: $_selectedPresentationType');
                   print('Selected presentation goal: $_selectedPresentationGoal');
@@ -225,7 +225,36 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
                       .startSession(_selectedPresentationType!, _selectedPresentationGoal!, _selectedName!);
                   Provider.of<SessionProvider>(context, listen: false)
                       .addSession('$_selectedName'); // Add session to the list
-                  Navigator.pushNamed(context, '/camera');
+                  try{
+                    await Provider.of<SessionProvider>(context, listen: false)
+                        .saveToSupabase();
+
+                    if (mounted){
+                      Navigator.pushNamed(context, '/camera');
+                    }
+                  }
+                  catch (e){
+                    if(mounted){
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context){
+                          return AlertDialog(
+                            title: Text('Error'),
+                            content: Text('An error occurred. Please try again later.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: Text('OK'),
+                              ),
+                            ],
+                          );
+                        }
+                      );
+                    }
+                  }
+
                 }, style: ElevatedButton.styleFrom(
                 minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 50),
                 backgroundColor: Color(0xFF7400B8),
