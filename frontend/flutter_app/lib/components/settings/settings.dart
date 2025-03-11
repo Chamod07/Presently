@@ -193,7 +193,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Get help from our team'),
                     leading: Icon(Icons.support_agent_outlined),
                     onTap: () {
-                      // Navigate to support page or open email
+                      Navigator.pushReplacementNamed(
+                          context, '/contact_support');
                     },
                   ),
                 ),
@@ -204,7 +205,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Legal information'),
                     leading: Icon(Icons.policy_outlined),
                     onTap: () {
-                      // Navigate to terms page
+                      Navigator.pushReplacementNamed(context, '/terms_privacy');
                     },
                   ),
                 ),
@@ -215,7 +216,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Get support and send feedback'),
                     leading: Icon(Icons.help_outline),
                     onTap: () {
-                      // TODO: Implement help section
+                      Navigator.pushReplacementNamed(context, '/help');
                     },
                   ),
                 ),
