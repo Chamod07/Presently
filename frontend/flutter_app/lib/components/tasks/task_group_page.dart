@@ -343,7 +343,13 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
           ],
         ),
       ),
-      bottomNavigationBar: const NavBar(selectedIndex: 0),
+      bottomNavigationBar: NavBar(
+        selectedIndex: ModalRoute.of(context)?.settings.arguments != null
+            ? (ModalRoute.of(context)?.settings.arguments
+                    as Map<String, dynamic>)['selectedIndex'] ??
+                2
+            : 2,
+      ),
     );
   }
 

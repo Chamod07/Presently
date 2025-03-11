@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/settings/faq.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:flutter_app/components/settings/about_page.dart';
@@ -19,6 +20,10 @@ import 'package:flutter_app/components/onboarding/account_setup_title.dart';
 import 'package:flutter_app/components/onboarding/account_setup_1.dart';
 import 'package:flutter_app/components/onboarding/account_setup_2.dart';
 import 'package:flutter_app/components/screens/splash_screen.dart';
+// Add new imports for the new pages
+import 'package:flutter_app/components/settings/contact_support.dart';
+import 'package:flutter_app/components/settings/terms_privacy.dart';
+import 'package:flutter_app/components/settings/help_page.dart';
 import 'services/supabase/supabase_service.dart';
 
 late List<CameraDescription> cameras;
@@ -72,13 +77,17 @@ class MyApp extends StatelessWidget {
         '/scenario_sel': (context) => ScenarioSelection(),
         '/task_group_page': (context) => TaskGroupPage(),
         '/settings': (context) => SettingsPage(),
-        '/about': (context) => AboutPage(),
         '/account_setup_greeting': (context) => AccountSetupGreeting(),
         '/account_setup_title': (context) => AccountSetupTitle(),
         '/account_setup_1': (context) => AccountSetup1(),
         '/account_setup_2': (context) => AccountSetup2(),
         '/task_pass': (context) => TaskPassed(),
         '/task_failed': (context) => TaskFailed(),
+        '/faq': (context) => FAQPage(),
+        '/contact_support': (context) => ContactSupportPage(),
+        '/terms_privacy': (context) => TermsPrivacyPage(),
+        '/help': (context) => HelpPage(),
+        '/about': (context) => AboutPage(),
       },
     );
   }

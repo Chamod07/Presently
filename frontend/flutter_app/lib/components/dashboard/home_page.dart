@@ -14,41 +14,39 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final supabase = Supabase.instance.client;
   final homePageService = HomePageService();
-  String ? firstName;
-  String ? avatarUrl;
+  String? firstName;
+  String? avatarUrl;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     Provider.of<SessionProvider>(context, listen: false)
-        .loadSessionsFromSupabase();  // load sessions from supabase
+        .loadSessionsFromSupabase(); // load sessions from supabase
     _loadHomePageData();
   }
 
-  Future<void> _loadHomePageData() async{
+  Future<void> _loadHomePageData() async {
     setState(() => isLoading = true);
 
-    try{
+    try {
       final homePageData = await homePageService.getHomePageData();
-      if (homePageData != null && mounted){
+      if (homePageData != null && mounted) {
         setState(() {
           firstName = homePageData['first_name'];
           avatarUrl = homePageData['avatar_url'];
-
         });
       }
-    }
-    catch(e){
+    } catch (e) {
       print('Error loading home page data: $e');
-    }
-    finally{
-      setState(() => isLoading = false);
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   void _showRenameDialog(String currentName) {
-    final TextEditingController controller = TextEditingController(text: currentName);
+    final TextEditingController controller =
+        TextEditingController(text: currentName);
 
     showDialog(
       context: context,
@@ -62,18 +60,22 @@ class _HomePageState extends State<HomePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(fontFamily: 'Roboto', color: Colors.black)),
+              child: Text('Cancel',
+                  style: TextStyle(fontFamily: 'Roboto', color: Colors.black)),
             ),
             ElevatedButton(
               onPressed: () {
-                if (controller.text.isNotEmpty && controller.text != currentName) {
+                if (controller.text.isNotEmpty &&
+                    controller.text != currentName) {
                   Provider.of<SessionProvider>(context, listen: false)
                       .renameSession(currentName, controller.text);
                 }
                 Navigator.pop(context);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF7400B8)),
-              child: Text('Save', style: TextStyle(fontFamily: 'Roboto', color: Colors.white)),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Color(0xFF7400B8)),
+              child: Text('Save',
+                  style: TextStyle(fontFamily: 'Roboto', color: Colors.white)),
             ),
           ],
         );
@@ -118,15 +120,15 @@ class _HomePageState extends State<HomePage> {
               radius: 40,
               backgroundColor: Colors.grey[300],
               backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
-              ? NetworkImage(avatarUrl!)
+                  ? NetworkImage(avatarUrl!)
                   : null,
-              child: (avatarUrl == null || avatarUrl!.isEmpty) ?
-              Icon(
-                Icons.person,
-                color: Colors.grey[700],
-                size: 40,
-              )
-              : null,
+              child: (avatarUrl == null || avatarUrl!.isEmpty)
+                  ? Icon(
+                      Icons.person,
+                      color: Colors.grey[700],
+                      size: 40,
+                    )
+                  : null,
             ),
             onPressed: () {},
           ),
@@ -235,8 +237,12 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      bottomNavigationBar: const NavBar(
-        selectedIndex: 0,
+      bottomNavigationBar: NavBar(
+        selectedIndex: ModalRoute.of(context)?.settings.arguments != null
+            ? (ModalRoute.of(context)?.settings.arguments
+                    as Map<String, dynamic>)['selectedIndex'] ??
+                0
+            : 0,
       ),
     );
   }
@@ -247,98 +253,100 @@ class _HomePageState extends State<HomePage> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
-      child:GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, navigateTo);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey,
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(
-              Icons.bookmark_border,
-              color: Colors.grey,
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(context, navigateTo);
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey,
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(
+                Icons.bookmark_border,
+                color: Colors.grey,
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Presentation | University',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                color: Colors.white,
+                icon: Icon(
+                  Icons.more_vert,
+                  color: Colors.grey,
+                ),
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    _showDeleteConfirmation(title);
+                  } else if (value == 'rename') {
+                    _showRenameDialog(title);
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'rename',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Rename',
+                          style: TextStyle(
+                              color: Colors.black, fontFamily: 'Roboto'),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Presentation | University',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 10,
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 18),
+                        SizedBox(width: 8),
+                        Text('Delete',
+                            style: TextStyle(
+                                color: Colors.black, fontFamily: 'Roboto')),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            PopupMenuButton<String>(
-              color: Colors.white,
-            icon: Icon(
-              Icons.more_vert,
-              color: Colors.grey,
-            ),
-              onSelected:(value){
-                if(value == 'delete'){
-                  _showDeleteConfirmation(title);
-                }
-                else if(value == 'rename'){
-                  _showRenameDialog(title);
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'rename',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 18),
-                      SizedBox(width: 8),
-                  Text('Rename',
-                  style: TextStyle(color: Colors.black, fontFamily: 'Roboto'),
-                  ),
-                  ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 18),
-                      SizedBox(width: 8),
-                  Text('Delete',
-                  style: TextStyle(color: Colors.black, fontFamily: 'Roboto')),
-                ],
-                ),
-                ),
-        ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }
