@@ -8,6 +8,12 @@ import '../signin_signup/sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart'; // Add this import for NavBar
 
+// Custom exception to handle partial success
+class DatabaseUpdateSuccess implements Exception {
+  final String message;
+  DatabaseUpdateSuccess([this.message = 'Database updated but auth failed']);
+}
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
@@ -183,10 +189,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Frequently asked questions'),
                     leading: Icon(Icons.question_answer_outlined),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => FAQPage())
-                      );
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => FAQPage()));
                     },
                   ),
                 ),
@@ -568,50 +572,103 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showChangeEmailDialog(BuildContext context) {
     final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Email Address'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'New Email Address'),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Password to Confirm'),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Change Email Address'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'New Email Address'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'Current Password'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      // Validate email format
+                      final emailRegex =
+                          RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+                      if (!emailRegex.hasMatch(emailController.text.trim())) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Please enter a valid email address'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      if (passwordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Please enter your current password'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await _updateEmail(emailController.text.trim(),
+                            passwordController.text);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(
+                              'Email update initiated. Please check your new email inbox for verification.'),
+                          backgroundColor: Colors.green,
+                        ));
+                      } catch (e) {
+                        String errorMessage = 'Failed to update email';
+                        if (e.toString().contains('invalid_credentials') ||
+                            e.toString().contains('Invalid login')) {
+                          errorMessage = 'Current password is incorrect';
+                        } else if (e.toString().contains('already in use')) {
+                          errorMessage = 'This email is already in use';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(errorMessage),
+                          backgroundColor: Colors.red,
+                        ));
+                      } finally {
+                        setState(() {
+                          isLoading = false;
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text('Update'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await _updateEmail(
-                    emailController.text, passwordController.text);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Email updated successfully')));
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Error: ${e.toString()}'),
-                    backgroundColor: Colors.red));
-              }
-            },
-            child: Text('Update'),
-          ),
-        ],
       ),
     );
   }
@@ -704,10 +761,37 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _updateEmail(String newEmail, String password) async {
     try {
-      await _supabaseService.client.auth.updateUser(
-        UserAttributes(email: newEmail),
+      // First verify the current password by signing in
+      final currentEmail = _supabaseService.client.auth.currentUser?.email;
+      final userId = _supabaseService.currentUserId;
+
+      if (currentEmail == null || userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Attempt to sign in with the current password to verify it
+      final AuthResponse res =
+          await _supabaseService.client.auth.signInWithPassword(
+        email: currentEmail,
+        password: password,
       );
-      return;
+
+      if (res.session == null) {
+        throw Exception('Current password is incorrect');
+      }
+
+      try {
+        // Update the authentication email - this will send a verification email
+        await _supabaseService.client.auth.updateUser(
+          UserAttributes(email: newEmail),
+        );
+
+        debugPrint('Auth email update successful');
+        return;
+      } catch (e) {
+        debugPrint('Error during email update: $e');
+        throw e;
+      }
     } catch (e) {
       throw e;
     }
