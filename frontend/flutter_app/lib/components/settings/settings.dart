@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart'; // Add this import for NavBar
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -14,12 +15,13 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-
   bool darkMode = false; // Dark mode setting to check if dark mode is enabled
 
-  bool notifications = false; //Notification setting to check if notifications are enabled
+  bool notifications =
+      false; //Notification setting to check if notifications are enabled
 
-  final SupabaseService _supabaseService = SupabaseService(); // Create instance of SupabaseService
+  final SupabaseService _supabaseService =
+      SupabaseService(); // Create instance of SupabaseService
 
   String profileImageUrl = ''; // User's profile image URL
 
@@ -27,14 +29,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String lastName = ''; // User's last name
 
-  String role = ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
+  String role =
+      ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider: SharePreferenceCache(), // Load saved preferences if available
+      cacheProvider:
+          SharePreferenceCache(), // Load saved preferences if available
     );
     _fetchUserProfile();
   }
@@ -68,8 +72,7 @@ class _SettingsPageState extends State<SettingsPage> {
           profileImageUrl = profileResponse['avatar_url'] ?? '';
         }
       });
-    }
-    catch (e) {
+    } catch (e) {
       print('Error fetching user profile: $e');
     }
   }
@@ -277,6 +280,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+      bottomNavigationBar: NavBar(
+        selectedIndex: ModalRoute.of(context)?.settings.arguments != null
+            ? (ModalRoute.of(context)?.settings.arguments
+                    as Map<String, dynamic>)['selectedIndex'] ??
+                3
+            : 3,
+      ),
     );
   }
 
@@ -292,14 +302,17 @@ class _SettingsPageState extends State<SettingsPage> {
               CircleAvatar(
                 radius: 69,
                 backgroundColor: Colors.grey[300],
-                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
-                    ? NetworkImage(profileImageUrl)
+                backgroundImage:
+                    profileImageUrl != null && profileImageUrl.isNotEmpty
+                        ? NetworkImage(profileImageUrl)
+                        : null,
+                child: (profileImageUrl == null || profileImageUrl!.isEmpty)
+                    ? Icon(
+                        Icons.person,
+                        size: 70,
+                        color: Colors.grey[700],
+                      )
                     : null,
-                child: (profileImageUrl == null || profileImageUrl!.isEmpty) ? Icon(
-                  Icons.person,
-                  size: 70,
-                  color: Colors.grey[700],
-                ) : null,
               ),
               GestureDetector(
                 onTap: _changeProfilePicture,
@@ -322,11 +335,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Roboto'),
           ),
-         // SizedBox(height: 8),
+          // SizedBox(height: 8),
           //Text(
-            //'Milan, Italy',
-            //style: TextStyle(
-              //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
+          //'Milan, Italy',
+          //style: TextStyle(
+          //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
           //),
           SizedBox(height: 8),
           Text(
@@ -342,7 +355,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _changeProfilePicture() async {
     showModalBottomSheet(
         context: context,
-        builder: (BuildContext context){
+        builder: (BuildContext context) {
           return SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -366,30 +379,29 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           );
-        }
-    );
-
+        });
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    try{
+    try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source, maxWidth: 800, imageQuality: 85);
+      final XFile? image = await picker.pickImage(
+          source: source, maxWidth: 800, imageQuality: 85);
       if (image == null) return;
 
       // loading indicator
-      if(!context.mounted) return;
+      if (!context.mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context){
+        builder: (BuildContext context) {
           return Center(child: CircularProgressIndicator());
         },
       );
 
       //upload to supabase storage
       final userId = _supabaseService.currentUserId;
-      if(userId == null) {
+      if (userId == null) {
         Navigator.of(context).pop(); // close loading indicator
         _showErrorMessage('User not logged in');
         return;
@@ -399,13 +411,11 @@ class _SettingsPageState extends State<SettingsPage> {
       final fileName = 'profile_$userId.$fileExt';
       final file = File(image.path);
 
-      await _supabaseService.client
-          .storage
+      await _supabaseService.client.storage
           .from('avatars')
           .upload(fileName, file, fileOptions: FileOptions(upsert: true));
 
-      final imageUrl = _supabaseService.client
-          .storage
+      final imageUrl = _supabaseService.client.storage
           .from('avatars')
           .getPublicUrl(fileName);
 
@@ -418,24 +428,22 @@ class _SettingsPageState extends State<SettingsPage> {
         profileImageUrl = imageUrl;
       });
 
-      if(context.mounted){
+      if (context.mounted) {
         Navigator.of(context).pop(); // close loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Profile picture updated successfully'))
-        );
+            SnackBar(content: Text('Profile picture updated successfully')));
       }
-    } catch (e){
-      if(context.mounted){
+    } catch (e) {
+      if (context.mounted) {
         Navigator.of(context).pop(); // close loading indicator
         _showErrorMessage('Error updating profile picture: $e');
       }
     }
   }
 
-  void _showErrorMessage(String message){
+  void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red)
-    );
+        SnackBar(content: Text(message), backgroundColor: Colors.red));
   }
 
   void _showChangePasswordDialog(BuildContext context) {
