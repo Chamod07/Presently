@@ -1,11 +1,9 @@
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/config.dart';
 
 class HttpService {
-  static final AuthService _authService = AuthService();
-  
   // Base URL from config
   final String baseUrl = Config.baseUrl;
 
@@ -23,11 +21,7 @@ class HttpService {
 
   Future<http.Response> _makeRequest(Future<http.Response> Function() fn) async {
     try {
-      var response = await fn();
-      
-      if (response.statusCode == 401 && await _handleTokenRefresh()) {
-        response = await fn();
-      }
+      final response = await fn();
       
       debugPrint('[JWT DEBUG] Response status: ${response.statusCode}');
       if (response.statusCode >= 400) {
@@ -47,24 +41,12 @@ class HttpService {
       'Accept': 'application/json',
     };
     
-    final token = await _authService.getAccessToken();
-    if (token != null) {
-      headers['Authorization'] = 'Bearer $token';
-      debugPrint('[JWT DEBUG] Using token: ${token.substring(0, 10)}...');
-    } else {
-      debugPrint('[JWT DEBUG] No token found');
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      headers['Authorization'] = 'Bearer ${session.accessToken}';
+      debugPrint('[JWT DEBUG] Using token: ${session.accessToken.substring(0, 10)}...');
     }
     
     return headers;
-  }
-
-  Future<bool> _handleTokenRefresh() async {
-    try {
-      await _authService.refreshSession();
-      return true;
-    } catch (e) {
-      debugPrint('[JWT DEBUG] Refresh failed: $e');
-      return false;
-    }
   }
 }
