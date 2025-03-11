@@ -40,7 +40,7 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       print('Error loading home page data: $e');
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
