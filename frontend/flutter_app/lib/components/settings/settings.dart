@@ -179,7 +179,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Frequently asked questions'),
                     leading: Icon(Icons.question_answer_outlined),
                     onTap: () {
-                      // Navigate to FAQ page
+                      Navigator.pushReplacementNamed(context, '/faq');
                     },
                   ),
                 ),
