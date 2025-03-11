@@ -166,7 +166,7 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 24.0),
             Center(
               child: Text(
-                '© 2023 Presently. All rights reserved.',
+                '© ${DateTime.now().year} Presently. All rights reserved.',
                 style: TextStyle(
                   color: Colors.grey,
                   fontSize: 14.0,

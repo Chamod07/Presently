@@ -453,62 +453,110 @@ class _SettingsPageState extends State<SettingsPage> {
     final TextEditingController newPasswordController = TextEditingController();
     final TextEditingController confirmPasswordController =
         TextEditingController();
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Password'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Current Password'),
-              ),
-              TextField(
-                controller: newPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'New Password'),
-              ),
-              TextField(
-                controller: confirmPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Confirm New Password'),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Change Password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'Current Password'),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    helperText: 'Minimum 8 characters required',
+                  ),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration:
+                      InputDecoration(labelText: 'Confirm New Password'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      // Validate password input
+                      if (newPasswordController.text.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text('Password must be at least 8 characters'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      if (newPasswordController.text !=
+                          confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Passwords do not match'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await _updatePassword(currentPasswordController.text,
+                            newPasswordController.text);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Password updated successfully'),
+                          backgroundColor: Colors.green,
+                        ));
+                      } catch (e) {
+                        String errorMessage = 'Failed to update password';
+                        if (e.toString().contains('invalid_credentials') ||
+                            e.toString().contains('Invalid login')) {
+                          errorMessage = 'Current password is incorrect';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(errorMessage),
+                          backgroundColor: Colors.red,
+                        ));
+                      } finally {
+                        setState(() {
+                          isLoading = false;
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text('Update'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (newPasswordController.text ==
-                  confirmPasswordController.text) {
-                try {
-                  await _updatePassword(currentPasswordController.text,
-                      newPasswordController.text);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Password updated successfully')));
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: Colors.red));
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Passwords do not match'),
-                    backgroundColor: Colors.red));
-              }
-            },
-            child: Text('Update'),
-          ),
-        ],
       ),
     );
   }
@@ -623,6 +671,24 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _updatePassword(
       String currentPassword, String newPassword) async {
     try {
+      // First verify the current password by signing in
+      final email = _supabaseService.client.auth.currentUser?.email;
+      if (email == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Attempt to sign in with the current password to verify it
+      final AuthResponse res =
+          await _supabaseService.client.auth.signInWithPassword(
+        email: email,
+        password: currentPassword,
+      );
+
+      if (res.session == null) {
+        throw Exception('Current password is incorrect');
+      }
+
+      // If verification succeeded, update the password
       await _supabaseService.client.auth.updateUser(
         UserAttributes(password: newPassword),
       );

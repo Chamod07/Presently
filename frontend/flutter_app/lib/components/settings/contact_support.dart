@@ -192,12 +192,12 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
               leading: const Icon(Icons.email, color: Color(0xFF7400B8)),
               title:
                   const Text('Email', style: TextStyle(fontFamily: 'Roboto')),
-              subtitle: const Text('chamodkarunathilake@gmail.com',
+              subtitle: const Text('presently.coach@gmail.com',
                   style: TextStyle(fontFamily: 'Roboto')),
               onTap: () async {
                 final Uri emailUri = Uri(
                   scheme: 'mailto',
-                  path: 'chamodkarunathilake@gmail.com',
+                  path: 'presently.coach@gmail.com',
                 );
                 if (await canLaunchUrl(emailUri)) {
                   await launchUrl(emailUri);
