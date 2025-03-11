@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/settings/about_page.dart';
+import 'package:flutter_app/components/settings/contact_support.dart';
 import 'package:flutter_app/components/settings/faq.dart';
+import 'package:flutter_app/components/settings/help_page.dart';
+import 'package:flutter_app/components/settings/terms_privacy.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
@@ -197,8 +201,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Get help from our team'),
                     leading: Icon(Icons.support_agent_outlined),
                     onTap: () {
-                      Navigator.pushReplacementNamed(
-                          context, '/contact_support');
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ContactSupportPage())
+                      );
                     },
                   ),
                 ),
@@ -209,7 +215,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Legal information'),
                     leading: Icon(Icons.policy_outlined),
                     onTap: () {
-                      Navigator.pushReplacementNamed(context, '/terms_privacy');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => TermsPrivacyPage())
+                      );
                     },
                   ),
                 ),
@@ -220,7 +229,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Get support and send feedback'),
                     leading: Icon(Icons.help_outline),
                     onTap: () {
-                      Navigator.pushReplacementNamed(context, '/help');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => HelpPage())
+                      );
                     },
                   ),
                 ),
@@ -231,7 +243,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Learn more about Presently'),
                     leading: Icon(Icons.info_outline),
                     onTap: () {
-                      Navigator.pushReplacementNamed(context, '/about');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => AboutPage())
+                      );
                     },
                   ),
                 ),

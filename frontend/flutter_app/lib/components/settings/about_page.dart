@@ -8,14 +8,16 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About', style: TextStyle(fontFamily: 'Roboto')),
         backgroundColor: Colors.white,
+        title: const Text('About', style: TextStyle(fontFamily: 'Roboto')),
+        centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () => Navigator.pushReplacementNamed(context, '/settings'),
         ),
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(child:
+      SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,6 +178,7 @@ class AboutPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
