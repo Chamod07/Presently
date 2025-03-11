@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/settings/faq.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
 import 'package:flutter_app/components/settings/about_page.dart';
@@ -79,6 +80,7 @@ class MyApp extends StatelessWidget {
         '/account_setup_2': (context) => AccountSetup2(),
         '/task_pass': (context) => TaskPassed(),
         '/task_failed': (context) => TaskFailed(),
+        '/faq': (context) => FAQPage(),
       },
     );
   }
