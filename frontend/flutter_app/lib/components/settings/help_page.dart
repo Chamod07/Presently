@@ -135,7 +135,8 @@ class _HelpPageState extends State<HelpPage> {
           onPressed: () => Navigator.pushReplacementNamed(context, '/settings'),
         ),
       ),
-      body: ListView.builder(
+      body: SafeArea( child:
+      ListView.builder(
         itemCount: _helpCategories.length,
         itemBuilder: (context, categoryIndex) {
           final category = _helpCategories[categoryIndex];
@@ -148,6 +149,7 @@ class _HelpPageState extends State<HelpPage> {
             categoryIndex,
           );
         },
+      ),
       ),
     );
   }
@@ -162,6 +164,7 @@ class _HelpPageState extends State<HelpPage> {
   ) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      color: Colors.white,
       child: Column(
         children: [
           ListTile(
@@ -220,6 +223,7 @@ class _HelpPageState extends State<HelpPage> {
                 ),
                 isExpanded: item['isExpanded'],
                 canTapOnHeader: true,
+                backgroundColor: Colors.white,
               );
             }).toList(),
           ),

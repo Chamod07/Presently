@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/settings/faq.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
@@ -182,7 +183,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Frequently asked questions'),
                     leading: Icon(Icons.question_answer_outlined),
                     onTap: () {
-                      Navigator.pushReplacementNamed(context, '/faq');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => FAQPage())
+                      );
                     },
                   ),
                 ),
