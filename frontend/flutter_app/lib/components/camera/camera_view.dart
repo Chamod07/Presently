@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -40,6 +41,8 @@ class _CameraViewState extends State<CameraView> {
   bool _isRecording = false;
   bool _showNotification = false;
   String _notificationMessage = 'Test one';
+  Timer? _timer;
+  int _seconds = 0;
 
 
 
@@ -91,6 +94,25 @@ class _CameraViewState extends State<CameraView> {
     });
   }
 
+  void _startTimer(){
+    _seconds = 0;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _seconds++;
+      });
+    });
+  }
+  void _stopTimer(){
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  String _formatTime(){
+    int minutes = _seconds ~/ 60;
+    int remainingSeconds = _seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(body: _liveFeedBody());
@@ -115,6 +137,7 @@ class _CameraViewState extends State<CameraView> {
               child: widget.customPaint,
             ),
           ),
+          _recordingTimerWidget(),
           _notificationWidget(),
           _switchLiveCameraToggle(),
           _shutterButton(), // Add the summary button to the stack
@@ -123,12 +146,49 @@ class _CameraViewState extends State<CameraView> {
     );
   }
 
+  Widget _recordingTimerWidget() => Positioned(
+    top: 40,
+    left: 0,
+    right: 0,
+    child: AnimatedOpacity(
+      opacity: _isRecording ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.circle,
+              color: Colors.red,
+              size: 12,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _formatTime(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _switchLiveCameraToggle() => Positioned(
-    bottom: 8,
-    right: 8,
+    bottom: 69,
+    right: 50,
     child: SizedBox(
-      height: 50.0,
-      width: 50.0,
+      height: 60.0,
+      width: 60.0,
       child: FloatingActionButton(
         heroTag: Object(),
         onPressed: _switchLiveCamera,
@@ -137,7 +197,7 @@ class _CameraViewState extends State<CameraView> {
           Platform.isIOS
               ? Icons.flip_camera_ios_outlined
               : Icons.flip_camera_android_outlined,
-          size: 25,
+          size: 30,
           color: Colors.white,
         ),
       ),
@@ -194,18 +254,19 @@ class _CameraViewState extends State<CameraView> {
   );
 
   Widget _shutterButton() => Positioned(
-    bottom: 80, // Position it above the bottom controls
+    bottom: 62, // Position it above the bottom controls
     left: 0,
     right: 0,
     child: Center(
       child: SizedBox(
-        height: 60.0,
+        height: 80.0,
         width: 200.0,
         child: GestureDetector(
           onTap: () {
             setState(() {
               if(_isRecording){
                 _isRecording = false;
+                _stopTimer();
                 // Stop the camera feed and navigate to the summary page
                 _stopLiveFeed().then((_) {
                   Navigator.pushReplacementNamed(context, '/summary');
@@ -213,22 +274,25 @@ class _CameraViewState extends State<CameraView> {
               }
               else{
                 _isRecording = true;
+                _startTimer();
                 showNotification("Recording started");
               }
             });
 
           },
           child: Container(
-            width: 80.0,
-            height: 80.0,
+            width: 100.0,
+            height: 100.0,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 5),
             ),
             child: Center( child:
-            Container(
-              width: _isRecording ? 32.0 : 60.0,
-              height: _isRecording ? 32.0 : 60.0,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve : Curves.easeInOut,
+              width: _isRecording ? 40.0 : 74.0,
+              height: _isRecording ? 40.0 : 74.0,
               decoration: BoxDecoration(
                 color: _isRecording ? Colors.red:Colors.white,
                 shape: _isRecording ? BoxShape.rectangle:  BoxShape.circle,
