@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,6 +38,13 @@ class _CameraViewState extends State<CameraView> {
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
   bool _changingCameraLens = false;
+  bool _isRecording = false;
+  bool _showNotification = false;
+  String _notificationMessage = 'Test one';
+  Timer? _timer;
+  int _seconds = 0;
+
+
 
   @override
   void initState() {
@@ -66,6 +74,45 @@ class _CameraViewState extends State<CameraView> {
     super.dispose();
   }
 
+  void showNotification(String message) {
+    setState(() {
+      _notificationMessage = message;
+      _showNotification = true;
+    });
+
+    // Auto-dismiss after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        _dismissNotification();
+      }
+    });
+  }
+
+  void _dismissNotification() {
+    setState(() {
+      _showNotification = false;
+    });
+  }
+
+  void _startTimer(){
+    _seconds = 0;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _seconds++;
+      });
+    });
+  }
+  void _stopTimer(){
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  String _formatTime(){
+    int minutes = _seconds ~/ 60;
+    int remainingSeconds = _seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(body: _liveFeedBody());
@@ -90,114 +137,44 @@ class _CameraViewState extends State<CameraView> {
               child: widget.customPaint,
             ),
           ),
-          _backButton(),
+          _recordingTimerWidget(),
+          _notificationWidget(),
           _switchLiveCameraToggle(),
-          _detectionViewModeToggle(),
-          _zoomControl(),
-          _exposureControl(),
-          _summaryButton(), // Add the summary button to the stack
+          _shutterButton(), // Add the summary button to the stack
         ],
       ),
     );
   }
 
-  Widget _backButton() => Positioned(
+  Widget _recordingTimerWidget() => Positioned(
     top: 40,
-    left: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: () => Navigator.of(context).pop(),
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Icons.arrow_back_ios_outlined,
-          size: 20,
-        ),
-      ),
-    ),
-  );
-
-  Widget _detectionViewModeToggle() => Positioned(
-    bottom: 8,
-    left: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: widget.onDetectorViewModeChanged,
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Icons.photo_library_outlined,
-          size: 25,
-        ),
-      ),
-    ),
-  );
-
-  Widget _switchLiveCameraToggle() => Positioned(
-    bottom: 8,
-    right: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: _switchLiveCamera,
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Platform.isIOS
-              ? Icons.flip_camera_ios_outlined
-              : Icons.flip_camera_android_outlined,
-          size: 25,
-        ),
-      ),
-    ),
-  );
-
-  Widget _zoomControl() => Positioned(
-    bottom: 16,
     left: 0,
     right: 0,
-    child: Align(
-      alignment: Alignment.bottomCenter,
-      child: SizedBox(
-        width: 250,
+    child: AnimatedOpacity(
+      opacity: _isRecording ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(
-              child: Slider(
-                value: _currentZoomLevel,
-                min: _minAvailableZoom,
-                max: _maxAvailableZoom,
-                activeColor: Colors.white,
-                inactiveColor: Colors.white30,
-                onChanged: (value) async {
-                  setState(() {
-                    _currentZoomLevel = value;
-                  });
-                  await _controller?.setZoomLevel(value);
-                },
-              ),
+            const Icon(
+              Icons.circle,
+              color: Colors.red,
+              size: 12,
             ),
-            Container(
-              width: 50,
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Center(
-                  child: Text(
-                    '${_currentZoomLevel.toStringAsFixed(1)}x',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
+            const SizedBox(width: 8),
+            Text(
+              _formatTime(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
           ],
@@ -206,89 +183,124 @@ class _CameraViewState extends State<CameraView> {
     ),
   );
 
-  Widget _exposureControl() => Positioned(
-    top: 40,
-    right: 8,
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: 250,
-      ),
-      child: Column(children: [
-        Container(
-          width: 55,
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: Text(
-                '${_currentExposureOffset.toStringAsFixed(1)}x',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
+  Widget _switchLiveCameraToggle() => Positioned(
+    bottom: 69,
+    right: 50,
+    child: SizedBox(
+      height: 60.0,
+      width: 60.0,
+      child: FloatingActionButton(
+        heroTag: Object(),
+        onPressed: _switchLiveCamera,
+        backgroundColor: Colors.black54,
+        child: Icon(
+          Platform.isIOS
+              ? Icons.flip_camera_ios_outlined
+              : Icons.flip_camera_android_outlined,
+          size: 30,
+          color: Colors.white,
         ),
-        Expanded(
-          child: RotatedBox(
-            quarterTurns: 3,
-            child: SizedBox(
-              height: 30,
-              child: Slider(
-                value: _currentExposureOffset,
-                min: _minAvailableExposureOffset,
-                max: _maxAvailableExposureOffset,
-                activeColor: Colors.white,
-                inactiveColor: Colors.white30,
-                onChanged: (value) async {
-                  setState(() {
-                    _currentExposureOffset = value;
-                  });
-                  await _controller?.setExposureOffset(value);
-                },
+      ),
+    ),
+  );
+  //TODO
+  Widget _notificationWidget() => Positioned(
+    bottom: 150, // Position above the shutter button
+    left: 20,
+    right: 20,
+    child: AnimatedOpacity(
+      opacity: _showNotification ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 300),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        transform: Matrix4.translationValues(
+            0.0,
+            _showNotification ? 0.0 : 20.0,
+            0.0
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.redAccent, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.redAccent,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _notificationMessage,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
               ),
             ),
-          ),
-        )
-      ]),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: _dismissNotification,
+            ),
+          ],
+        ),
+      ),
     ),
   );
 
-  // New method to create the summary button
-  Widget _summaryButton() => Positioned(
-    bottom: 80, // Position it above the bottom controls
+  Widget _shutterButton() => Positioned(
+    bottom: 62, // Position it above the bottom controls
     left: 0,
     right: 0,
     child: Center(
       child: SizedBox(
-        height: 60.0,
+        height: 80.0,
         width: 200.0,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF7400B8),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-          onPressed: () {
-            // Stop the camera feed and navigate to the summary page
-            _stopLiveFeed().then((_) {
-              Navigator.pushReplacementNamed(context, '/summary');
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              if(_isRecording){
+                _isRecording = false;
+                _stopTimer();
+                // Stop the camera feed and navigate to the summary page
+                _stopLiveFeed().then((_) {
+                  Navigator.pushReplacementNamed(context, '/summary');
+                });
+              }
+              else{
+                _isRecording = true;
+                _startTimer();
+                showNotification("Recording started");
+              }
             });
+
           },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.assessment, size: 24),
-              SizedBox(width: 8),
-              Text(
-                'View Summary',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          child: Container(
+            width: 100.0,
+            height: 100.0,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 5),
+            ),
+            child: Center( child:
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve : Curves.easeInOut,
+              width: _isRecording ? 40.0 : 74.0,
+              height: _isRecording ? 40.0 : 74.0,
+              decoration: BoxDecoration(
+                color: _isRecording ? Colors.red:Colors.white,
+                shape: _isRecording ? BoxShape.rectangle:  BoxShape.circle,
+                borderRadius: _isRecording ? BorderRadius.circular(12) : null,
               ),
-            ],
-          ),
+            ),
+            ),
+          )
         ),
       ),
     ),

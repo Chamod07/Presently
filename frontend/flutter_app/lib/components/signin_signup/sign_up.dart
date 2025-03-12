@@ -89,40 +89,92 @@ class _SignUpPageState extends State<SignUpPage> {
       debugPrint(
           'Attempting to sign up with email: ${_emailController.text.trim()}');
 
-// Modified sign-up approach with better error handling
+      // Sign up with Supabase
       final AuthResponse res = await _supabaseService.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        // Simplified data object
-        data: {
-          'email_confirmed': true,
-        },
-        // No need for emailRedirectTo since we're bypassing email confirmation
       );
 
-      // Detailed debug logging
-      debugPrint('Sign-up response received:');
-      debugPrint('User: ${res.user != null ? res.user!.id : 'null'}');
-      debugPrint('Session: ${res.session != null ? 'active' : 'null'}');
+      // Debug logs
+      debugPrint('Sign-up response received');
+      debugPrint('User: ${res.user != null ? "created" : "null"}');
+      debugPrint('Session: ${res.session != null ? "active" : "null"}');
 
-      if (res.user == null) {
-        debugPrint('No user returned in response');
-        throw Exception('User creation failed');
-      }
+      // Check if sign-up was successful
+      if (res.user != null) {
+        debugPrint('User ID: ${res.user!.id}');
 
-      if (mounted) {
-        // Simplified logic: consider sign-up successful if we got a response with user
-        if (res.user != null) {
-          debugPrint('User created successfully');
-          String userId = res.user!.id;
+        try {
+          // Create user details record with all required fields
+          // Include empty defaults for fields that will be populated later
+          final userDetailsResponse =
+              await _supabaseService.client.from('UserDetails').insert({
+            'userId': res.user!.id,
+            'email': _emailController.text.trim(),
+            'firstName': '', // Empty but will be filled during onboarding
+            'lastName': '', // Empty but will be filled during onboarding
+            'role': '', // Empty but will be filled during onboarding
+            'createdAt': DateTime.now().toIso8601String(),
+          }).select();
 
-          // Always proceed to account setup regardless of session status
-          // No more email verification check
-          Navigator.pushReplacementNamed(context, '/account_setup_1', arguments: {'userId': userId});
-        } else {
-          // Instead of throwing an error, show a meaningful message
+          debugPrint('User details created: $userDetailsResponse');
+
+          if (mounted) {
+            // Navigate to combined account setup
+            Navigator.pushReplacementNamed(
+              context,
+              '/account_setup',
+              arguments: {'userId': res.user!.id},
+            );
+          }
+        } catch (dbError) {
+          debugPrint('Error creating user details: $dbError');
+
+          // Try a more detailed approach to diagnose the issue
+          try {
+            // First check if a record already exists
+            final existingRecord = await _supabaseService.client
+                .from('UserDetails')
+                .select()
+                .eq('userId', res.user!.id)
+                .maybeSingle();
+
+            if (existingRecord != null) {
+              debugPrint('Record already exists, proceeding to onboarding');
+              if (mounted) {
+                Navigator.pushReplacementNamed(
+                  context,
+                  '/account_setup',
+                  arguments: {'userId': res.user!.id},
+                );
+              }
+              return;
+            }
+
+            // If no record exists, show the error
+            if (mounted) {
+              setState(() {
+                errorText = 'Profile setup failed. Please try signing in.';
+                _isLoading = false;
+              });
+            }
+          } catch (retryError) {
+            debugPrint('Error during recovery attempt: $retryError');
+            if (mounted) {
+              setState(() {
+                errorText =
+                    'Account created but profile setup failed. Please sign in with your new account.';
+                _isLoading = false;
+              });
+            }
+          }
+        }
+      } else {
+        // If auth succeeded but no user was returned
+        if (mounted) {
           setState(() {
             errorText = 'Unable to create account. Please try again later.';
+            _isLoading = false;
           });
         }
       }
@@ -130,24 +182,35 @@ class _SignUpPageState extends State<SignUpPage> {
       debugPrint('AuthException during sign-up: ${e.message}');
       if (mounted) {
         setState(() {
-          if (e.message.contains('email')) {
+          _isLoading = false;
+
+          // More specific error messages based on the error type
+          if (e.message.toLowerCase().contains('email') &&
+              e.message.toLowerCase().contains('taken')) {
             emailError = true;
+            errorText = 'This email is already in use. Please sign in instead.';
+          } else if (e.message.toLowerCase().contains('weak password')) {
+            passwordError = true;
+            errorText = 'Password is too weak. Please use a stronger password.';
+          } else {
+            errorText = 'Sign up failed: ${e.message}';
           }
-          errorText = 'Sign up failed: ${e.message}';
         });
       }
     } catch (e) {
       debugPrint('Unexpected error during sign-up: $e');
       if (mounted) {
         setState(() {
-          // Make the error message more user-friendly
-          errorText =
-              'Something went wrong. Please check your internet connection and try again.';
+          _isLoading = false;
+          // Provide more specific error message if possible
+          if (e.toString().contains('network')) {
+            errorText =
+                'Network error. Please check your internet connection and try again.';
+          } else {
+            errorText =
+                'Something went wrong. Please try again or contact support.';
+          }
         });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }

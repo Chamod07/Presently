@@ -13,7 +13,8 @@ class SummaryPage extends StatefulWidget {
   _SummaryPageState createState() => _SummaryPageState();
 }
 
-class _SummaryPageState extends State<SummaryPage> {
+class _SummaryPageState extends State<SummaryPage>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final List<String> _pageTitles = [
@@ -22,6 +23,68 @@ class _SummaryPageState extends State<SummaryPage> {
     "Body Language",
     "Voice Analysis",
   ];
+
+  bool _isRefreshing = false;
+
+  // Animation controller for the tab indicator
+  late AnimationController _tabAnimationController;
+  late Animation<double> _tabAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Setup animation controller for tab sliding
+    _tabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _tabAnimation = Tween<double>(
+      begin: 0,
+      end: 0,
+    ).animate(
+      CurvedAnimation(
+        parent: _tabAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Listen to page changes from the PageView
+    _pageController.addListener(_handlePageChange);
+  }
+
+  // Handle page changes from the PageView
+  void _handlePageChange() {
+    final double page = _pageController.page ?? 0;
+    if (page % 1.0 == 0) {
+      // Only update for complete page changes
+      updateTabIndicator(page.toInt());
+    }
+  }
+
+  // Update tab indicator position when page changes
+  void updateTabIndicator(int page) {
+    if (_currentPage != page) {
+      setState(() {
+        _currentPage = page;
+      });
+
+      // Reset animation with new values
+      _tabAnimation = Tween<double>(
+        begin: _tabAnimation.value,
+        end: page.toDouble(),
+      ).animate(
+        CurvedAnimation(
+          parent: _tabAnimationController,
+          curve: Curves.easeInOut,
+        ),
+      );
+
+      _tabAnimationController.reset();
+      _tabAnimationController.forward();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,19 +97,90 @@ class _SummaryPageState extends State<SummaryPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Text(_pageTitles[_currentPage]),
+        title: Text(
+          _pageTitles[_currentPage],
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+            fontSize: 20,
+          ),
+        ),
         centerTitle: true,
+        elevation: 1,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: Colors.black87),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF7400B8),
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Icon(Icons.refresh, color: Colors.black87),
+            onPressed: _isRefreshing ? null : _refreshData,
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Tab indicators
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(_pageTitles.length, (index) {
-                return _buildTabIndicator(index);
-              }),
+          // Improved tab indicators with sliding animation
+          Container(
+            margin:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            padding: const EdgeInsets.all(4.0),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(25.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                )
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Animated sliding indicator
+                AnimatedBuilder(
+                  animation: _tabAnimation,
+                  builder: (context, child) {
+                    return Positioned(
+                      left: _calculateTabPosition(_tabAnimation.value),
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: (MediaQuery.of(context).size.width - 40) /
+                            _pageTitles.length,
+                        decoration: BoxDecoration(
+                          color: Color(0xFF7400B8),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF7400B8).withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Tab labels
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(_pageTitles.length, (index) {
+                    return _buildTabIndicator(index);
+                  }),
+                ),
+              ],
             ),
           ),
           // PageView with all report categories
@@ -54,9 +188,7 @@ class _SummaryPageState extends State<SummaryPage> {
             child: PageView(
               controller: _pageController,
               onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
+                updateTabIndicator(index);
               },
               children: const [
                 ContextSummary(),
@@ -72,28 +204,65 @@ class _SummaryPageState extends State<SummaryPage> {
     );
   }
 
+  // Calculate position for the sliding indicator
+  double _calculateTabPosition(double page) {
+    // Calculate the width of each tab
+    final double tabWidth =
+        (MediaQuery.of(context).size.width - 40) / _pageTitles.length;
+    // Add small horizontal padding
+    return page * tabWidth + 4;
+  }
+
+  // Method to refresh data
+  Future<void> _refreshData() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      await Provider.of<ReportProvider>(context, listen: false)
+          .fetchReportData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to refresh data')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
+  }
+
   Widget _buildTabIndicator(int index) {
     final isActive = index == _currentPage;
-    return GestureDetector(
-      onTap: () {
-        _pageController.animateToPage(
-          index,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? Color(0xFF7400B8) : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          _pageTitles[index]
-              .split(' ')[0], // Just show first word for compactness
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.black,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          _pageController.animateToPage(
+            index,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          margin: EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            // Remove background color as we're using the sliding indicator
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            _pageTitles[index]
+                .split(' ')[0], // Just show first word for compactness
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.black54,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              fontSize: 14,
+            ),
           ),
         ),
       ),
@@ -102,6 +271,8 @@ class _SummaryPageState extends State<SummaryPage> {
 
   @override
   void dispose() {
+    _tabAnimationController.dispose();
+    _pageController.removeListener(_handlePageChange);
     _pageController.dispose();
     super.dispose();
   }
@@ -124,62 +295,250 @@ abstract class BaseSummary extends StatelessWidget {
       child: Consumer<ReportProvider>(
         builder: (context, provider, _) {
           if (provider.loading) {
-            return Center(child: CircularProgressIndicator());
+            return _buildLoadingState();
           } else if (provider.errorMessage.isNotEmpty) {
-            return Center(child: Text(provider.errorMessage));
+            return _buildErrorState(context, provider.errorMessage);
           } else {
-            return Column(
-              children: [
-                SizedBox(height: 20),
-                Text(title,
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 20),
-                Center(
-                  child: GraphDisplay(score: (getScore(provider) ?? 0) / 10),
-                ),
-                SizedBox(height: 20),
-                Expanded(
-                  child: buildWeaknessList(context, provider),
-                ),
-              ],
-            );
+            return _buildContentState(context, provider);
           }
         },
       ),
     );
   }
 
+  // Improved loading state with progress indicator
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 80,
+            height: 80,
+            child: CircularProgressIndicator(
+              color: Color(0xFF7400B8),
+              strokeWidth: 3,
+            ),
+          ),
+          SizedBox(height: 20),
+          Text(
+            'Loading your summary...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Improved error state
+  Widget _buildErrorState(BuildContext context, String errorMessage) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 60,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Oops! Something went wrong',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF7400B8),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            onPressed: () {
+              Provider.of<ReportProvider>(context, listen: false)
+                  .fetchReportData();
+            },
+            child: Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Improved content state with better styling
+  Widget _buildContentState(BuildContext context, ReportProvider provider) {
+    return Column(
+      children: [
+        SizedBox(height: 16),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF7400B8),
+          ),
+        ),
+        SizedBox(height: 16),
+        Center(
+          child: GraphDisplay(score: (getScore(provider) ?? 0) / 10),
+        ),
+        SizedBox(height: 12),
+        Text(
+          _getScoreDescription((getScore(provider) ?? 0) / 10),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey.shade700,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        SizedBox(height: 20),
+        Expanded(
+          child: buildWeaknessList(context, provider),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to get description based on score
+  String _getScoreDescription(double score) {
+    if (score >= 0.8) {
+      return "Excellent! You've mastered this area.";
+    } else if (score >= 0.6) {
+      return "Good job! With a little more practice, you'll excel.";
+    } else if (score >= 0.4) {
+      return "You're making progress. Keep practicing!";
+    } else {
+      return "This area needs improvement. Focus on the suggestions below.";
+    }
+  }
+
+  // Improved weakness list with better card design
   Widget buildWeaknessList(BuildContext context, ReportProvider provider) {
     final weaknesses = getWeaknesses(provider);
     if (weaknesses == null || weaknesses.isEmpty) {
-      return Center(child: Text('No weaknesses found.'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              color: Colors.green,
+              size: 60,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No weaknesses found!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Great job! Continue practicing to maintain your skills.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: weaknesses.length,
       itemBuilder: (context, index) {
         final weakness = weaknesses[index];
         return Card(
+          margin: EdgeInsets.only(bottom: 16),
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ExpansionTile(
-            title: Text(weakness.topic ?? 'Unknown Issue'),
+            leading: Icon(
+              Icons.warning_amber_outlined,
+              color: Color(0xFF7400B8),
+            ),
+            title: Text(
+              weakness.topic ?? 'Unknown Issue',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Examples:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    if (weakness.examples != null)
-                      for (String example in weakness.examples!)
-                        Text('- $example'),
-                    const SizedBox(height: 8),
-                    const Text('Suggestions:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    if (weakness.suggestions != null)
-                      for (String suggestion in weakness.suggestions!)
-                        Text('- $suggestion'),
+                    if (weakness.examples != null &&
+                        weakness.examples!.isNotEmpty) ...[
+                      const Text(
+                        'Examples:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF7400B8),
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      ...weakness.examples!
+                          .map((example) => Padding(
+                                padding: const EdgeInsets.only(bottom: 4.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('• ',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Expanded(child: Text(example)),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      SizedBox(height: 12),
+                    ],
+                    if (weakness.suggestions != null &&
+                        weakness.suggestions!.isNotEmpty) ...[
+                      const Text(
+                        'Suggestions:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF7400B8),
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      ...weakness.suggestions!
+                          .map((suggestion) => Padding(
+                                padding: const EdgeInsets.only(bottom: 4.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('• ',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Expanded(child: Text(suggestion)),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                    ],
                   ],
                 ),
               ),
@@ -206,13 +565,13 @@ class ContextSummary extends BaseSummary {
 
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
-    // Additional custom UI for context summary if needed
     return Container();
   }
 }
 
 class GrammarSummary extends BaseSummary {
   const GrammarSummary({super.key});
+
   @override
   String get title => 'Grammar Summary';
 
@@ -225,7 +584,6 @@ class GrammarSummary extends BaseSummary {
 
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
-    // Additional custom UI for grammar summary if needed
     return Container();
   }
 }
