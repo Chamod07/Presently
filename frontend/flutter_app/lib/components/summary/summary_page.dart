@@ -13,7 +13,8 @@ class SummaryPage extends StatefulWidget {
   _SummaryPageState createState() => _SummaryPageState();
 }
 
-class _SummaryPageState extends State<SummaryPage> {
+class _SummaryPageState extends State<SummaryPage>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final List<String> _pageTitles = [
@@ -24,6 +25,66 @@ class _SummaryPageState extends State<SummaryPage> {
   ];
 
   bool _isRefreshing = false;
+
+  // Animation controller for the tab indicator
+  late AnimationController _tabAnimationController;
+  late Animation<double> _tabAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Setup animation controller for tab sliding
+    _tabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _tabAnimation = Tween<double>(
+      begin: 0,
+      end: 0,
+    ).animate(
+      CurvedAnimation(
+        parent: _tabAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Listen to page changes from the PageView
+    _pageController.addListener(_handlePageChange);
+  }
+
+  // Handle page changes from the PageView
+  void _handlePageChange() {
+    final double page = _pageController.page ?? 0;
+    if (page % 1.0 == 0) {
+      // Only update for complete page changes
+      updateTabIndicator(page.toInt());
+    }
+  }
+
+  // Update tab indicator position when page changes
+  void updateTabIndicator(int page) {
+    if (_currentPage != page) {
+      setState(() {
+        _currentPage = page;
+      });
+
+      // Reset animation with new values
+      _tabAnimation = Tween<double>(
+        begin: _tabAnimation.value,
+        end: page.toDouble(),
+      ).animate(
+        CurvedAnimation(
+          parent: _tabAnimationController,
+          curve: Curves.easeInOut,
+        ),
+      );
+
+      _tabAnimationController.reset();
+      _tabAnimationController.forward();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +129,7 @@ class _SummaryPageState extends State<SummaryPage> {
       ),
       body: Column(
         children: [
-          // Improved tab indicators with container
+          // Improved tab indicators with sliding animation
           Container(
             margin:
                 const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
@@ -84,11 +145,42 @@ class _SummaryPageState extends State<SummaryPage> {
                 )
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(_pageTitles.length, (index) {
-                return _buildTabIndicator(index);
-              }),
+            child: Stack(
+              children: [
+                // Animated sliding indicator
+                AnimatedBuilder(
+                  animation: _tabAnimation,
+                  builder: (context, child) {
+                    return Positioned(
+                      left: _calculateTabPosition(_tabAnimation.value),
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: (MediaQuery.of(context).size.width - 40) /
+                            _pageTitles.length,
+                        decoration: BoxDecoration(
+                          color: Color(0xFF7400B8),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF7400B8).withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Tab labels
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(_pageTitles.length, (index) {
+                    return _buildTabIndicator(index);
+                  }),
+                ),
+              ],
             ),
           ),
           // PageView with all report categories
@@ -96,9 +188,7 @@ class _SummaryPageState extends State<SummaryPage> {
             child: PageView(
               controller: _pageController,
               onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
+                updateTabIndicator(index);
               },
               children: const [
                 ContextSummary(),
@@ -112,6 +202,15 @@ class _SummaryPageState extends State<SummaryPage> {
       ),
       bottomNavigationBar: NavBar(selectedIndex: selectedIndex),
     );
+  }
+
+  // Calculate position for the sliding indicator
+  double _calculateTabPosition(double page) {
+    // Calculate the width of each tab
+    final double tabWidth =
+        (MediaQuery.of(context).size.width - 40) / _pageTitles.length;
+    // Add small horizontal padding
+    return page * tabWidth + 4;
   }
 
   // Method to refresh data
@@ -151,17 +250,9 @@ class _SummaryPageState extends State<SummaryPage> {
           padding: EdgeInsets.symmetric(vertical: 12),
           margin: EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
-            color: isActive ? Color(0xFF7400B8) : Colors.transparent,
+            // Remove background color as we're using the sliding indicator
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: Color(0xFF7400B8).withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    )
-                  ]
-                : [],
           ),
           child: Text(
             _pageTitles[index]
@@ -180,6 +271,8 @@ class _SummaryPageState extends State<SummaryPage> {
 
   @override
   void dispose() {
+    _tabAnimationController.dispose();
+    _pageController.removeListener(_handlePageChange);
     _pageController.dispose();
     super.dispose();
   }
