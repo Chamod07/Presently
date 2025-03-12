@@ -38,6 +38,10 @@ class _CameraViewState extends State<CameraView> {
   double _currentExposureOffset = 0.0;
   bool _changingCameraLens = false;
   bool _isRecording = false;
+  bool _showNotification = false;
+  String _notificationMessage = 'Test one';
+
+
 
   @override
   void initState() {
@@ -67,6 +71,26 @@ class _CameraViewState extends State<CameraView> {
     super.dispose();
   }
 
+  void showNotification(String message) {
+    setState(() {
+      _notificationMessage = message;
+      _showNotification = true;
+    });
+
+    // Auto-dismiss after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        _dismissNotification();
+      }
+    });
+  }
+
+  void _dismissNotification() {
+    setState(() {
+      _showNotification = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(body: _liveFeedBody());
@@ -91,50 +115,13 @@ class _CameraViewState extends State<CameraView> {
               child: widget.customPaint,
             ),
           ),
-          _backButton(),
+          _notificationWidget(),
           _switchLiveCameraToggle(),
-          _detectionViewModeToggle(),
           _shutterButton(), // Add the summary button to the stack
         ],
       ),
     );
   }
-
-  Widget _backButton() => Positioned(
-    top: 40,
-    left: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: () => Navigator.of(context).pop(),
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Icons.arrow_back_ios_outlined,
-          size: 20,
-        ),
-      ),
-    ),
-  );
-
-  Widget _detectionViewModeToggle() => Positioned(
-    bottom: 8,
-    left: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: widget.onDetectorViewModeChanged,
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Icons.photo_library_outlined,
-          size: 25,
-        ),
-      ),
-    ),
-  );
 
   Widget _switchLiveCameraToggle() => Positioned(
     bottom: 8,
@@ -151,12 +138,61 @@ class _CameraViewState extends State<CameraView> {
               ? Icons.flip_camera_ios_outlined
               : Icons.flip_camera_android_outlined,
           size: 25,
+          color: Colors.white,
+        ),
+      ),
+    ),
+  );
+  //TODO
+  Widget _notificationWidget() => Positioned(
+    bottom: 150, // Position above the shutter button
+    left: 20,
+    right: 20,
+    child: AnimatedOpacity(
+      opacity: _showNotification ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 300),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        transform: Matrix4.translationValues(
+            0.0,
+            _showNotification ? 0.0 : 20.0,
+            0.0
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.redAccent, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.redAccent,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _notificationMessage,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: _dismissNotification,
+            ),
+          ],
         ),
       ),
     ),
   );
 
-  // New method to create the summary button
   Widget _shutterButton() => Positioned(
     bottom: 80, // Position it above the bottom controls
     left: 0,
@@ -177,6 +213,7 @@ class _CameraViewState extends State<CameraView> {
               }
               else{
                 _isRecording = true;
+                showNotification("Recording started");
               }
             });
 
