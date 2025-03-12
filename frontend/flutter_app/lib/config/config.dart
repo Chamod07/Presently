@@ -12,6 +12,20 @@ class Config {
   // Original API endpoints (preserved as requested)
   static const String grammarWeaknessEndpoint = '/analyser/grammar/weaknesses';
   static const String grammarScoreEndPoint = '/analyser/grammar/score';
+
   static const String contextScoreEndpoint = '/analyser/context/score';
   static const String contextWeaknessEndpoint = '/analyser/context/weaknesses';
+
+  static const String poseScoreEndpoint = '/analyser/body-language/weaknesses';
+  static const String poseWeaknessEndpoint = '/analyser/body-language/weaknesses';
+
+  static const String voiceScoreEndpoint = '/analyser/voice/weaknesses';
+  static const String voiceWeaknessEndpoint = '/analyser/voice/weaknesses';
+
+
+
+
+
+
+
 }

@@ -7,16 +7,14 @@ import 'dart:convert';
 class ReportProvider with ChangeNotifier {
   final String reportId = '123e4567-e89b-12d3-a456-426614174000';
   
-  // Old report for backward compatibility
-  Report _legacyReport = Report();
+
   // New report structure
   PresentationReport _report = PresentationReport.empty();
   
   bool _loading = false;
   String _errorMessage = '';
 
-  // For backward compatibility
-  Report get legacyReport => _legacyReport;
+
   // New getter
   PresentationReport get report => _report;
   bool get loading => _loading;
@@ -33,9 +31,8 @@ class ReportProvider with ChangeNotifier {
       await Future.wait([
         _fetchContextData(),
         _fetchGrammarData(),
-        // Body language and voice API calls removed
-        // _fetchBodyLanguageData(),
-        // _fetchVoiceData(),
+        _fetchBodyLanguageData(),
+        _fetchVoiceData(),
       ]);
     } catch (e) {
       _errorMessage = 'An unexpected error occurred: $e';
@@ -59,9 +56,6 @@ class ReportProvider with ChangeNotifier {
         final scoreData = jsonDecode(contextScoreResponse.body);
         final double? contextScore = scoreData['overall_score']?.toDouble();
         
-        // Update legacy report
-        _legacyReport.scoreContext = contextScore;
-        
         // Fetch context weaknesses
         final weaknessResponse = await _httpService.get(
           '${Config.apiUrl}${Config.contextWeaknessEndpoint}?report_id=$reportId'
@@ -72,9 +66,7 @@ class ReportProvider with ChangeNotifier {
           final weaknesses = (weaknessData['weakness_topics'] as List<dynamic>?)
                 ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
                 .toList();
-          
-          // Update legacy report
-          _legacyReport.contextWeaknesses = weaknesses;
+
           
           // Update new report structure
           _report = PresentationReport(
@@ -107,9 +99,7 @@ class ReportProvider with ChangeNotifier {
       if (grammarScoreResponse.statusCode == 200) {
         final scoreData = jsonDecode(grammarScoreResponse.body);
         final double? grammarScore = scoreData['grammar_score']?.toDouble();
-        
-        // Update legacy report
-        _legacyReport.scoreGrammar = grammarScore;
+
 
         // Fetch grammar weaknesses
         final grammarResponse = await _httpService.get(
@@ -121,9 +111,6 @@ class ReportProvider with ChangeNotifier {
           final weaknesses = (grammarData['weakness_topics'] as List<dynamic>?)
                 ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
                 .toList();
-          
-          // Update legacy report
-          _legacyReport.grammarWeaknesses = weaknesses;
           
           // Update new report structure
           _report = PresentationReport(
@@ -146,8 +133,7 @@ class ReportProvider with ChangeNotifier {
     }
   }
 
-  // Body language and voice data fetch methods commented out for future implementation
-  /*
+
   Future<void> _fetchBodyLanguageData() async {
     try {
       // Fetch body language score
@@ -233,7 +219,6 @@ class ReportProvider with ChangeNotifier {
       _errorMessage += 'Error fetching voice data: $e\n';
     }
   }
-  */
 
   void _addError(String message, dynamic response) {
     _errorMessage += '$message: ${response.statusCode}\n';
