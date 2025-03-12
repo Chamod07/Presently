@@ -32,7 +32,7 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
 
   // Map icons to goals
   final Map<String, IconData> _goalIcons = {
-    'inform': Icons.info,
+    'Inform': Icons.info,
     'Persuade': Icons.psychology,
     'Entertain': Icons.theater_comedy,
     'Inspire': Icons.emoji_emotions,
@@ -333,11 +333,11 @@ class _ScenarioSelectionScreenState extends State<ScenarioSelection> {
               TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
         ),
         SizedBox(height: 16),
-        ...['inform', 'Persuade', 'Entertain', 'Inspire'].map((goal) {
+        ...['Inform', 'Persuade', 'Entertain', 'Inspire'].map((goal) {
           String description;
 
           switch (goal) {
-            case 'inform':
+            case 'Inform':
               description = 'Educate or explain something to your audience';
               break;
             case 'Persuade':
