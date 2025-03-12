@@ -6,24 +6,82 @@ class SessionProvider with ChangeNotifier {
   String? _selectedPresentationType;
   String? _selectedPresentationGoal;
   String? _selectedName;
-  List<String> _sessions = [];
+  String? _selectedAudience;
+  String? _selectedTopic;
+  List<Map<String, dynamic>> _sessions = [];
 
-  List<String> get sessions => _sessions;
+  // Add a compatibility check when accessing sessions
+  List<Map<String, dynamic>> get sessions {
+    // This ensures backward compatibility if somehow _sessions is a List<String>
+    if (_sessions.isNotEmpty && _sessions.first is String) {
+      // Convert legacy format to new format
+      final legacySessions = _sessions.map((item) => item.toString()).toList();
+      _sessions = legacySessions
+          .map((name) => {
+                'name': name,
+                'type': 'Presentation',
+                'goal': 'inform',
+                'audience': 'General',
+                'topic': 'General Topic',
+                'is_favorite': false,
+                'created_at': DateTime.now().toIso8601String(),
+              })
+          .toList();
+      notifyListeners();
+    }
+
+    // Sort sessions by creation time (newest first)
+    _sessions.sort((a, b) {
+      DateTime timeA =
+          DateTime.parse(a['created_at'] ?? DateTime.now().toIso8601String());
+      DateTime timeB =
+          DateTime.parse(b['created_at'] ?? DateTime.now().toIso8601String());
+      return timeB.compareTo(timeA); // Descending order (newest first)
+    });
+
+    return _sessions;
+  }
+
   String? get selectedPresentationType => _selectedPresentationType;
   String? get selectedPresentationGoal => _selectedPresentationGoal;
   String? get selectedName => _selectedName;
+  String? get selectedAudience => _selectedAudience;
+  String? get selectedTopic => _selectedTopic;
 
-  //session data update
-  void startSession(
-      String presentationType, String presentationGoal, String sessionName) {
-    _selectedPresentationType = presentationType;
-    _selectedPresentationGoal = presentationGoal;
-    _selectedName = sessionName;
+  // Reset all sessions data and clear any cached information
+  void resetSessionsData() {
+    _sessions = [];
     notifyListeners();
   }
 
-  void addSession(String session) {
-    _sessions.add(session);
+  //session data update
+  void startSession(
+      String presentationType, String presentationGoal, String sessionName,
+      {required String audience, required String topic}) {
+    _selectedPresentationType = presentationType;
+    _selectedPresentationGoal = presentationGoal;
+    _selectedName = sessionName;
+    _selectedAudience = audience;
+    _selectedTopic = topic;
+    notifyListeners();
+  }
+
+  // Modified to add the current session details or use provided values
+  void addSession(String sessionName,
+      {String? type,
+      String? goal,
+      String? audience,
+      String? topic,
+      bool isFavorite = false}) {
+    _sessions.add({
+      'name': sessionName,
+      'type': type ?? _selectedPresentationType,
+      'goal': goal ?? _selectedPresentationGoal,
+      'audience': audience ?? _selectedAudience,
+      'topic': topic ?? _selectedTopic,
+      'is_favorite': isFavorite,
+      'created_at': DateTime.now().toIso8601String(),
+    });
     notifyListeners();
   }
 
@@ -32,6 +90,8 @@ class SessionProvider with ChangeNotifier {
     _selectedPresentationType = null;
     _selectedPresentationGoal = null;
     _selectedName = null;
+    _selectedAudience = null;
+    _selectedTopic = null;
     notifyListeners();
   }
 
@@ -40,13 +100,27 @@ class SessionProvider with ChangeNotifier {
     final userId = _supabaseService.currentUserId;
     if (userId == null) return "User not logged in";
 
+    final timestamp = DateTime.now().toIso8601String();
+
     try {
       await _supabaseService.client.from('Sessions').insert({
         'session_name': _selectedName,
         'session_type': _selectedPresentationType,
         'session_goal': _selectedPresentationGoal,
+        'audience': _selectedAudience,
+        'topic': _selectedTopic,
         'user_id': userId,
+        'is_favorite': false,
+        'created_at': timestamp,
       });
+
+      // Add the session to local list after successful save
+      addSession(_selectedName!,
+          type: _selectedPresentationType,
+          goal: _selectedPresentationGoal,
+          audience: _selectedAudience,
+          topic: _selectedTopic);
+
       return null; // Success, no error
     } catch (e) {
       return 'Error saving session: $e';
@@ -74,9 +148,11 @@ class SessionProvider with ChangeNotifier {
     );
   }
 
-
   //load sessions from supabase
   Future<void> loadSessionsFromSupabase() async {
+    // Clear any existing sessions to avoid mixing formats
+    _sessions = [];
+
     final userId = _supabaseService.currentUserId;
     if (userId == null) return;
 
@@ -87,8 +163,18 @@ class SessionProvider with ChangeNotifier {
           .eq('user_id', userId);
 
       List<dynamic> data = response as List<dynamic>;
-      _sessions.clear(); //clear existing sessions before loading new sessions
-      _sessions.addAll(data.map((s) => s['session_name'] as String).toList()); //add sessions for current user
+      for (var session in data) {
+        _sessions.add({
+          'name': session['session_name'],
+          'type': session['session_type'],
+          'goal': session['session_goal'],
+          'audience': session['audience'],
+          'topic': session['topic'],
+          'is_favorite': session['is_favorite'] ?? false,
+          'created_at':
+              session['created_at'] ?? DateTime.now().toIso8601String(),
+        });
+      }
 
       notifyListeners();
     } catch (e) {
@@ -97,9 +183,9 @@ class SessionProvider with ChangeNotifier {
   }
 
   Future<void> renameSession(String oldName, String newName) async {
-    final index = _sessions.indexOf(oldName);
+    final index = _sessions.indexWhere((session) => session['name'] == oldName);
     if (index != -1) {
-      _sessions[index] = newName;
+      _sessions[index]['name'] = newName;
       notifyListeners();
 
       // Update in Supabase
@@ -119,7 +205,7 @@ class SessionProvider with ChangeNotifier {
   }
 
   Future<void> deleteSession(String sessionName) async {
-    _sessions.remove(sessionName);
+    _sessions.removeWhere((session) => session['name'] == sessionName);
     notifyListeners();
 
     // Delete from Supabase
@@ -135,5 +221,42 @@ class SessionProvider with ChangeNotifier {
         print('Error deleting session from Supabase: $e');
       }
     }
+  }
+
+  // Toggle favorite status of a session
+  Future<void> toggleFavorite(String sessionName) async {
+    final index =
+        _sessions.indexWhere((session) => session['name'] == sessionName);
+    if (index != -1) {
+      _sessions[index]['is_favorite'] = !_sessions[index]['is_favorite'];
+      notifyListeners();
+
+      // Update in Supabase
+      final userId = _supabaseService.currentUserId;
+      if (userId != null) {
+        try {
+          await _supabaseService.client
+              .from('Sessions')
+              .update({'is_favorite': _sessions[index]['is_favorite']})
+              .eq('user_id', userId)
+              .eq('session_name', sessionName);
+        } catch (e) {
+          print('Error updating favorite status in Supabase: $e');
+        }
+      }
+    }
+  }
+
+  // Get filtered sessions (all or favorites only)
+  List<Map<String, dynamic>> getFilteredSessions({bool favoritesOnly = false}) {
+    // Ensure we're working with the correct format
+    final safeList = sessions;
+
+    if (favoritesOnly) {
+      return safeList
+          .where((session) => session['is_favorite'] == true)
+          .toList();
+    }
+    return safeList;
   }
 }
