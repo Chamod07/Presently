@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,11 +37,7 @@ class _CameraViewState extends State<CameraView> {
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
   bool _changingCameraLens = false;
-
-  // Add recording state variables
   bool _isRecording = false;
-  int _remainingTimeInSeconds = 120; // Changed to 120 seconds (2 minutes)
-  Timer? _recordingTimer;
 
   @override
   void initState() {
@@ -69,7 +64,6 @@ class _CameraViewState extends State<CameraView> {
   @override
   void dispose() {
     _stopLiveFeed();
-    _recordingTimer?.cancel();
     super.dispose();
   }
 
@@ -82,30 +76,26 @@ class _CameraViewState extends State<CameraView> {
     if (_cameras.isEmpty) return Container();
     if (_controller == null) return Container();
     if (_controller?.value.isInitialized == false) return Container();
-    return SafeArea(
-      child: ColoredBox(
-        color: Colors.black,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            Center(
-              child: _changingCameraLens
-                  ? Center(
-                child: const Text('Changing camera lens'),
-              )
-                  : CameraPreview(
-                _controller!,
-                child: widget.customPaint,
-              ),
+    return ColoredBox(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          Center(
+            child: _changingCameraLens
+                ? Center(
+              child: const Text('Changing camera lens'),
+            )
+                : CameraPreview(
+              _controller!,
+              child: widget.customPaint,
             ),
-            _backButton(),
-            _switchLiveCameraToggle(),
-            // Removed gallery button
-            _exposureControl(),
-            _timelineWidget(),
-            _shutterButton(),
-          ],
-        ),
+          ),
+          _backButton(),
+          _switchLiveCameraToggle(),
+          _detectionViewModeToggle(),
+          _shutterButton(), // Add the summary button to the stack
+        ],
       ),
     );
   }
@@ -128,9 +118,27 @@ class _CameraViewState extends State<CameraView> {
     ),
   );
 
+  Widget _detectionViewModeToggle() => Positioned(
+    bottom: 8,
+    left: 8,
+    child: SizedBox(
+      height: 50.0,
+      width: 50.0,
+      child: FloatingActionButton(
+        heroTag: Object(),
+        onPressed: widget.onDetectorViewModeChanged,
+        backgroundColor: Colors.black54,
+        child: Icon(
+          Icons.photo_library_outlined,
+          size: 25,
+        ),
+      ),
+    ),
+  );
+
   Widget _switchLiveCameraToggle() => Positioned(
-    bottom: 35,
-    right: 70,
+    bottom: 8,
+    right: 8,
     child: SizedBox(
       height: 50.0,
       width: 50.0,
@@ -143,194 +151,59 @@ class _CameraViewState extends State<CameraView> {
               ? Icons.flip_camera_ios_outlined
               : Icons.flip_camera_android_outlined,
           size: 25,
-          color: Colors.white, // Added explicit white color
         ),
       ),
     ),
   );
 
-  Widget _exposureControl() => Positioned(
-    top: 40,
-    right: 8,
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: 250,
-      ),
-      child: Column(children: [
-        Container(
-          width: 55,
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: Text(
-                '${_currentExposureOffset.toStringAsFixed(1)}x',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: RotatedBox(
-            quarterTurns: 3,
-            child: SizedBox(
-              height: 30,
-              child: Slider(
-                value: _currentExposureOffset,
-                min: _minAvailableExposureOffset,
-                max: _maxAvailableExposureOffset,
-                activeColor: Colors.white,
-                inactiveColor: Colors.white30,
-                onChanged: (value) async {
-                  setState(() {
-                    _currentExposureOffset = value;
-                  });
-                  await _controller?.setExposureOffset(value);
-                },
-              ),
-            ),
-          ),
-        )
-      ]),
-    ),
-  );
-
-  // Timeline widget moved to bottom and updated styling
-  Widget _timelineWidget() => Positioned(
-    bottom: 120, // Positioned above the shutter button
-    left: 0,
-    right: 0,
-    child: Visibility(
-      visible: _isRecording,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: LinearProgressIndicator(
-              value: (120 - _remainingTimeInSeconds) / 120, // Shows consumed time (left to right)
-              backgroundColor: Colors.grey.withOpacity(0.3), // Light grey background
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white), // White progress
-              minHeight: 5,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '${_formatTime(_remainingTimeInSeconds)}',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  // Format time to mm:ss
-  String _formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
-  // Replace summary button with shutter button
+  // New method to create the summary button
   Widget _shutterButton() => Positioned(
-    bottom: 30,
+    bottom: 80, // Position it above the bottom controls
     left: 0,
     right: 0,
     child: Center(
-      child: GestureDetector(
-        onTap: _toggleRecording,
-        child: Container(
-          height: 80.0,
-          width: 80.0,
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: _isRecording ? Colors.red : Colors.white,
-              width: 4,
+      child: SizedBox(
+        height: 60.0,
+        width: 200.0,
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              if(_isRecording){
+                _isRecording = false;
+                // Stop the camera feed and navigate to the summary page
+                _stopLiveFeed().then((_) {
+                  Navigator.pushReplacementNamed(context, '/summary');
+                });
+              }
+              else{
+                _isRecording = true;
+              }
+            });
+
+          },
+          child: Container(
+            width: 80.0,
+            height: 80.0,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 5),
             ),
-          ),
-          child: Center(
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 300),
-              height: _isRecording ? 30.0 : 70.0,
-              width: _isRecording ? 30.0 : 70.0,
+            child: Center( child:
+            Container(
+              width: _isRecording ? 32.0 : 60.0,
+              height: _isRecording ? 32.0 : 60.0,
               decoration: BoxDecoration(
-                color: _isRecording ? Colors.red : Colors.white,
-                shape: BoxShape.circle,
+                color: _isRecording ? Colors.red:Colors.white,
+                shape: _isRecording ? BoxShape.rectangle:  BoxShape.circle,
+                borderRadius: _isRecording ? BorderRadius.circular(12) : null,
               ),
             ),
-          ),
+            ),
+          )
         ),
       ),
     ),
   );
-
-  // Toggle recording state
-  void _toggleRecording() async {
-    if (_isRecording) {
-      await _stopRecording();
-    } else {
-      await _startRecording();
-    }
-  }
-
-  // Start recording video
-  Future<void> _startRecording() async {
-    if (_controller != null && !_isRecording) {
-      try {
-        await _controller!.startVideoRecording();
-        setState(() {
-          _isRecording = true;
-          _remainingTimeInSeconds = 120; // Reset to 120 seconds (2 minutes)
-        });
-
-        // Start countdown timer
-        _recordingTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-          setState(() {
-            if (_remainingTimeInSeconds > 0) {
-              _remainingTimeInSeconds--;
-            } else {
-              _stopRecording(); // Auto stop when time runs out
-            }
-          });
-        });
-      } catch (e) {
-        print('Error starting video recording: $e');
-      }
-    }
-  }
-
-  // Stop recording and navigate to summary
-  Future<void> _stopRecording() async {
-    if (_controller != null && _isRecording) {
-      _recordingTimer?.cancel();
-      try {
-        final videoFile = await _controller!.stopVideoRecording();
-        setState(() {
-          _isRecording = false;
-        });
-
-        // Navigate to summary page with video file
-        await _stopLiveFeed();
-        Navigator.pushReplacementNamed(
-          context,
-          '/summary',
-          arguments: videoFile.path,
-        );
-      } catch (e) {
-        setState(() {
-          _isRecording = false;
-        });
-        print('Error stopping video recording: $e');
-      }
-    }
-  }
 
   Future _startLiveFeed() async {
     final camera = _cameras[_cameraIndex];
