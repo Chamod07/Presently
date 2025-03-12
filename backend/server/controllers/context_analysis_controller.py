@@ -79,7 +79,6 @@ async def get_overall_score(report_id: str = Query(..., title="Report ID"), user
         raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
     
     overall_score = response.data[0]["scoreContext"]
-    print("\nReturning Overall Score:", overall_score)
     return {"overall_score": overall_score, "user_id": user_id}
 
 @router.get("/sub_scores")
