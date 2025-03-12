@@ -1,10 +1,22 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/settings/about_page.dart';
+import 'package:flutter_app/components/settings/contact_support.dart';
+import 'package:flutter_app/components/settings/faq.dart';
+import 'package:flutter_app/components/settings/help_page.dart';
+import 'package:flutter_app/components/settings/terms_privacy.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_app/components/dashboard/navbar.dart'; // Add this import for NavBar
+
+// Custom exception to handle partial success
+class DatabaseUpdateSuccess implements Exception {
+  final String message;
+  DatabaseUpdateSuccess([this.message = 'Database updated but auth failed']);
+}
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -14,12 +26,13 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-
   bool darkMode = false; // Dark mode setting to check if dark mode is enabled
 
-  bool notifications = false; //Notification setting to check if notifications are enabled
+  bool notifications =
+      false; //Notification setting to check if notifications are enabled
 
-  final SupabaseService _supabaseService = SupabaseService(); // Create instance of SupabaseService
+  final SupabaseService _supabaseService =
+      SupabaseService(); // Create instance of SupabaseService
 
   String profileImageUrl = ''; // User's profile image URL
 
@@ -27,14 +40,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String lastName = ''; // User's last name
 
-  String role = ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
+  String role =
+      ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider: SharePreferenceCache(), // Load saved preferences if available
+      cacheProvider:
+          SharePreferenceCache(), // Load saved preferences if available
     );
     _fetchUserProfile();
   }
@@ -68,8 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
           profileImageUrl = profileResponse['avatar_url'] ?? '';
         }
       });
-    }
-    catch (e) {
+    } catch (e) {
       print('Error fetching user profile: $e');
     }
   }
@@ -179,7 +193,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Frequently asked questions'),
                     leading: Icon(Icons.question_answer_outlined),
                     onTap: () {
-                      // Navigate to FAQ page
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => FAQPage()));
                     },
                   ),
                 ),
@@ -190,7 +205,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Get help from our team'),
                     leading: Icon(Icons.support_agent_outlined),
                     onTap: () {
-                      // Navigate to support page or open email
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ContactSupportPage())
+                      );
                     },
                   ),
                 ),
@@ -201,7 +219,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Legal information'),
                     leading: Icon(Icons.policy_outlined),
                     onTap: () {
-                      // Navigate to terms page
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => TermsPrivacyPage())
+                      );
                     },
                   ),
                 ),
@@ -212,7 +233,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Get support and send feedback'),
                     leading: Icon(Icons.help_outline),
                     onTap: () {
-                      // TODO: Implement help section
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => HelpPage())
+                      );
                     },
                   ),
                 ),
@@ -223,7 +247,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: Text('Learn more about Presently'),
                     leading: Icon(Icons.info_outline),
                     onTap: () {
-                      Navigator.pushReplacementNamed(context, '/about');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => AboutPage())
+                      );
                     },
                   ),
                 ),
@@ -277,6 +304,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+      bottomNavigationBar: NavBar(
+        selectedIndex: ModalRoute.of(context)?.settings.arguments != null
+            ? (ModalRoute.of(context)?.settings.arguments
+                    as Map<String, dynamic>)['selectedIndex'] ??
+                3
+            : 3,
+      ),
     );
   }
 
@@ -292,14 +326,17 @@ class _SettingsPageState extends State<SettingsPage> {
               CircleAvatar(
                 radius: 69,
                 backgroundColor: Colors.grey[300],
-                backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
-                    ? NetworkImage(profileImageUrl)
+                backgroundImage:
+                    profileImageUrl != null && profileImageUrl.isNotEmpty
+                        ? NetworkImage(profileImageUrl)
+                        : null,
+                child: (profileImageUrl == null || profileImageUrl!.isEmpty)
+                    ? Icon(
+                        Icons.person,
+                        size: 70,
+                        color: Colors.grey[700],
+                      )
                     : null,
-                child: (profileImageUrl == null || profileImageUrl!.isEmpty) ? Icon(
-                  Icons.person,
-                  size: 70,
-                  color: Colors.grey[700],
-                ) : null,
               ),
               GestureDetector(
                 onTap: _changeProfilePicture,
@@ -322,11 +359,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Roboto'),
           ),
-         // SizedBox(height: 8),
+          // SizedBox(height: 8),
           //Text(
-            //'Milan, Italy',
-            //style: TextStyle(
-              //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
+          //'Milan, Italy',
+          //style: TextStyle(
+          //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
           //),
           SizedBox(height: 8),
           Text(
@@ -342,7 +379,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _changeProfilePicture() async {
     showModalBottomSheet(
         context: context,
-        builder: (BuildContext context){
+        builder: (BuildContext context) {
           return SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -366,30 +403,29 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           );
-        }
-    );
-
+        });
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    try{
+    try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source, maxWidth: 800, imageQuality: 85);
+      final XFile? image = await picker.pickImage(
+          source: source, maxWidth: 800, imageQuality: 85);
       if (image == null) return;
 
       // loading indicator
-      if(!context.mounted) return;
+      if (!context.mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context){
+        builder: (BuildContext context) {
           return Center(child: CircularProgressIndicator());
         },
       );
 
       //upload to supabase storage
       final userId = _supabaseService.currentUserId;
-      if(userId == null) {
+      if (userId == null) {
         Navigator.of(context).pop(); // close loading indicator
         _showErrorMessage('User not logged in');
         return;
@@ -399,13 +435,11 @@ class _SettingsPageState extends State<SettingsPage> {
       final fileName = 'profile_$userId.$fileExt';
       final file = File(image.path);
 
-      await _supabaseService.client
-          .storage
+      await _supabaseService.client.storage
           .from('avatars')
           .upload(fileName, file, fileOptions: FileOptions(upsert: true));
 
-      final imageUrl = _supabaseService.client
-          .storage
+      final imageUrl = _supabaseService.client.storage
           .from('avatars')
           .getPublicUrl(fileName);
 
@@ -418,24 +452,22 @@ class _SettingsPageState extends State<SettingsPage> {
         profileImageUrl = imageUrl;
       });
 
-      if(context.mounted){
+      if (context.mounted) {
         Navigator.of(context).pop(); // close loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Profile picture updated successfully'))
-        );
+            SnackBar(content: Text('Profile picture updated successfully')));
       }
-    } catch (e){
-      if(context.mounted){
+    } catch (e) {
+      if (context.mounted) {
         Navigator.of(context).pop(); // close loading indicator
         _showErrorMessage('Error updating profile picture: $e');
       }
     }
   }
 
-  void _showErrorMessage(String message){
+  void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red)
-    );
+        SnackBar(content: Text(message), backgroundColor: Colors.red));
   }
 
   void _showChangePasswordDialog(BuildContext context) {
@@ -444,62 +476,110 @@ class _SettingsPageState extends State<SettingsPage> {
     final TextEditingController newPasswordController = TextEditingController();
     final TextEditingController confirmPasswordController =
         TextEditingController();
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Password'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Current Password'),
-              ),
-              TextField(
-                controller: newPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'New Password'),
-              ),
-              TextField(
-                controller: confirmPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Confirm New Password'),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Change Password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'Current Password'),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    helperText: 'Minimum 8 characters required',
+                  ),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration:
+                      InputDecoration(labelText: 'Confirm New Password'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      // Validate password input
+                      if (newPasswordController.text.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text('Password must be at least 8 characters'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      if (newPasswordController.text !=
+                          confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Passwords do not match'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await _updatePassword(currentPasswordController.text,
+                            newPasswordController.text);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Password updated successfully'),
+                          backgroundColor: Colors.green,
+                        ));
+                      } catch (e) {
+                        String errorMessage = 'Failed to update password';
+                        if (e.toString().contains('invalid_credentials') ||
+                            e.toString().contains('Invalid login')) {
+                          errorMessage = 'Current password is incorrect';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(errorMessage),
+                          backgroundColor: Colors.red,
+                        ));
+                      } finally {
+                        setState(() {
+                          isLoading = false;
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text('Update'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (newPasswordController.text ==
-                  confirmPasswordController.text) {
-                try {
-                  await _updatePassword(currentPasswordController.text,
-                      newPasswordController.text);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Password updated successfully')));
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: Colors.red));
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Passwords do not match'),
-                    backgroundColor: Colors.red));
-              }
-            },
-            child: Text('Update'),
-          ),
-        ],
       ),
     );
   }
@@ -507,50 +587,103 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showChangeEmailDialog(BuildContext context) {
     final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Email Address'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'New Email Address'),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: 'Password to Confirm'),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Change Email Address'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'New Email Address'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'Current Password'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      // Validate email format
+                      final emailRegex =
+                          RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+                      if (!emailRegex.hasMatch(emailController.text.trim())) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Please enter a valid email address'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      if (passwordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Please enter your current password'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await _updateEmail(emailController.text.trim(),
+                            passwordController.text);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(
+                              'Email update initiated. Please check your new email inbox for verification.'),
+                          backgroundColor: Colors.green,
+                        ));
+                      } catch (e) {
+                        String errorMessage = 'Failed to update email';
+                        if (e.toString().contains('invalid_credentials') ||
+                            e.toString().contains('Invalid login')) {
+                          errorMessage = 'Current password is incorrect';
+                        } else if (e.toString().contains('already in use')) {
+                          errorMessage = 'This email is already in use';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(errorMessage),
+                          backgroundColor: Colors.red,
+                        ));
+                      } finally {
+                        setState(() {
+                          isLoading = false;
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text('Update'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await _updateEmail(
-                    emailController.text, passwordController.text);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Email updated successfully')));
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Error: ${e.toString()}'),
-                    backgroundColor: Colors.red));
-              }
-            },
-            child: Text('Update'),
-          ),
-        ],
       ),
     );
   }
@@ -614,6 +747,24 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _updatePassword(
       String currentPassword, String newPassword) async {
     try {
+      // First verify the current password by signing in
+      final email = _supabaseService.client.auth.currentUser?.email;
+      if (email == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Attempt to sign in with the current password to verify it
+      final AuthResponse res =
+          await _supabaseService.client.auth.signInWithPassword(
+        email: email,
+        password: currentPassword,
+      );
+
+      if (res.session == null) {
+        throw Exception('Current password is incorrect');
+      }
+
+      // If verification succeeded, update the password
       await _supabaseService.client.auth.updateUser(
         UserAttributes(password: newPassword),
       );
@@ -625,10 +776,37 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _updateEmail(String newEmail, String password) async {
     try {
-      await _supabaseService.client.auth.updateUser(
-        UserAttributes(email: newEmail),
+      // First verify the current password by signing in
+      final currentEmail = _supabaseService.client.auth.currentUser?.email;
+      final userId = _supabaseService.currentUserId;
+
+      if (currentEmail == null || userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Attempt to sign in with the current password to verify it
+      final AuthResponse res =
+          await _supabaseService.client.auth.signInWithPassword(
+        email: currentEmail,
+        password: password,
       );
-      return;
+
+      if (res.session == null) {
+        throw Exception('Current password is incorrect');
+      }
+
+      try {
+        // Update the authentication email - this will send a verification email
+        await _supabaseService.client.auth.updateUser(
+          UserAttributes(email: newEmail),
+        );
+
+        debugPrint('Auth email update successful');
+        return;
+      } catch (e) {
+        debugPrint('Error during email update: $e');
+        throw e;
+      }
     } catch (e) {
       throw e;
     }

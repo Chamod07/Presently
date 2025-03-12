@@ -25,6 +25,12 @@ class _SummaryPageState extends State<SummaryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get selectedIndex from route arguments
+    final Map<String, dynamic>? args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final int selectedIndex =
+        args?['selectedIndex'] ?? 1; // Default to 1 (add/new tab)
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -62,7 +68,7 @@ class _SummaryPageState extends State<SummaryPage> {
           ),
         ],
       ),
-      bottomNavigationBar: const NavBar(selectedIndex: 0),
+      bottomNavigationBar: NavBar(selectedIndex: selectedIndex),
     );
   }
 
@@ -226,16 +232,18 @@ class GrammarSummary extends BaseSummary {
 
 class BodyLanguageSummary extends BaseSummary {
   const BodyLanguageSummary({super.key});
-  
+
   @override
   String get title => 'Body Language';
-  
+
   @override
-  double? getScore(ReportProvider provider) => provider.report.bodyLanguage.score;
-  
+  double? getScore(ReportProvider provider) =>
+      provider.report.bodyLanguage.score;
+
   @override
-  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.bodyLanguage.weaknesses;
-  
+  List<Weakness>? getWeaknesses(ReportProvider provider) =>
+      provider.report.bodyLanguage.weaknesses;
+
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
     return Container();
@@ -244,16 +252,17 @@ class BodyLanguageSummary extends BaseSummary {
 
 class VoiceAnalysisSummary extends BaseSummary {
   const VoiceAnalysisSummary({super.key});
-  
+
   @override
   String get title => 'Voice Analysis';
-  
+
   @override
   double? getScore(ReportProvider provider) => provider.report.voice.score;
-  
+
   @override
-  List<Weakness>? getWeaknesses(ReportProvider provider) => provider.report.voice.weaknesses;
-  
+  List<Weakness>? getWeaknesses(ReportProvider provider) =>
+      provider.report.voice.weaknesses;
+
   @override
   Widget buildContent(BuildContext context, ReportProvider provider) {
     return Container();
