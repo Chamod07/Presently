@@ -23,6 +23,14 @@ class _SummaryPageState extends State<SummaryPage> {
     "Voice Analysis",
   ];
 
+  late ReportProvider _reportProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _reportProvider = ReportProvider()..fetchReportData();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Get selectedIndex from route arguments
@@ -31,44 +39,47 @@ class _SummaryPageState extends State<SummaryPage> {
     final int selectedIndex =
         args?['selectedIndex'] ?? 1; // Default to 1 (add/new tab)
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Text(_pageTitles[_currentPage]),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Tab indicators
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(_pageTitles.length, (index) {
-                return _buildTabIndicator(index);
-              }),
+    return ChangeNotifierProvider.value(
+      value: _reportProvider,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          title: Text(_pageTitles[_currentPage]),
+          centerTitle: true,
+        ),
+        body: Column(
+          children: [
+            // Tab indicators
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(_pageTitles.length, (index) {
+                  return _buildTabIndicator(index);
+                }),
+              ),
             ),
-          ),
-          // PageView with all report categories
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-              },
-              children: const [
-                ContextSummary(),
-                GrammarSummary(),
-                BodyLanguageSummary(),
-                VoiceAnalysisSummary(),
-              ],
+            // PageView with all report categories
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                children: const [
+                  ContextSummary(),
+                  GrammarSummary(),
+                  BodyLanguageSummary(),
+                  VoiceAnalysisSummary(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+        bottomNavigationBar: NavBar(selectedIndex: selectedIndex),
       ),
-      bottomNavigationBar: NavBar(selectedIndex: selectedIndex),
     );
   }
 
@@ -119,34 +130,30 @@ abstract class BaseSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => ReportProvider()..fetchReportData(),
-      child: Consumer<ReportProvider>(
-        builder: (context, provider, _) {
-          if (provider.loading) {
-            return Center(child: CircularProgressIndicator());
-          } else if (provider.errorMessage.isNotEmpty) {
-            return Center(child: Text(provider.errorMessage));
-          } else {
-            return Column(
-              children: [
-                SizedBox(height: 20),
-                Text(title,
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 20),
-                Center(
-                  child: GraphDisplay(score: (getScore(provider) ?? 0) / 10),
-                ),
-                SizedBox(height: 20),
-                Expanded(
-                  child: buildWeaknessList(context, provider),
-                ),
-              ],
-            );
-          }
-        },
-      ),
+    return Consumer<ReportProvider>(
+      builder: (context, provider, _) {
+        if (provider.loading) {
+          return Center(child: CircularProgressIndicator());
+        } else if (provider.errorMessage.isNotEmpty) {
+          return Center(child: Text(provider.errorMessage));
+        } else {
+          return Column(
+            children: [
+              SizedBox(height: 20),
+              Text(title,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              SizedBox(height: 20),
+              Center(
+                child: GraphDisplay(score: (getScore(provider) ?? 0) / 10),
+              ),
+              SizedBox(height: 20),
+              Expanded(
+                child: buildWeaknessList(context, provider),
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 
