@@ -8,7 +8,7 @@ import 'package:flutter_app/components/scenario_selection/scenario_selection.dar
 import 'package:flutter_app/components/tasks/task_failed.dart';
 import 'package:flutter_app/components/tasks/task_group_page.dart';
 import 'package:flutter_app/components/dashboard/home_page.dart';
-import 'package:flutter_app/components/camera/camera.dart';
+import 'package:flutter_app/services/mlkit_service.dart';
 import 'package:flutter_app/components/summary/summary_page.dart';
 import 'package:flutter_app/components/onboarding/welcome.dart';
 import 'package:flutter_app/components/signin_signup/sign_in.dart';
