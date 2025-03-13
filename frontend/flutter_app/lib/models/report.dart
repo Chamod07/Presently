@@ -71,8 +71,8 @@ class BodyLanguageReport extends BaseReport {
 
   factory BodyLanguageReport.fromJson(Map<String, dynamic> json) {
     return BodyLanguageReport(
-      score: json['pose_score']?.toDouble(),
-      weaknesses: (json['weakness_topics'] as List<dynamic>?)
+      score: json['scoreBodyLanguage']?.toDouble(),
+      weaknesses: (json['weaknessTopics'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -84,8 +84,8 @@ class VoiceAnalysisReport extends BaseReport {
 
   factory VoiceAnalysisReport.fromJson(Map<String, dynamic> json) {
     return VoiceAnalysisReport(
-      score: json['voice_score']?.toDouble(),
-      weaknesses: (json['weakness_topics'] as List<dynamic>?)
+      score: json['scoreVoice']?.toDouble(),
+      weaknesses: (json['weaknessTopics'] as List<dynamic>?)
           ?.map((e) => Weakness.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
