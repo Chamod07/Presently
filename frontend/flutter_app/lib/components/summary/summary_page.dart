@@ -4,6 +4,7 @@ import 'package:flutter_app/components/summary/graph_display.dart';
 import 'package:flutter_app/providers/report_provider.dart';
 import 'package:provider/provider.dart';
 
+
 import '../../models/report.dart';
 
 class SummaryPage extends StatefulWidget {

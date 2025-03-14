@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import '../../services/upload/upload_service.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -47,8 +51,10 @@ class _CameraViewState extends State<CameraView> {
   bool _isFaceWellPositioned = true;
   bool _isRecordingQualitySufficient = true;
   bool _showPositionGuide = true;
-
-
+  File? _recordedVideoFile;
+  Map<String, dynamic> _videoMetaData = {};
+  String? _videoFilePath;
+  XFile? _videoFile;
 
 
   @override
@@ -459,28 +465,69 @@ class _CameraViewState extends State<CameraView> {
         height: 80.0,
         width: 200.0,
         child: GestureDetector(
-          onTap: () {
-            setState(() async {
-              if(_isRecording){
+          onTap: () async {
+            if (_isRecording) {
+              // Stop recording
+              setState(() {
                 _isRecording = false;
                 _stopTimer();
-                // Stop the camera feed and navigate to the summary page
+              });
+
+              try {
+                // Show processing notification
+                showNotification("Processing video...");
+
+                // Stop video recording and get the file
+                final videoFile = await _controller?.stopVideoRecording();
+                
+                if (videoFile != null) {
+                  // Process the video (save and generate metadata)
+                  await _processRecording(videoFile);
+                  
+                  //uploading video
+                  await _videoUpload();
+                  // Stop the camera feed and navigate to summary page
+                  
+                  await _stopLiveFeed();
+                  Navigator.pushReplacementNamed(
+                      context,
+                      '/summary',
+                      arguments: {
+                        'selectedIndex': 1,
+                        'videoPath': _videoFilePath,
+                        'metadata': _videoMetaData,
+                      }
+                  );
+                }
+              } catch (e) {
+                print("Error stopping recording: $e");
+                showNotification("Error saving video");
+
+                // Fall back to original behavior if recording fails
                 _stopLiveFeed().then((_) {
                   Navigator.pushReplacementNamed(context, '/summary');
                 });
               }
-              else{
-                //check conditions before starting recording
-                bool conditionsGood =  await _checkRecordingConditions();
+            } else {
+              // Check conditions before starting recording
+              bool conditionsGood = await _checkRecordingConditions();
 
-                if(conditionsGood) {
-                  _isRecording = true;
-                  _startTimer();
+              if (conditionsGood) {
+                try {
+                  // Start actual video recording
+                  await _controller!.startVideoRecording();
+
+                  setState(() {
+                    _isRecording = true;
+                    _startTimer();
+                  });
                   showNotification("Recording started");
+                } catch (e) {
+                  print("Error starting recording: $e");
+                  showNotification("Failed to start recording");
                 }
               }
-            });
-
+            }
           },
           child: Container(
             width: 100.0,
@@ -489,20 +536,20 @@ class _CameraViewState extends State<CameraView> {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 5),
             ),
-            child: Center( child:
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve : Curves.easeInOut,
-              width: _isRecording ? 40.0 : 74.0,
-              height: _isRecording ? 40.0 : 74.0,
-              decoration: BoxDecoration(
-                color: _isRecording ? Colors.red:Colors.white,
-                shape: _isRecording ? BoxShape.rectangle:  BoxShape.circle,
-                borderRadius: _isRecording ? BorderRadius.circular(12) : null,
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                width: _isRecording ? 40.0 : 74.0,
+                height: _isRecording ? 40.0 : 74.0,
+                decoration: BoxDecoration(
+                  color: _isRecording ? Colors.red : Colors.white,
+                  shape: _isRecording ? BoxShape.rectangle : BoxShape.circle,
+                  borderRadius: _isRecording ? BorderRadius.circular(12) : null,
+                ),
               ),
             ),
-            ),
-          )
+          ),
         ),
       ),
     ),
@@ -512,60 +559,56 @@ class _CameraViewState extends State<CameraView> {
     final camera = _cameras[_cameraIndex];
     _controller = CameraController(
       camera,
-      // Set to ResolutionPreset.high (720p) if you experience issues. Do NOT set it to ResolutionPreset.max because for some phones does NOT work.
+      // Use veryHigh for better detail in body language analysis
       ResolutionPreset.veryHigh,
+      // Enable audio for speech analysis
       enableAudio: true,
       imageFormatGroup: Platform.isAndroid
           ? ImageFormatGroup.nv21
           : ImageFormatGroup.bgra8888,
     );
-    try{
+
+    try {
+      // Initialize the controller
+      await _controller?.initialize();
+
+      if (!mounted) return;
+
+      // Prepare for video recording
       await _controller?.prepareForVideoRecording();
 
-      final cameras = await availableCameras();
-      for (var cam in cameras){
-        if(cam.sensorOrientation == camera.sensorOrientation){
-          try{
-            await _controller?.setFocusMode(FocusMode.auto);
-          }
-          catch(e){
-            print('Error setting focus mode: $e');
-        }
-      }
-    }
-    }
-    catch(e){
-      print('Error preparing for video recording: $e');
-    }
+      // Get zoom levels
+      _currentZoomLevel = await _controller?.getMinZoomLevel() ?? 1.0;
+      _minAvailableZoom = _currentZoomLevel;
+      _maxAvailableZoom = await _controller?.getMaxZoomLevel() ?? 1.0;
 
-    _controller?.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      _controller?.getMinZoomLevel().then((value) {
-        _currentZoomLevel = value;
-        _minAvailableZoom = value;
-      });
-      _controller?.getMaxZoomLevel().then((value) {
-        _maxAvailableZoom = value;
-      });
+      // Set exposure
       _currentExposureOffset = 0.0;
-      _controller?.getMinExposureOffset().then((value) {
-        _minAvailableExposureOffset = value;
-      });
-      _controller?.getMaxExposureOffset().then((value) {
-        _maxAvailableExposureOffset = value;
-      });
-      _controller?.startImageStream(_processCameraImage).then((value) {
-        if (widget.onCameraFeedReady != null) {
-          widget.onCameraFeedReady!();
-        }
-        if (widget.onCameraLensDirectionChanged != null) {
-          widget.onCameraLensDirectionChanged!(camera.lensDirection);
-        }
-      });
+      _minAvailableExposureOffset = await _controller?.getMinExposureOffset() ?? 0.0;
+      _maxAvailableExposureOffset = await _controller?.getMaxExposureOffset() ?? 0.0;
+
+      // Try to set optimal focus mode
+      try {
+        await _controller?.setFocusMode(FocusMode.auto);
+      } catch (e) {
+        print('Focus mode setting not supported: $e');
+      }
+
+      // Start image stream for processing
+      await _controller?.startImageStream(_processCameraImage);
+
+      // Call callbacks
+      if (widget.onCameraFeedReady != null) {
+        widget.onCameraFeedReady!();
+      }
+      if (widget.onCameraLensDirectionChanged != null) {
+        widget.onCameraLensDirectionChanged!(camera.lensDirection);
+      }
+
       setState(() {});
-    });
+    } catch (e) {
+      print('Error setting up camera feed: $e');
+    }
   }
 
   Future _stopLiveFeed() async {
@@ -664,4 +707,77 @@ class _CameraViewState extends State<CameraView> {
       ),
     );
   }
+
+  Future<void> _processRecording(XFile videoFile) async {
+    try {
+      _recordedVideoFile = File(videoFile.path);
+
+      // Create timestamp and recording ID
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final recordingId = 'rec_$timestamp';
+
+      // Generate metadata
+      _videoMetaData = {
+        'recordingId': recordingId,
+        'timestamp': DateTime.now().toIso8601String(),
+        'duration': _seconds,
+        'recordingSettings': {
+          'resolution': _controller?.value.previewSize?.toString() ?? 'unknown',
+          'camera': _cameras[_cameraIndex].lensDirection.toString(),
+          'audioEnabled': true,
+        },
+        'recordingConditions': {
+          'lightingQuality': _hasGoodLighting ? 'good' : 'suboptimal',
+          'facePositioning': _isFaceWellPositioned ? 'good' : 'suboptimal',
+        }
+      };
+
+      // Get app directory
+      final appDir = await getApplicationDocumentsDirectory();
+      final videoDir = Directory('${appDir.path}/recordings/$recordingId');
+
+      // Create directory if it doesn't exist
+      if (!await videoDir.exists()) {
+        await videoDir.create(recursive: true);
+      }
+
+      // Save video file to app directory
+      final savedVideoPath = '${videoDir.path}/recording.mp4';
+      await _recordedVideoFile!.copy(savedVideoPath);
+      _videoFilePath = savedVideoPath;
+
+      // Save metadata alongside the video
+      final metadataFile = File('${videoDir.path}/metadata.json');
+      await metadataFile.writeAsString(jsonEncode(_videoMetaData));
+
+      print('Video saved to: $savedVideoPath');
+      print('Metadata saved to: ${metadataFile.path}');
+    } catch (e) {
+      print('Error processing video: $e');
+      throw Exception("Failed to process recording: $e");
+    }
+  }
+
+  //uploading video
+  Future<void> _videoUpload() async{
+    try{
+      if(_videoFilePath != null && _videoMetaData.isNotEmpty){
+        final videoFile = File(_videoFilePath!);
+        
+        //calling upload service to upload video
+        UploadService().uploadVideo(
+          videoFile: videoFile,
+          metadata: _videoMetaData,
+        );
+        print('Video queued for upload: $_videoFilePath');
+      }
+      else{
+        print('Warning: No video file or metadata available for upload');
+      }
+    }
+    catch(e){
+      print('Error in _videoUpload: $e');
+    }
+  }
+
 }
