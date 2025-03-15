@@ -11,6 +11,7 @@ import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart'; // Add this import for NavBar
+import 'package:http/http.dart' as http;
 
 // Custom exception to handle partial success
 class DatabaseUpdateSuccess implements Exception {
@@ -58,20 +59,10 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final userId = _supabaseService.currentUserId;
       if (userId == null) {
-        print('User ID is null');
+        debugPrint('User ID is null');
         return;
       }
-      final userDetailResponse = await _supabaseService.client
-          .from('UserDetails')
-          .select('firstName, lastName, role')
-          .eq('userId', userId)
-          .single();
-
-      final profileResponse = await _supabaseService.client
-          .from('Profile')
-          .select('avatar_url')
-          .eq('userId', userId)
-          .maybeSingle();
+      final userDetailResponse = await _supabaseService.client.from('UserDetails').select('firstName, lastName, role').eq('userId', userId).single();
 
       setState(() {
         if (userDetailResponse != null) {
@@ -79,10 +70,34 @@ class _SettingsPageState extends State<SettingsPage> {
           lastName = userDetailResponse['lastName'] ?? '';
           role = userDetailResponse['role'] ?? '';
         }
-        if (profileResponse != null) {
-          profileImageUrl = profileResponse['avatar_url'] ?? '';
-        }
       });
+
+      final extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      String? avatarUrl;
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Get avatar URL
+      for (final ext in extensions) {
+        try {
+          final url = '${_supabaseService.client.storage.from('avatars').getPublicUrl('avatar_$userId.$ext')}?t=$timestamp';
+
+          // Test if URL exists
+          final response = await http.head(Uri.parse(url));
+          if (response.statusCode == 200) {
+            avatarUrl = url;
+            break;
+          }
+        } catch (_) {
+          // Continue trying other extensions
+        }
+      }
+
+      if (avatarUrl != null) {
+        debugPrint('Found avatar URL: $avatarUrl');
+        setState(() {
+          profileImageUrl = avatarUrl!;
+        });
+      }
     } catch (e) {
       print('Error fetching user profile: $e');
     }
@@ -326,11 +341,8 @@ class _SettingsPageState extends State<SettingsPage> {
               CircleAvatar(
                 radius: 69,
                 backgroundColor: Colors.grey[300],
-                backgroundImage:
-                    profileImageUrl != null && profileImageUrl.isNotEmpty
-                        ? NetworkImage(profileImageUrl)
-                        : null,
-                child: (profileImageUrl == null || profileImageUrl!.isEmpty)
+                backgroundImage: profileImageUrl.isNotEmpty ? NetworkImage(profileImageUrl, headers: {'Cache-Control': 'no-cache'}) : null,
+                child: (profileImageUrl.isEmpty)
                     ? Icon(
                         Icons.person,
                         size: 70,
@@ -351,7 +363,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             '$firstName $lastName',
             style: TextStyle(
@@ -365,7 +377,7 @@ class _SettingsPageState extends State<SettingsPage> {
           //style: TextStyle(
           //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
           //),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             '$role',
             style: TextStyle(
@@ -426,27 +438,29 @@ class _SettingsPageState extends State<SettingsPage> {
       //upload to supabase storage
       final userId = _supabaseService.currentUserId;
       if (userId == null) {
-        Navigator.of(context).pop(); // close loading indicator
-        _showErrorMessage('User not logged in');
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          _showErrorMessage('User not logged in');
+        }
         return;
       }
 
-      final String fileExt = image.path.split('.').last;
-      final fileName = 'profile_$userId.$fileExt';
+      await _deleteExistingProfileImages(userId);
+
       final file = File(image.path);
+      final String fileExt = image.path.split('.').last;
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final String fileName = 'avatar_${userId}_$timestamp.$fileExt';
 
-      await _supabaseService.client.storage
-          .from('avatars')
-          .upload(fileName, file, fileOptions: FileOptions(upsert: true));
+      debugPrint('Uploading new avatar: $fileName');
 
-      final imageUrl = _supabaseService.client.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
+      await _supabaseService.client.storage.from('avatars').upload(fileName, file, fileOptions: FileOptions(upsert: true));
 
-      await _supabaseService.client.from('Profile').upsert({
-        'userId': userId,
-        'avatar_url': imageUrl,
-      });
+      final imageUrl = '${_supabaseService.client.storage.from('avatars').getPublicUrl(fileName)}?t=$timestamp';
+
+      debugPrint('Uploaded image URL with cache-buster: $imageUrl');
+
+      await precacheImage(NetworkImage(imageUrl), context);
 
       setState(() {
         profileImageUrl = imageUrl;
@@ -458,10 +472,56 @@ class _SettingsPageState extends State<SettingsPage> {
             SnackBar(content: Text('Profile picture updated successfully')));
       }
     } catch (e) {
+      debugPrint('Error uploading profile image: $e');
       if (context.mounted) {
-        Navigator.of(context).pop(); // close loading indicator
-        _showErrorMessage('Error updating profile picture: $e');
+        Navigator.of(context).pop();
+        _showErrorMessage('Error updating profile picture: ${e.toString()}');
       }
+    }
+  }
+
+  Future<void> _deleteExistingProfileImages(String userId) async {
+    try {
+      // List all files in the avatars bucket
+      debugPrint('Listing all files in avatars bucket for user $userId');
+      final listResponse = await _supabaseService.client.storage.from('avatars').list();
+
+      debugPrint('Total files in bucket: ${listResponse.length}');
+
+      // Print all file names for debugging
+      for (var file in listResponse) {
+        debugPrint('Found file: ${file.name}');
+      }
+
+      // Filter files that match this user's avatar pattern
+      final userFiles = listResponse.where((file) {
+        final isMatch = file.name.contains('avatar_$userId');
+        if (isMatch) debugPrint('Matching file found: ${file.name}');
+        return isMatch;
+      }).toList();
+
+      if (userFiles.isNotEmpty) {
+        final filesToDelete = userFiles.map((file) => file.name).toList();
+        debugPrint('Found files to delete: ${filesToDelete.join(', ')}');
+
+        // Delete files one by one to identify any specific issues
+        for (var fileName in filesToDelete) {
+          try {
+            debugPrint('Attempting to delete: $fileName');
+            await _supabaseService.client.storage.from('avatars').remove([fileName]);
+            debugPrint('Successfully deleted: $fileName');
+          } catch (e) {
+            debugPrint('Error deleting file $fileName: $e');
+          }
+        }
+
+        debugPrint('Deletion process completed');
+      } else {
+        debugPrint('No existing avatar files found for user $userId');
+      }
+    } catch (e) {
+      debugPrint('Error during avatar deletion: $e');
+      // Continue with upload even if deletion fails
     }
   }
 
