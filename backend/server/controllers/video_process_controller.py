@@ -1,11 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 import requests
 import os
 
 router = APIRouter()
 
 @router.get("/download_video")
-async def download_video(video_url: str):
+async def download_video(video_url: str, report_id: str = Query(...)):
     try:
         # Download the video file
         video_file = requests.get(video_url, stream=True)

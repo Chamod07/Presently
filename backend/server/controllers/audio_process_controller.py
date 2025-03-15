@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 import subprocess
 import os
 from backend.server.services.whisper_service import transcribe_audio
@@ -6,7 +6,7 @@ from backend.server.services.whisper_service import transcribe_audio
 router = APIRouter()
 
 @router.post("/convert_to_mp3")
-async def convert_to_mp3():
+async def convert_to_mp3(report_id: str = Query(...)):
     try:
         # Define input and output file paths
         input_video_path = "res/video/temp_video.mp4"
@@ -39,7 +39,7 @@ async def convert_to_mp3():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/transcribe")
-async def transcribe():
+async def transcribe(report_id: str = Query(...)):
     try:
         # Define the audio file path
         audio_file_path = "res/audio/converted_audio.mp3"
