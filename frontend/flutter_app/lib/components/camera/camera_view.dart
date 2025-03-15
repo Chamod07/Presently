@@ -482,15 +482,18 @@ class _CameraViewState extends State<CameraView> {
             ),
             child: Center(
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+                duration: Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
                 width: _isRecording ? 40.0 : 74.0,
                 height: _isRecording ? 40.0 : 74.0,
-                decoration: BoxDecoration(
-                  color: _isRecording ? Colors.red : Colors.white,
-                  shape: _isRecording ? BoxShape.rectangle : BoxShape.circle,
-                  borderRadius: _isRecording ? BorderRadius.circular(12) : null,
-                ),
+                decoration:
+                  _isRecording ? BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                ) : BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  ),
               ),
             ),
           ),
