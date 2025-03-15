@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'task_group.dart'; // Import the TaskGroup model
 import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/services/task_assign/task_group_service.dart'; // Add import
 
 class TaskDetailPage extends StatefulWidget {
   final TaskGroup taskGroup;
@@ -14,19 +15,63 @@ class TaskDetailPage extends StatefulWidget {
 
 class _TaskDetailPageState extends State<TaskDetailPage> {
   String selectedFilter = "All";
+  bool isLoading = false;
+  final TaskGroupService _taskGroupService = TaskGroupService();
+  List<Task> allTasks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Start with the tasks we already have
+    allTasks = widget.taskGroup.tasks;
+    // Refresh tasks in background
+    _refreshTasks();
+  }
+
+  Future<void> _refreshTasks() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // Use the consolidated API via service
+      final tasks = await _taskGroupService
+          .getTasksForGroup(widget.taskGroup.reportId ?? '');
+
+      if (mounted) {
+        setState(() {
+          allTasks = tasks;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing tasks: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
 
   List<Task> getFilteredTasks() {
     if (selectedFilter == "To do") {
-      return widget.taskGroup.tasks.where((task) => !task.isCompleted).toList();
+      return allTasks.where((task) => !task.isCompleted).toList();
     } else if (selectedFilter == "Completed") {
-      return widget.taskGroup.tasks.where((task) => task.isCompleted).toList();
+      return allTasks.where((task) => task.isCompleted).toList();
     }
-    return widget.taskGroup.tasks; // All tasks
+    return allTasks; // All tasks
   }
 
   void toggleTaskCompletion(Task task) {
     setState(() {
       task.isCompleted = !task.isCompleted;
+      // Update in backend
+      _taskGroupService.updateTaskStatus(
+        widget.taskGroup.reportId ?? '',
+        task.title, // Using title as the ID here
+        task.isCompleted,
+      );
     });
   }
 
@@ -38,7 +83,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pushReplacementNamed(context, '/task_group_page'),
+          onPressed: () =>
+              Navigator.pushReplacementNamed(context, '/task_group_page'),
         ),
         title: Text(widget.taskGroup.title,
             style: const TextStyle(color: Colors.black)),
@@ -54,17 +100,11 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                _buildFilterTab("All", widget.taskGroup.tasks.length),
-                _buildFilterTab(
-                    "To do",
-                    widget.taskGroup.tasks
-                        .where((task) => !task.isCompleted)
-                        .length),
-                _buildFilterTab(
-                    "Completed",
-                    widget.taskGroup.tasks
-                        .where((task) => task.isCompleted)
-                        .length),
+                _buildFilterTab("All", allTasks.length),
+                _buildFilterTab("To do",
+                    allTasks.where((task) => !task.isCompleted).length),
+                _buildFilterTab("Completed",
+                    allTasks.where((task) => task.isCompleted).length),
               ],
             ),
             const SizedBox(height: 16),
@@ -81,46 +121,50 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            // List of Tasks
+            // List of Tasks with loading indicator
             Expanded(
-              child: ListView.builder(
-                itemCount: filteredTasks.length,
-                itemBuilder: (context, index) {
-                  Task task = filteredTasks[index];
-                  return GestureDetector(
-                    onTap: () => toggleTaskCompletion(task),
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: ListTile(
-                        leading: Icon(
-                          task.isCompleted
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color:
-                          task.isCompleted ? Color(0xFF7400B8) : Colors.grey,
-                        ),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color:
-                            task.isCompleted ? Colors.black : Colors.grey,
-                            fontWeight: FontWeight.bold,
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      itemCount: filteredTasks.length,
+                      itemBuilder: (context, index) {
+                        Task task = filteredTasks[index];
+                        return GestureDetector(
+                          onTap: () => toggleTaskCompletion(task),
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: ListTile(
+                              leading: Icon(
+                                task.isCompleted
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                color: task.isCompleted
+                                    ? Color(0xFF7400B8)
+                                    : Colors.grey,
+                              ),
+                              title: Text(
+                                task.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: task.isCompleted
+                                      ? Colors.black
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              trailing: task.isCompleted
+                                  ? const Icon(Icons.check, color: Colors.white)
+                                  : null,
+                            ),
                           ),
-                        ),
-                        trailing: task.isCompleted
-                            ? const Icon(Icons.check, color: Colors.white)
-                            : null,
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: const NavBar (selectedIndex: 0),
+      bottomNavigationBar: const NavBar(selectedIndex: 0),
     );
   }
 
@@ -146,8 +190,9 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color:
-              selectedFilter == label ? Color(0xFF7400B8) : Colors.grey.shade300,
+              color: selectedFilter == label
+                  ? Color(0xFF7400B8)
+                  : Colors.grey.shade300,
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -168,9 +213,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: ListTile(
         leading: Icon(
-          task.isCompleted
-              ? Icons.check_circle
-              : Icons.radio_button_unchecked,
+          task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
           color: task.isCompleted ? Color(0xFF7400B8) : Colors.grey,
         ),
         title: Text(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class GraphDisplay extends StatefulWidget {
   final double? score;
+  final Color? color; // Category color (now only used as fallback)
 
-  const GraphDisplay({super.key, this.score});
+  const GraphDisplay({super.key, this.score, this.color});
 
   @override
   State<GraphDisplay> createState() => _GraphDisplayState();
@@ -42,96 +42,97 @@ class _GraphDisplayState extends State<GraphDisplay>
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 150,
+    return Container(
+      width: 180,
+      height: 180,
       child: _buildAnimatedGraph(),
     );
   }
 
   Widget _buildAnimatedGraph() {
     final normalizedScore = widget.score ?? 0.0;
+    // Always use score-based color instead of passed color
+    final displayColor = _getScoreColor(normalizedScore);
 
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Background circle
-              Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey.shade100,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Score indicator
-              SizedBox(
-                width: 130,
-                height: 130,
-                child: CircularProgressIndicator(
-                  value: _animation.value,
-                  color: _getScoreColor(normalizedScore),
-                  backgroundColor: Colors.grey.shade200,
-                  strokeWidth: 12.0,
-                  strokeCap: StrokeCap.round,
-                ),
-              ),
-
-              // Score text
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${(_animation.value * 10).toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: _getScoreColor(normalizedScore),
-                    ),
-                  ),
-                  Text(
-                    'out of 10',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background circle
+            Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: displayColor.withOpacity(0.1),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: Offset(0, 3),
                   ),
                 ],
               ),
+            ),
 
-              // Category-specific icon
-              Positioned(
-                bottom: 0,
-                child: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: _getCategoryIcon(normalizedScore),
-                ),
+            // Score indicator
+            SizedBox(
+              width: 140,
+              height: 140,
+              child: CircularProgressIndicator(
+                value: _animation.value,
+                color: displayColor, // Score-based color
+                backgroundColor: Colors.grey.shade100,
+                strokeWidth: 14.0,
+                strokeCap: StrokeCap.round,
               ),
-            ],
-          ),
+            ),
+
+            // Score text with color matching the score
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(_animation.value * 10).toStringAsFixed(1)}',
+                  style: TextStyle(
+                    fontSize: 38,
+                    fontWeight: FontWeight.bold,
+                    color: displayColor, // Score-based color
+                  ),
+                ),
+                Text(
+                  'out of 10',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+
+            // Category-specific icon with inverted colors
+            Positioned(
+              bottom: 0,
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: _getCategoryIcon(normalizedScore, displayColor),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -139,25 +140,25 @@ class _GraphDisplayState extends State<GraphDisplay>
 
   Color _getScoreColor(double score) {
     if (score >= 0.8) {
-      return Colors.green.shade600;
+      return Colors.green.shade600; // Excellent
     } else if (score >= 0.6) {
-      return Colors.blue.shade600;
+      return Colors.blue.shade600; // Good
     } else if (score >= 0.4) {
-      return Colors.orange.shade600;
+      return Colors.orange.shade600; // Needs improvement
     } else {
-      return Colors.red.shade600;
+      return Colors.red.shade600; // Poor
     }
   }
 
-  Icon _getCategoryIcon(double score) {
+  Icon _getCategoryIcon(double score, Color iconColor) {
     if (score >= 0.8) {
-      return Icon(Icons.verified, color: Colors.green.shade600, size: 20);
+      return Icon(Icons.verified, color: iconColor, size: 24);
     } else if (score >= 0.6) {
-      return Icon(Icons.thumb_up, color: Colors.blue.shade600, size: 20);
+      return Icon(Icons.thumb_up, color: iconColor, size: 24);
     } else if (score >= 0.4) {
-      return Icon(Icons.trending_up, color: Colors.orange.shade600, size: 20);
+      return Icon(Icons.trending_up, color: iconColor, size: 24);
     } else {
-      return Icon(Icons.priority_high, color: Colors.red.shade600, size: 20);
+      return Icon(Icons.priority_high, color: iconColor, size: 24);
     }
   }
 }
