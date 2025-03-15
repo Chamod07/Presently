@@ -39,7 +39,7 @@ class NetworkBandwidthMonitor {
   // Initialize the monitor
   Future<void> initialize() async {
     // Set up connectivity change listener
-    Connectivity().onConnectivityChanged.listen(_updateConnectivity);
+    Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
 
     // Check initial connectivity
     await _checkConnectivity();
@@ -48,16 +48,8 @@ class NetworkBandwidthMonitor {
   // Check current connectivity
   Future<void> _checkConnectivity() async {
     try {
-      _connectionType = await Connectivity().checkConnectivity();
-
-      if (_connectionType == ConnectivityResult.none) {
-        _currentNetworkQuality = NetworkQuality.none;
-        _networkQualityController.add(_currentNetworkQuality);
-        return;
-      }
-
-      // If connected, measure bandwidth
-      await measureBandwidth();
+      final connectivityResult = await Connectivity().checkConnectivity();
+      _updateConnectivity(connectivityResult as ConnectivityResult);
     } catch (e) {
       debugPrint('Error checking connectivity: $e');
       _currentNetworkQuality = NetworkQuality.none;
@@ -65,7 +57,17 @@ class NetworkBandwidthMonitor {
     }
   }
 
-  // Update connectivity status on change
+  // Handle connectivity changes - now receives a list
+  void _handleConnectivityChange(List<ConnectivityResult> results) {
+    if (results.isEmpty) {
+      _updateConnectivity(ConnectivityResult.none);
+    } else {
+      // Use the first result (most relevant)
+      _updateConnectivity(results.first);
+    }
+  }
+
+  // Update connectivity status with a single result
   void _updateConnectivity(ConnectivityResult result) async {
     _connectionType = result;
     if (result == ConnectivityResult.none) {

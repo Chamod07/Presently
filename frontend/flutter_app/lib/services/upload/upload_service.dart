@@ -248,15 +248,15 @@ class UploadService {
           .getPublicUrl(fileName);
 
       // Create a database record for the upload
-      await _supabaseService.client
-          .from('presentation_recordings')
-          .insert({
-        'video_url': videoUrl,
-        'metadata_file': metadataFileName,
-        'created_at': DateTime.now().toIso8601String(),
-        'status': 'uploaded',
-        'user_id': _supabaseService.currentUserId,
-      });
+      // await _supabaseService.client
+      //     .from('presentation_recordings')
+      //     .insert({
+      //   'video_url': videoUrl,
+      //   'metadata_file': metadataFileName,
+      //   'created_at': DateTime.now().toIso8601String(),
+      //   'status': 'uploaded',
+      //   'user_id': _supabaseService.currentUserId,
+      // });
 
       _updateStatus(uploadId, 'complete', 'Upload and processing complete', 1.0);
 
