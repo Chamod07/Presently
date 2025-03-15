@@ -32,11 +32,11 @@ def user_has_access_to_report(report_id: str, user_id: str) -> bool:
 
 # to fetch the task groups
 def get_task_groups_by_user(user_id: str):
-    response = supabase.table("UserReport").select("reportTopic, reportId").eq("userId", user_id).execute()
+    response = supabase.table("UserReport").select("session_name, reportId").eq("userId", user_id).execute()
     
     if hasattr(response, "data") and response.data:
-        # to return both reportTopic and reportId
-        report_names = [{"Id": item.get("reportId"), "Topic": item.get("reportTopic")} for item in response.data if "reportTopic" in item and "reportId" in item]
+        # to return both session_name and reportId
+        report_names = [{"Id": item.get("reportId"), "Topic": item.get("session_name")} for item in response.data if "session_name" in item and "reportId" in item]
         return report_names
     
     if hasattr(response, "error") and response.error:
@@ -100,14 +100,18 @@ def _get_tasks(report_id: str):
 
 # to get the user mistake list from the UserReport table
 def get_user_mistakes(report_id: str) -> List[str]:
-  
-    response = supabase.table("UserReport").select("subScoresContext").eq("reportId", report_id).execute()
+    response = supabase.table("UserReport").select("weaknessTopicsContext").eq("reportId", report_id).execute()
     if not response.data or len(response.data) == 0:
         raise Exception(f"No report found with id: {report_id}")
     
     report = response.data[0]
-    mistakes = report.get("subScoresContext", [])
-    logging.info(f"Fetched mistakes for report {report_id}: {mistakes}")
+    mistakes = report.get("weaknessTopicsContext", [])
+    logging.info(f"Fetched mistakes for report {report_id}: {mistakes}, type: {type(mistakes)}")
+    
+    # Ensure we return a list even if mistakes is None
+    if mistakes is None:
+        return []
+        
     return mistakes
 
 #to fetch the challenges from the Challenges table with their ID and associated mistakes
@@ -133,13 +137,21 @@ def build_mapping(challenges: List[Dict]) -> Dict[str, List[int]]:
 
 # to insert data into the TaskGroupChallenges table
 def insert_task_group_challenges(report_id: str, challenge_ids: List[int]) -> None:
+    # Get the user_id associated with this report
+    user_response = supabase.table("UserReport").select("userId").eq("reportId", report_id).execute()
+    
+    if not user_response.data or "userId" not in user_response.data[0]:
+        raise Exception(f"No user ID found for report {report_id}")
+        
+    user_id = user_response.data[0]["userId"]
  
     for challenge_id in challenge_ids:
-        # Insert a row for each challenge assignment.
+        # Insert a row for each challenge assignment, now including userId
         try:
             response = supabase.table("TaskGroupChallenges").insert({
                 "reportId": report_id,
-                "challengeId": challenge_id
+                "challengeId": challenge_id,
+                "userId": user_id  # Add the userId field
             }).execute()
 
             if hasattr(response, 'error') and response.error:
@@ -216,12 +228,12 @@ def get_overall_progress(user_id: str) -> float:
 def get_task_group_details(report_id: str) -> Dict:
     
     # Get report details (topic/name)
-    report_response = supabase.table("UserReport").select("reportTopic").eq("reportId", report_id).execute()
+    report_response = supabase.table("UserReport").select("session_name").eq("reportId", report_id).execute()
     
     if not report_response.data:
         raise Exception(f"No report found with id: {report_id}")
     
-    report_topic = report_response.data[0].get("reportTopic")
+    report_topic = report_response.data[0].get("session_name")
     
     # Get all tasks with their status
     tasks = _get_tasks(report_id)
@@ -242,7 +254,7 @@ def get_task_group_details(report_id: str) -> Dict:
     
     return {
         "reportId": report_id,
-        "reportTopic": report_topic,
+        "session_name": report_topic,
         "progress": progress_percentage,
         "taskCount": total_tasks,
         "completedCount": completed_tasks,

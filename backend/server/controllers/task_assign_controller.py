@@ -13,7 +13,7 @@ class ReportAssignmentResponse(BaseModel):
 
 class TaskGroupDetailsResponse(BaseModel):
     reportId: str
-    reportTopic: str
+    session_name: str
     progress: float
     taskCount: int
     completedCount: int
