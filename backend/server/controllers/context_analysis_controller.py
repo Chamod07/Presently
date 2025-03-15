@@ -11,15 +11,13 @@ router = APIRouter()
 analyzer = GeminiContextAnalyzer()
 
 @router.post("/analyze")
-async def analyze_presentation(request: Request, user_id: str = Depends(get_current_user_id)):
+async def analyze_presentation(request: Request):
     """Analyze a presentation transcription and store results in Supabase"""
     try:
         body = await request.json()
         transcription = body.get("transcription")
         report_id = body.get("reportId")
         topic = body.get("topic", "")
-        
-        # User ID is now directly provided by the dependency
 
         if not transcription or not report_id:
             raise HTTPException(status_code=400, detail="transcription and reportId are required")
@@ -37,8 +35,7 @@ async def analyze_presentation(request: Request, user_id: str = Depends(get_curr
             scoreContext=analysis_results["overall_score"],
             subScoresContext=analysis_results["content_analysis"],
             weaknessTopicsContext=analysis_results["weakness_topics"],
-            createdAt=datetime.datetime.now().isoformat(),
-            userId=user_id
+            createdAt=datetime.datetime.now().isoformat()
         )
         data = user_report.dict()
 
@@ -60,12 +57,14 @@ async def analyze_presentation(request: Request, user_id: str = Depends(get_curr
             if response.data and "error" in response.data:
                 raise HTTPException(status_code=500, detail=response.data["error"])
             return {"message": f"Analysis completed successfully and updated report with reportId {report_id}"}
+        
+
         else:
             # Insert a new report
             response = storage_service.supabase.table("UserReport").insert(data).execute()
             if response.data and "error" in response.data:
                 raise HTTPException(status_code=500, detail=response.data["error"])
-            return {"message": "Analysis completed successfully and stored in Supabase"}
+            return {"message": "Analysis completed successfully with new report id"}
     except Exception as e:
         print(f"\nError during analysis: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

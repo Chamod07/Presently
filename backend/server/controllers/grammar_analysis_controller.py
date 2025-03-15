@@ -12,7 +12,7 @@ router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
 
 @router.post("/analyze")
-async def analyze_grammar(request: Request, user_id: str = Depends(get_current_user_id)):
+async def analyze_grammar(request: Request):
     """Analyze text for grammatical correctness and store results"""
     try:
         body = await request.json()
@@ -34,7 +34,6 @@ async def analyze_grammar(request: Request, user_id: str = Depends(get_current_u
             reportId=report_id,
             reportTopic=topic,
             createdAt=datetime.datetime.now().isoformat(),
-            userId=user_id,  # Use the user_id from auth instead of hardcoded value
             scoreGrammar=float(analysis_results["grammar_score"]),
             subScoresGrammar={
                 "grammaticalAccuracy": analysis_results["analysis"]["grammatical_accuracy"],

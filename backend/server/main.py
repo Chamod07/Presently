@@ -9,6 +9,9 @@ from controllers.context_analysis_controller import router as context_router
 from controllers.grammar_analysis_controller import router as grammar_router
 from controllers.body_language_analysis_controller import router as body_language_router
 from controllers.voice_analysis_controller import router as voice_router
+from controllers.video_process_controller import router as video_process_router
+from controllers.audio_process_controller import router as audio_process_router
+from controllers.main_process_controller import router as main_controller
 from controllers.report_controller import router as report_router
 from routers import auth, upload
 
@@ -38,6 +41,9 @@ app.include_router(grammar_router, prefix="/api/analyser/grammar", tags=["gramma
 app.include_router(context_router, prefix="/api/analyser/context", tags=["context"])
 app.include_router(body_language_router, prefix="/api/analyser/body-language", tags=["Body Language Analysis"])
 app.include_router(voice_router, prefix="/api/analyser/voice", tags=["Voice Analysis"])
+app.include_router(video_process_router, prefix="/api/process/video", tags=["Video Processing"])
+app.include_router(audio_process_router, prefix="/api/process/audio", tags=["Audio Processing"])
+app.include_router(main_controller, prefix="/api/process/main", tags=["Main Processing"])
 app.include_router(report_router, prefix="/api/report", tags=["Report"])
 
 if __name__ == "__main__":
