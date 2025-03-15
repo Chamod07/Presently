@@ -59,22 +59,8 @@ def get_report_count(user_id: str):
     # to default to 0 if no challenges are found
     return 0
 
-# to count the number of challenges linked to the given reportId
-def get_task_count(report_id: str):
-    response = supabase.table("TaskGroupChallenges").select("id", count="exact").eq("reportId", report_id).execute()
-
-    if hasattr(response, "error") and response.error:
-        raise Exception(f"Error fetching task count: {response.error}")
-
-    # to return the count of challenges
-    if hasattr(response, "count"):
-        return response.count  # Returns the exact count of challenges
-
-    # to default to 0 if no challenges are found
-    return 0
-
-# to fetch the tasks 
-def get_tasks(report_id: str):
+# Private helper function to get all tasks for a report
+def _get_tasks(report_id: str):
     # Get challenge IDs and isDone status linked to the reportId
     task_group_response = supabase.table("TaskGroupChallenges") \
         .select("challengeId, isDone") \
@@ -112,19 +98,6 @@ def get_tasks(report_id: str):
         for item in challenges_response.data if "id" in item and "title" in item
     ]
 
-def get_challenge_count_by_status(report_id: str, is_done: bool):
-    # Query to count challenges with the given status (isDone=True or isDone=False)
-    response = supabase.table("TaskGroupChallenges").select("id", count="exact").eq("reportId", report_id).eq("isDone", is_done).execute()
-
-    if hasattr(response, "error") and response.error:
-        raise Exception(f"Error fetching challenge count: {response.error}")
-
-    if hasattr(response, "count"):
-        return response.count  
-
-    # to return 0 if no challenges are found
-    return 0  
-
 # to get the user mistake list from the UserReport table
 def get_user_mistakes(report_id: str) -> List[str]:
   
@@ -136,7 +109,6 @@ def get_user_mistakes(report_id: str) -> List[str]:
     mistakes = report.get("subScoresContext", [])
     logging.info(f"Fetched mistakes for report {report_id}: {mistakes}")
     return mistakes
-
 
 #to fetch the challenges from the Challenges table with their ID and associated mistakes
 def fetch_challenges() -> List[Dict]:
@@ -214,39 +186,6 @@ def assign_challenges_for_report(report_id: str, threshold: int = 5) -> List[int
     
     return assigned_challenge_ids_list
 
-# to get the progress for the given report
-def get_task_group_progress(report_id: str) -> float:
- 
-    # Get total count of tasks for the given report
-    total_response = supabase.table("TaskGroupChallenges") \
-        .select("id", count="exact") \
-        .eq("reportId", report_id) \
-        .execute()
-    
-    if hasattr(total_response, "error") and total_response.error:
-        raise Exception(f"Error fetching total tasks: {total_response.error}")
-    
-    total_tasks = total_response.count if hasattr(total_response, "count") else 0
-
-    # Get count of tasks that are marked as done (isDone=True)
-    completed_response = supabase.table("TaskGroupChallenges") \
-        .select("id", count="exact") \
-        .eq("reportId", report_id) \
-        .eq("isDone", True) \
-        .execute()
-    
-    if hasattr(completed_response, "error") and completed_response.error:
-        raise Exception(f"Error fetching completed tasks: {completed_response.error}")
-    
-    completed_tasks = completed_response.count if hasattr(completed_response, "count") else 0
-
-    # Avoid division by zero; if no tasks exist, progress is 0%
-    if total_tasks == 0:
-        return 0.0
-
-    percentage = (completed_tasks / total_tasks) * 100
-    return round(percentage, 0)
-
 # to get the overrall progress of all the report
 def get_overall_progress(user_id: str) -> float:
   
@@ -267,8 +206,50 @@ def get_overall_progress(user_id: str) -> float:
     total_percentage = 0.0
     for report in reports:
         report_id = report.get("reportId")
-        progress = get_task_group_progress(report_id)
-        total_percentage += progress
+        report_details = get_task_group_details(report_id)
+        total_percentage += report_details['progress']
 
     overall_progress = total_percentage / len(reports)
     return round(overall_progress, 0)
+
+# Consolidated function to get all task group details
+def get_task_group_details(report_id: str) -> Dict:
+    
+    # Get report details (topic/name)
+    report_response = supabase.table("UserReport").select("reportTopic").eq("reportId", report_id).execute()
+    
+    if not report_response.data:
+        raise Exception(f"No report found with id: {report_id}")
+    
+    report_topic = report_response.data[0].get("reportTopic")
+    
+    # Get all tasks with their status
+    tasks = _get_tasks(report_id)
+    
+    # Calculate task counts
+    total_tasks = len(tasks)
+    completed_tasks = sum(1 for task in tasks if task.get("isDone", False))
+    pending_tasks = total_tasks - completed_tasks
+    
+    # Calculate progress percentage
+    progress_percentage = 0.0
+    if total_tasks > 0:
+        progress_percentage = round((completed_tasks / total_tasks) * 100, 0)
+        
+    # Get todo and completed tasks separately
+    todo_tasks = [task for task in tasks if not task.get("isDone", False)]
+    completed_tasks_list = [task for task in tasks if task.get("isDone", False)]
+    
+    return {
+        "reportId": report_id,
+        "reportTopic": report_topic,
+        "progress": progress_percentage,
+        "taskCount": total_tasks,
+        "completedCount": completed_tasks,
+        "pendingCount": pending_tasks,
+        "tasks": {
+            "all": tasks,
+            "todo": todo_tasks,
+            "completed": completed_tasks_list
+        }
+    }
