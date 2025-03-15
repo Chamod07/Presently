@@ -5,7 +5,7 @@ class BaseReport(BaseModel):
     reportId: str
     reportTopic: str
     createdAt: str
-    userId: str
+    userId: Optional[str] = None
 
 class UserReport(BaseReport):
     scoreContext: Optional[float] = None
