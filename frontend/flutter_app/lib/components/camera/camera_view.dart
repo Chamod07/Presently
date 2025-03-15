@@ -1,13 +1,9 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
-import 'package:path_provider/path_provider.dart';
-import 'package:intl/intl.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
-import '../../services/upload/upload_service.dart';
+import './camera_function.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -32,51 +28,34 @@ class CameraView extends StatefulWidget {
 }
 
 class _CameraViewState extends State<CameraView> {
-  static List<CameraDescription> _cameras = [];
-  CameraController? _controller;
-  int _cameraIndex = -1;
-  double _currentZoomLevel = 1.0;
-  double _minAvailableZoom = 1.0;
-  double _maxAvailableZoom = 1.0;
-  double _minAvailableExposureOffset = 0.0;
-  double _maxAvailableExposureOffset = 0.0;
-  double _currentExposureOffset = 0.0;
-  bool _changingCameraLens = false;
+  // UI state variables
   bool _isRecording = false;
   bool _showNotification = false;
   String _notificationMessage = 'Test one';
-  Timer? _timer;
-  int _seconds = 0;
-  bool _hasGoodLighting = true;
-  bool _isFaceWellPositioned = true;
-  bool _isRecordingQualitySufficient = true;
   bool _showPositionGuide = true;
-  File? _recordedVideoFile;
-  Map<String, dynamic> _videoMetaData = {};
-  String? _videoFilePath;
-  XFile? _videoFile;
 
+  // Camera functionality handler
+  late CameraFunctions _cameraFunctions;
 
   @override
   void initState() {
     super.initState();
 
+    // Initialize the camera functions
+    _cameraFunctions = CameraFunctions(
+      onImage: widget.onImage,
+      setState: setState,
+      onCameraFeedReady: widget.onCameraFeedReady,
+      onDetectorViewModeChanged: widget.onDetectorViewModeChanged,
+      onCameraLensDirectionChanged: widget.onCameraLensDirectionChanged,
+      initialCameraLensDirection: widget.initialCameraLensDirection,
+    );
+
     _initialize();
   }
 
   void _initialize() async {
-    if (_cameras.isEmpty) {
-      _cameras = await availableCameras();
-    }
-    for (var i = 0; i < _cameras.length; i++) {
-      if (_cameras[i].lensDirection == widget.initialCameraLensDirection) {
-        _cameraIndex = i;
-        break;
-      }
-    }
-    if (_cameraIndex != -1) {
-      _startLiveFeed();
-    }
+    await _cameraFunctions.initialize();
   }
 
   @override
@@ -105,46 +84,9 @@ class _CameraViewState extends State<CameraView> {
     });
   }
 
-  void _startTimer(){
-    _seconds = 0;
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        _seconds++;
-      });
-    });
+  Future<void> _stopLiveFeed() async {
+    await _cameraFunctions.stopLiveFeed();
   }
-  void _stopTimer(){
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  String _formatTime(){
-    int minutes = _seconds ~/ 60;
-    int remainingSeconds = _seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
-  Future<bool> _checkRecordingConditions() async{
-    bool isQualitySufficient = true;
-    String notificationMessage = '';
-
-    if(!_hasGoodLighting){
-      isQualitySufficient = false;
-      notificationMessage = 'Poor lighting detected. Move to a brighter area.';
-    }
-    else if(!_isFaceWellPositioned){
-      isQualitySufficient = false;
-      notificationMessage = 'Please center your face in the frame';
-    }
-    else if(!_isRecordingQualitySufficient){
-      isQualitySufficient = false;
-    }
-    setState(() {
-      _isRecordingQualitySufficient = isQualitySufficient;
-    });
-    return isQualitySufficient;
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -152,33 +94,33 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
-    if (_cameras.isEmpty) return Container();
-    if (_controller == null) return Container();
-    if (_controller?.value.isInitialized == false) return Container();
+    if (CameraFunctions.cameras.isEmpty) return Container();
+    if (_cameraFunctions.controller == null) return Container();
+    if (_cameraFunctions.controller?.value.isInitialized == false) return Container();
     return ColoredBox(
       color: Colors.black,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
           Center(
-            child: _changingCameraLens
+            child: _cameraFunctions.changingCameraLens
                 ? Center(
               child: const Text('Changing camera lens'),
             )
-              :GestureDetector(
-                onTap:(){
-                  if(!_isRecording){
-                    setState(() {
-                      _showPositionGuide = !_showPositionGuide;
-                    });
-                  }
-                },
-                child: CameraPreview(
-              _controller!,
-              child: widget.customPaint,
+                :GestureDetector(
+              onTap:(){
+                if(!_isRecording){
+                  setState(() {
+                    _showPositionGuide = !_showPositionGuide;
+                  });
+                }
+              },
+              child: CameraPreview(
+                _cameraFunctions.controller!,
+                child: widget.customPaint,
+              ),
             ),
-            ),
-    ),
+          ),
           _positionGuideOverlay(),
           _recordingTimerWidget(),
           _notificationWidget(),
@@ -213,7 +155,7 @@ class _CameraViewState extends State<CameraView> {
             ),
             const SizedBox(width: 8),
             Text(
-              _formatTime(),
+              _cameraFunctions.formatTime(),
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -234,7 +176,7 @@ class _CameraViewState extends State<CameraView> {
       width: 60.0,
       child: FloatingActionButton(
         heroTag: Object(),
-        onPressed: _switchLiveCamera,
+        onPressed: () => _cameraFunctions.switchLiveCamera(),
         backgroundColor: Colors.black54,
         child: Icon(
           Platform.isIOS
@@ -349,8 +291,8 @@ class _CameraViewState extends State<CameraView> {
                 child: Row(
                   children: [
                     Icon(
-                      _hasGoodLighting ? Icons.light_mode : Icons.light_mode_outlined,
-                      color: _hasGoodLighting ? Colors.green : Colors.orange,
+                      _cameraFunctions.hasGoodLighting ? Icons.light_mode : Icons.light_mode_outlined,
+                      color: _cameraFunctions.hasGoodLighting ? Colors.green : Colors.orange,
                       size: 20,
                     ),
                     SizedBox(width: 8),
@@ -376,8 +318,8 @@ class _CameraViewState extends State<CameraView> {
                 child: Row(
                   children: [
                     Icon(
-                      _isFaceWellPositioned ? Icons.face : Icons.face_outlined,
-                      color: _isFaceWellPositioned ? Colors.green : Colors.orange,
+                      _cameraFunctions.isFaceWellPositioned ? Icons.face : Icons.face_outlined,
+                      color: _cameraFunctions.isFaceWellPositioned ? Colors.green : Colors.orange,
                       size: 20,
                     ),
                     SizedBox(width: 8),
@@ -425,7 +367,7 @@ class _CameraViewState extends State<CameraView> {
     right: 0,
     child: Center(
       child: AnimatedOpacity(
-        opacity: (!_isRecording && _isRecordingQualitySufficient) ? 1.0 : 0.0,
+        opacity: (!_isRecording && _cameraFunctions.isRecordingQualitySufficient) ? 1.0 : 0.0,
         duration: const Duration(milliseconds: 300),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -470,7 +412,8 @@ class _CameraViewState extends State<CameraView> {
               // Stop recording
               setState(() {
                 _isRecording = false;
-                _stopTimer();
+                _cameraFunctions.isRecording = false;
+                _cameraFunctions.stopTimer();
               });
 
               try {
@@ -478,24 +421,24 @@ class _CameraViewState extends State<CameraView> {
                 showNotification("Processing video...");
 
                 // Stop video recording and get the file
-                final videoFile = await _controller?.stopVideoRecording();
-                
+                final videoFile = await _cameraFunctions.controller?.stopVideoRecording();
+
                 if (videoFile != null) {
                   // Process the video (save and generate metadata)
-                  await _processRecording(videoFile);
-                  
+                  await _cameraFunctions.processRecording(videoFile);
+
                   //uploading video
-                  await _videoUpload();
+                  await _cameraFunctions.videoUpload();
                   // Stop the camera feed and navigate to summary page
-                  
+
                   await _stopLiveFeed();
                   Navigator.pushReplacementNamed(
                       context,
                       '/summary',
                       arguments: {
                         'selectedIndex': 1,
-                        'videoPath': _videoFilePath,
-                        'metadata': _videoMetaData,
+                        'videoPath': _cameraFunctions.videoFilePath,
+                        'metadata': _cameraFunctions.videoMetaData,
                       }
                   );
                 }
@@ -510,16 +453,17 @@ class _CameraViewState extends State<CameraView> {
               }
             } else {
               // Check conditions before starting recording
-              bool conditionsGood = await _checkRecordingConditions();
+              bool conditionsGood = await _cameraFunctions.checkRecordingConditions();
 
               if (conditionsGood) {
                 try {
                   // Start actual video recording
-                  await _controller!.startVideoRecording();
+                  await _cameraFunctions.controller!.startVideoRecording();
 
                   setState(() {
                     _isRecording = true;
-                    _startTimer();
+                    _cameraFunctions.isRecording = true;
+                    _cameraFunctions.startTimer();
                   });
                   showNotification("Recording started");
                 } catch (e) {
@@ -554,230 +498,4 @@ class _CameraViewState extends State<CameraView> {
       ),
     ),
   );
-
-  Future _startLiveFeed() async {
-    final camera = _cameras[_cameraIndex];
-    _controller = CameraController(
-      camera,
-      // Use veryHigh for better detail in body language analysis
-      ResolutionPreset.veryHigh,
-      // Enable audio for speech analysis
-      enableAudio: true,
-      imageFormatGroup: Platform.isAndroid
-          ? ImageFormatGroup.nv21
-          : ImageFormatGroup.bgra8888,
-    );
-
-    try {
-      // Initialize the controller
-      await _controller?.initialize();
-
-      if (!mounted) return;
-
-      // Prepare for video recording
-      await _controller?.prepareForVideoRecording();
-
-      // Get zoom levels
-      _currentZoomLevel = await _controller?.getMinZoomLevel() ?? 1.0;
-      _minAvailableZoom = _currentZoomLevel;
-      _maxAvailableZoom = await _controller?.getMaxZoomLevel() ?? 1.0;
-
-      // Set exposure
-      _currentExposureOffset = 0.0;
-      _minAvailableExposureOffset = await _controller?.getMinExposureOffset() ?? 0.0;
-      _maxAvailableExposureOffset = await _controller?.getMaxExposureOffset() ?? 0.0;
-
-      // Try to set optimal focus mode
-      try {
-        await _controller?.setFocusMode(FocusMode.auto);
-      } catch (e) {
-        print('Focus mode setting not supported: $e');
-      }
-
-      // Start image stream for processing
-      await _controller?.startImageStream(_processCameraImage);
-
-      // Call callbacks
-      if (widget.onCameraFeedReady != null) {
-        widget.onCameraFeedReady!();
-      }
-      if (widget.onCameraLensDirectionChanged != null) {
-        widget.onCameraLensDirectionChanged!(camera.lensDirection);
-      }
-
-      setState(() {});
-    } catch (e) {
-      print('Error setting up camera feed: $e');
-    }
-  }
-
-  Future _stopLiveFeed() async {
-    await _controller?.stopImageStream();
-    await _controller?.dispose();
-    _controller = null;
-  }
-
-  Future _switchLiveCamera() async {
-    setState(() => _changingCameraLens = true);
-    _cameraIndex = (_cameraIndex + 1) % _cameras.length;
-
-    await _stopLiveFeed();
-    await _startLiveFeed();
-    setState(() => _changingCameraLens = false);
-  }
-
-  void _processCameraImage(CameraImage image) {
-    final inputImage = _inputImageFromCameraImage(image);
-    if (inputImage == null) return;
-
-    if(!_isRecording){
-      //TODO
-      // This is where you'd implement actual image analysis for lighting and face position
-      // For now, we'll use placeholder logic which you can replace with actual ML analysis
-
-      // As a placeholder, we'll assume good conditions most of the time,
-      // but you should replace this with actual analysis based on MLKit results
-      _hasGoodLighting = true;
-      _isFaceWellPositioned = true;
-    }
-    widget.onImage(inputImage);
-  }
-
-  final _orientations = {
-    DeviceOrientation.portraitUp: 0,
-    DeviceOrientation.landscapeLeft: 90,
-    DeviceOrientation.portraitDown: 180,
-    DeviceOrientation.landscapeRight: 270,
-  };
-
-  InputImage? _inputImageFromCameraImage(CameraImage image) {
-    if (_controller == null) return null;
-
-    // get image rotation
-    // it is used in android to convert the InputImage from Dart to Java: https://github.com/flutter-ml/google_ml_kit_flutter/blob/master/packages/google_mlkit_commons/android/src/main/java/com/google_mlkit_commons/InputImageConverter.java
-    // `rotation` is not used in iOS to convert the InputImage from Dart to Obj-C: https://github.com/flutter-ml/google_ml_kit_flutter/blob/master/packages/google_mlkit_commons/ios/Classes/MLKVisionImage%2BFlutterPlugin.m
-    // in both platforms `rotation` and `camera.lensDirection` can be used to compensate `x` and `y` coordinates on a canvas: https://github.com/flutter-ml/google_ml_kit_flutter/blob/master/packages/example/lib/vision_detector_views/painters/coordinates_translator.dart
-    final camera = _cameras[_cameraIndex];
-    final sensorOrientation = camera.sensorOrientation;
-    // print(
-    //     'lensDirection: ${camera.lensDirection}, sensorOrientation: $sensorOrientation, ${_controller?.value.deviceOrientation} ${_controller?.value.lockedCaptureOrientation} ${_controller?.value.isCaptureOrientationLocked}');
-    InputImageRotation? rotation;
-    if (Platform.isIOS) {
-      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
-    } else if (Platform.isAndroid) {
-      var rotationCompensation =
-      _orientations[_controller!.value.deviceOrientation];
-      if (rotationCompensation == null) return null;
-      if (camera.lensDirection == CameraLensDirection.front) {
-        // front-facing
-        rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
-      } else {
-        // back-facing
-        rotationCompensation =
-            (sensorOrientation - rotationCompensation + 360) % 360;
-      }
-      rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
-      // print('rotationCompensation: $rotationCompensation');
-    }
-    if (rotation == null) return null;
-    // print('final rotation: $rotation');
-
-    // get image format
-    final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    // validate format depending on platform
-    // only supported formats:
-    // * nv21 for Android
-    // * bgra8888 for iOS
-    if (format == null ||
-        (Platform.isAndroid && format != InputImageFormat.nv21) ||
-        (Platform.isIOS && format != InputImageFormat.bgra8888)) return null;
-
-    // since format is constraint to nv21 or bgra8888, both only have one plane
-    if (image.planes.length != 1) return null;
-    final plane = image.planes.first;
-
-    // compose InputImage using bytes
-    return InputImage.fromBytes(
-      bytes: plane.bytes,
-      metadata: InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: rotation, // used only in Android
-        format: format, // used only in iOS
-        bytesPerRow: plane.bytesPerRow, // used only in iOS
-      ),
-    );
-  }
-
-  Future<void> _processRecording(XFile videoFile) async {
-    try {
-      _recordedVideoFile = File(videoFile.path);
-
-      // Create timestamp and recording ID
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final recordingId = 'rec_$timestamp';
-
-      // Generate metadata
-      _videoMetaData = {
-        'recordingId': recordingId,
-        'timestamp': DateTime.now().toIso8601String(),
-        'duration': _seconds,
-        'recordingSettings': {
-          'resolution': _controller?.value.previewSize?.toString() ?? 'unknown',
-          'camera': _cameras[_cameraIndex].lensDirection.toString(),
-          'audioEnabled': true,
-        },
-        'recordingConditions': {
-          'lightingQuality': _hasGoodLighting ? 'good' : 'suboptimal',
-          'facePositioning': _isFaceWellPositioned ? 'good' : 'suboptimal',
-        }
-      };
-
-      // Get app directory
-      final appDir = await getApplicationDocumentsDirectory();
-      final videoDir = Directory('${appDir.path}/recordings/$recordingId');
-
-      // Create directory if it doesn't exist
-      if (!await videoDir.exists()) {
-        await videoDir.create(recursive: true);
-      }
-
-      // Save video file to app directory
-      final savedVideoPath = '${videoDir.path}/recording.mp4';
-      await _recordedVideoFile!.copy(savedVideoPath);
-      _videoFilePath = savedVideoPath;
-
-      // Save metadata alongside the video
-      final metadataFile = File('${videoDir.path}/metadata.json');
-      await metadataFile.writeAsString(jsonEncode(_videoMetaData));
-
-      print('Video saved to: $savedVideoPath');
-      print('Metadata saved to: ${metadataFile.path}');
-    } catch (e) {
-      print('Error processing video: $e');
-      throw Exception("Failed to process recording: $e");
-    }
-  }
-
-  //uploading video
-  Future<void> _videoUpload() async{
-    try{
-      if(_videoFilePath != null && _videoMetaData.isNotEmpty){
-        final videoFile = File(_videoFilePath!);
-        
-        //calling upload service to upload video
-        UploadService().uploadVideo(
-          videoFile: videoFile,
-          metadata: _videoMetaData,
-        );
-        print('Video queued for upload: $_videoFilePath');
-      }
-      else{
-        print('Warning: No video file or metadata available for upload');
-      }
-    }
-    catch(e){
-      print('Error in _videoUpload: $e');
-    }
-  }
-
 }
