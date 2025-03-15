@@ -11,6 +11,7 @@ from controllers.body_language_analysis_controller import router as body_languag
 from controllers.voice_analysis_controller import router as voice_router
 from controllers.video_process_controller import router as video_process_router
 from controllers.audio_process_controller import router as audio_process_router
+from controllers.main_process_controller import router as main_controller
 from routers import auth, upload
 
 
@@ -41,6 +42,7 @@ app.include_router(body_language_router, prefix="/api/analyser/body-language", t
 app.include_router(voice_router, prefix="/api/analyser/voice", tags=["Voice Analysis"])
 app.include_router(video_process_router, prefix="/api/process/video", tags=["Video Processing"])
 app.include_router(audio_process_router, prefix="/api/process/audio", tags=["Audio Processing"])
+app.include_router(main_controller, prefix="/api/process/main", tags=["Main Processing"])
 
 
 if __name__ == "__main__":
