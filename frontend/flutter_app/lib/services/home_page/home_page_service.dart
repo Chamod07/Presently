@@ -4,11 +4,11 @@ class HomePageService {
   final SupabaseService _supabaseService = SupabaseService();
 
   Future<Map<String, dynamic>?> getHomePageData() async {
-    if(!_supabaseService.isSignedIn) return null;
+    if (!_supabaseService.isSignedIn) return null;
 
-    try{
+    try {
       final userId = _supabaseService.currentUserId;
-      if(userId == null){
+      if (userId == null) {
         print('User ID is null');
         return null;
       }
@@ -19,21 +19,20 @@ class HomePageService {
           .single();
 
       final avatarResponse = await _supabaseService.client
-      .from('Profile')
-      .select('avatar_url')
-      .eq('userId', userId)
-      .maybeSingle();
+          .from('Profile')
+          .select('avatar_url')
+          .eq('userId', userId)
+          .maybeSingle();
 
-      return{
+      return {
         'first_name': profileResponse['firstName'] ?? 'User',
         'avatar_url': avatarResponse?['avatar_url'],
       };
-    }
-    catch(e){
+    } catch (e) {
       print('Error getting home page data: $e');
       return {
-      'first_name': 'User',
-        'avatar_url': null ,
+        'first_name': 'User',
+        'avatar_url': null,
       };
     }
   }
