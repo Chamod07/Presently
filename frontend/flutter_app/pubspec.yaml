@@ -51,6 +51,10 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
   flutter_test:
     sdk: flutter
+  mockito: ^5.4.5
+  build_runner: ^2.4.6
+  integration_test:
+      sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
