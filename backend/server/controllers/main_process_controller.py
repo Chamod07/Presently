@@ -1,11 +1,24 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 import httpx
+from services.auth_service import get_current_user_id
+from services import storage_service
 
 router = APIRouter()
 
 @router.post("/process")
-async def process_video(video_url: str, report_id: str = Query(...)):
+async def process_video(
+    report_id: str = Query(...),
+    user_id: str = Depends(get_current_user_id)
+):
     try:
+        # Get the video URL from the report
+        response = storage_service.supabase.table("UserReport").select("videoUrl").eq("reportId", report_id).execute()
+        
+        if not response.data or not response.data[0].get("videoUrl"):
+            raise HTTPException(status_code=404, detail="No video found for this report")
+        
+        video_url = response.data[0]["videoUrl"]
+        
         async with httpx.AsyncClient() as client:
             # 1. Download video
             download_url = f"http://localhost:8000/api/process/video/download_video?video_url={video_url}&report_id={report_id}"

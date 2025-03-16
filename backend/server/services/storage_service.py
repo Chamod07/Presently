@@ -16,3 +16,10 @@ def upload_to_supabase(file_path: str, filename: str) -> str:
 
     public_url = supabase.storage.from_(STORAGE_BUCKET_NAME).get_public_url(filename)
     return public_url
+
+def get_video_public_url(bucket_name: str, path: str) -> str:
+    """
+    Get the public URL for a file in Supabase storage
+    """
+    response = supabase.storage.from_(bucket_name).get_public_url(path)
+    return response

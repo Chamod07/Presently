@@ -19,3 +19,4 @@ class UserReport(BaseReport):
     scoreVoice: Optional[float] = None
     resources: Optional[Dict[str, Any]] = None
     feedback: Optional[Dict[str, Any]] = None
+    videoUrl: Optional[str] = None
