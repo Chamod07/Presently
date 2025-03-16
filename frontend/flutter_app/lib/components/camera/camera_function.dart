@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import '../../services/upload/upload_service.dart';
@@ -87,20 +86,19 @@ class CameraFunctions {
   String formatTime() {
     int minutes = seconds ~/ 60;
     int remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds
+        .toString()
+        .padLeft(2, '0')}';
   }
 
   Future<bool> checkRecordingConditions() async {
     bool isQualitySufficient = true;
-    String notificationMessage = '';
 
     if (!hasGoodLighting) {
       isQualitySufficient = false;
-      notificationMessage = 'Poor lighting detected. Move to a brighter area.';
     }
     else if (!isFaceWellPositioned) {
       isQualitySufficient = false;
-      notificationMessage = 'Please center your face in the frame';
     }
     else if (!isRecordingQualitySufficient) {
       isQualitySufficient = false;
@@ -135,8 +133,10 @@ class CameraFunctions {
 
       // Set exposure
       currentExposureOffset = 0.0;
-      minAvailableExposureOffset = await controller?.getMinExposureOffset() ?? 0.0;
-      maxAvailableExposureOffset = await controller?.getMaxExposureOffset() ?? 0.0;
+      minAvailableExposureOffset =
+          await controller?.getMinExposureOffset() ?? 0.0;
+      maxAvailableExposureOffset =
+          await controller?.getMaxExposureOffset() ?? 0.0;
 
       // Try to set optimal focus mode
       try {
@@ -296,17 +296,63 @@ class CameraFunctions {
       if (videoFilePath != null && videoMetaData.isNotEmpty) {
         final videoFile = File(videoFilePath!);
 
+        // Set up listener for upload completion
+        StreamSubscription? statusSubscription;
+        final completer = Completer<bool>();
+
+        statusSubscription = UploadService().statusStream.listen((status) {
+          // Check for completion status with our recording ID in the message
+          if (status['status'] == 'complete' &&
+              status['message'] == 'Upload complete!') {
+            completer.complete(true);
+            statusSubscription?.cancel();
+          } else if (status['status'] == 'failed') {
+            completer.complete(false);
+            statusSubscription?.cancel();
+          }
+        });
+
         //calling upload service to upload video
         UploadService().uploadVideo(
           videoFile: videoFile,
           metadata: videoMetaData,
         );
         print('Video queued for upload: $videoFilePath');
+
+        bool uploadSuccess = await completer.future.timeout(
+          Duration(minutes: 3),
+          onTimeout: () {
+            statusSubscription?.cancel();
+            return false;
+          },
+        );
+        if (uploadSuccess){
+          await deleteVideoLocal();
+        }
       } else {
         print('Warning: No video file or metadata available for upload');
       }
     } catch (e) {
       print('Error in videoUpload: $e');
+    }
+  }
+
+  Future<void> deleteVideoLocal() async {
+    try {
+      if (videoFilePath != null) {
+        final videoFile = File(videoFilePath!);
+        final directory = videoFile.parent;
+
+        if (await directory.exists()) {
+          await directory.delete(recursive: true);
+          print('Local recording deleted: ${directory.path}');
+        }
+
+        videoFilePath = null;
+        recordedVideoFile = null;
+      }
+    } catch (e) {
+      print('Error in deleteVideo: $e');
     }
   }
 }

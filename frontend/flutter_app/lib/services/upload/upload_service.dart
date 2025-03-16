@@ -241,6 +241,8 @@ class UploadService {
 
       _updateStatus(uploadId, 'processing', 'Creating database record...', 0.9);
 
+
+
       // Get the public URL of the video
       final videoUrl = _supabaseService.client
           .storage
