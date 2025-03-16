@@ -113,7 +113,7 @@ class CameraFunctions {
     final camera = cameras[cameraIndex];
     controller = CameraController(
       camera,
-      ResolutionPreset.veryHigh,
+      ResolutionPreset.high,
       enableAudio: true,
       imageFormatGroup: Platform.isAndroid
           ? ImageFormatGroup.nv21
@@ -291,7 +291,7 @@ class CameraFunctions {
     }
   }
 
-  Future<void> videoUpload() async {
+  Future<bool> videoUpload() async {
     try {
       if (videoFilePath != null && videoMetaData.isNotEmpty) {
         final videoFile = File(videoFilePath!);
@@ -329,11 +329,12 @@ class CameraFunctions {
         if (uploadSuccess){
           await deleteVideoLocal();
         }
-      } else {
-        print('Warning: No video file or metadata available for upload');
+        return uploadSuccess;
       }
+      return false;
     } catch (e) {
       print('Error in videoUpload: $e');
+      return false;
     }
   }
 

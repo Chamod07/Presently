@@ -427,8 +427,15 @@ class _CameraViewState extends State<CameraView> {
                   // Process the video (save and generate metadata)
                   await _cameraFunctions.processRecording(videoFile);
 
-                  //uploading video
-                  await _cameraFunctions.videoUpload();
+                  bool uploadSuccess = await _cameraFunctions.videoUpload();
+
+                  if(uploadSuccess){
+                    _dismissNotification();
+                  }
+                  else{
+                    showNotification("Error saving video");
+                  }
+
                   // Stop the camera feed and navigate to summary page
 
                   await _stopLiveFeed();
@@ -489,6 +496,7 @@ class _CameraViewState extends State<CameraView> {
                 decoration:
                   _isRecording ? BoxDecoration(
                     color: Colors.red,
+                    shape: BoxShape.rectangle,
                     borderRadius: BorderRadius.circular(12),
                 ) : BoxDecoration(
                   color: Colors.white,
