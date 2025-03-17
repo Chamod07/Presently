@@ -423,6 +423,9 @@ class _CameraViewState extends State<CameraView> {
                 // Stop video recording and get the file
                 final videoFile = await _cameraFunctions.controller?.stopVideoRecording();
 
+                final String? videoPath = _cameraFunctions.videoFilePath;
+                final videoMetaData = Map<String, dynamic>.from(_cameraFunctions.videoMetaData);
+
                 if (videoFile != null) {
                   // Process the video (save and generate metadata)
                   await _cameraFunctions.processRecording(videoFile);
@@ -431,6 +434,7 @@ class _CameraViewState extends State<CameraView> {
 
                   if(uploadSuccess){
                     _dismissNotification();
+                    videoMetaData['uploadSuccess'] = true;
                   }
                   else{
                     showNotification("Error saving video");
@@ -444,14 +448,16 @@ class _CameraViewState extends State<CameraView> {
                       '/summary',
                       arguments: {
                         'selectedIndex': 1,
-                        'videoPath': _cameraFunctions.videoFilePath,
-                        'metadata': _cameraFunctions.videoMetaData,
+                        'videoPath': videoPath,
+                        'metadata': videoMetaData,
                       }
                   );
+
+                  await _cameraFunctions.deleteVideoLocal();
                 }
               } catch (e) {
                 print("Error stopping recording: $e");
-                showNotification("Error saving video");
+                showNotification("Error stopping video");
 
                 // Fall back to original behavior if recording fails
                 _stopLiveFeed().then((_) {

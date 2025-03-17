@@ -163,9 +163,19 @@ class CameraFunctions {
   }
 
   Future<void> stopLiveFeed() async {
-    await controller?.stopImageStream();
-    await controller?.dispose();
-    controller = null;
+    try {
+      if (controller != null) {
+        // Check if controller is initialized and streaming before stopping
+        if (controller!.value.isInitialized && controller!.value.isStreamingImages) {
+          await controller!.stopImageStream();
+        }
+        await controller!.dispose();
+        controller = null;
+      }
+    } catch (e) {
+      print('Error stopping live feed: $e');
+      controller = null;
+    }
   }
 
   Future<void> switchLiveCamera() async {
@@ -326,9 +336,7 @@ class CameraFunctions {
             return false;
           },
         );
-        if (uploadSuccess){
-          await deleteVideoLocal();
-        }
+
         return uploadSuccess;
       }
       return false;
