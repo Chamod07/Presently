@@ -580,7 +580,15 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: GestureDetector(
         onTap: () {
-          Navigator.pushNamed(context, navigateTo);
+          // Pass the session name when navigating to the summary page
+          Navigator.pushNamed(
+            context,
+            navigateTo,
+            arguments: {
+              'selectedIndex': 1, // Default to 1 (add/new tab)
+              'sessionName': sessionName, // Pass session name
+            },
+          );
         },
         child: Container(
           decoration: BoxDecoration(
@@ -719,7 +727,15 @@ class _HomePageState extends State<HomePage> {
                         // Practice button
                         OutlinedButton.icon(
                           onPressed: () {
-                            Navigator.pushNamed(context, navigateTo);
+                            // Pass the session name when navigating via the practice button
+                            Navigator.pushNamed(
+                              context,
+                              navigateTo,
+                              arguments: {
+                                'selectedIndex': 1,
+                                'sessionName': sessionName,
+                              },
+                            );
                           },
                           icon: Icon(Icons.play_arrow, size: 18),
                           label: Text('Continue'),

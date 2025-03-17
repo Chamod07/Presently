@@ -30,6 +30,37 @@ class TaskGroupService {
     return supabase.auth.currentSession?.accessToken;
   }
 
+  // Fetch detailed information for a specific task group
+  Future<Map<String, dynamic>> getTaskGroupDetails(String reportId) async {
+    try {
+      final token = getAuthToken();
+      if (token == null) {
+        throw Exception('Authentication required');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/report/details?report_id=$reportId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Response status for details: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Error from server: ${response.body}');
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching task group details: $e');
+      throw Exception('Failed to fetch task group details: $e');
+    }
+  }
+
   // Fetch task groups from backend
   Future<List<TaskGroup>> getTaskGroups() async {
     try {
@@ -55,81 +86,56 @@ class TaskGroupService {
       );
 
       print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('Response body: ${response.body}'); // Debug the actual response
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
+        print('Number of task groups from API: ${data.length}');
+
         List<TaskGroup> taskGroups = [];
 
-        // Process each task group
+        // Process each task group from the API response directly
         for (var item in data) {
           final reportId = item['Id'];
 
-          // Get task count for this report
-          int taskCount = 0;
-          double progress = 0.0;
-          List<Task> tasks = [];
-
           if (token != null) {
-            // Only fetch additional details if authenticated
+            // Use the new consolidated API endpoint
             try {
-              // Get task count
-              final taskCountResponse = await http.get(
-                Uri.parse('$baseUrl/report/task_count?report_id=$reportId'),
-                headers: {'Authorization': 'Bearer $token'},
-              );
-              if (taskCountResponse.statusCode == 200) {
-                var taskCountData = jsonDecode(taskCountResponse.body);
-                taskCount = taskCountData['taskCount'] ?? 0;
-              }
+              final taskGroupDetails = await getTaskGroupDetails(reportId);
+              print('Details for report $reportId: $taskGroupDetails');
 
-              // Get progress percentage
-              final progressResponse = await http.get(
-                Uri.parse('$baseUrl/report/progress?report_id=$reportId'),
-                headers: {'Authorization': 'Bearer $token'},
-              );
-              if (progressResponse.statusCode == 200) {
-                var progressData = jsonDecode(progressResponse.body);
-                progress = (progressData['progressPercentage'] ?? 0.0) / 100;
-              }
+              // Convert tasks from API response format to Task objects
+              List<dynamic> allTasks = taskGroupDetails['tasks']['all'] ?? [];
+              List<Task> tasks = allTasks
+                  .map((task) => Task(
+                        title: task['title'] ?? "",
+                        isCompleted: task['isDone'] ?? false,
+                      ))
+                  .toList();
 
-              // Get tasks
-              final tasksResponse = await http.get(
-                Uri.parse('$baseUrl/report/task/all?report_id=$reportId'),
-                headers: {'Authorization': 'Bearer $token'},
-              );
-              if (tasksResponse.statusCode == 200) {
-                var tasksData = jsonDecode(tasksResponse.body);
-                List<dynamic> tasksList = tasksData['tasks'] ?? [];
-                tasks = tasksList
-                    .map((task) => Task(
-                          title: task['title'] ?? "",
-                          isCompleted: task['isDone'] ?? false,
-                        ))
-                    .toList();
-              }
+              taskGroups.add(TaskGroup(
+                title: taskGroupDetails['session_name'] ?? "Untitled Group",
+                taskCount: taskGroupDetails['taskCount'] ?? 0,
+                progress: (taskGroupDetails['progress'] ?? 0.0) / 100,
+                tasks: tasks,
+                reportId: reportId,
+              ));
             } catch (e) {
               print('Error fetching details for report $reportId: $e');
             }
           } else {
-            // Use mock data if not authenticated
-            taskCount = 5;
-            progress = 0.5;
-            tasks = [
-              Task(title: "Sample Task 1", isCompleted: true),
-              Task(title: "Sample Task 2", isCompleted: false),
-            ];
+            // When not authenticated, just add basic info
+            taskGroups.add(TaskGroup(
+              title: item['Topic'] ?? "Untitled Group",
+              taskCount: 0,
+              progress: 0.0,
+              tasks: [],
+              reportId: reportId,
+            ));
           }
-
-          taskGroups.add(TaskGroup(
-            title: item['Topic'] ?? "Untitled Group",
-            taskCount: taskCount,
-            progress: progress,
-            tasks: tasks,
-            reportId: reportId,
-          ));
         }
 
+        print('Final number of task groups: ${taskGroups.length}');
         return taskGroups;
       } else {
         print('Error from server: ${response.body}');
@@ -137,93 +143,80 @@ class TaskGroupService {
       }
     } catch (e) {
       print('Error fetching task groups: $e');
-      // Return mock data instead of throwing an exception
-      return _getMockTaskGroups();
+      throw Exception('Failed to load task groups: $e');
     }
   }
 
-  // Method to provide mock data
-  List<TaskGroup> _getMockTaskGroups() {
-    print('Returning mock task groups');
-    return [
-      TaskGroup(
-        title: "Machine Learning (Mock)",
-        taskCount: 4,
-        progress: 0.65,
-        tasks: [
-          Task(title: "Power Pose Challenge", isCompleted: true),
-          Task(title: "Smooth Steady Stare", isCompleted: false),
-          Task(title: "Smooth Talker", isCompleted: false),
-          Task(title: "Filler Free Zone", isCompleted: false),
-        ],
-      ),
-      TaskGroup(
-        title: "Psychology Traits (Mock)",
-        taskCount: 6,
-        progress: 0.50,
-        tasks: [
-          Task(title: "Confidence Builder", isCompleted: true),
-          Task(title: "Eye Contact Master", isCompleted: false),
-          Task(title: "Voice Projection", isCompleted: false),
-          Task(title: "Audience Engagement", isCompleted: false),
-          Task(title: "Gesture Control", isCompleted: false),
-          Task(title: "Pacing Practice", isCompleted: false),
-        ],
-      ),
-      TaskGroup(
-        title: "Development Behavior (Mock)",
-        taskCount: 5,
-        progress: 0.40,
-        tasks: [
-          Task(title: "Structure Planning", isCompleted: true),
-          Task(title: "Opening Hook", isCompleted: false),
-          Task(title: "Closing Impact", isCompleted: false),
-          Task(title: "Visual Aid Mastery", isCompleted: false),
-          Task(title: "Q&A Preparation", isCompleted: false),
-        ],
-      ),
-    ];
-  }
-
+  // Get tasks for a specific group - now using the consolidated API
   Future<List<Task>> getTasksForGroup(String reportId) async {
     try {
       final token = getAuthToken();
       if (token == null) {
-        return _getMockTasksForGroup();
+        throw Exception('Authentication required');
       }
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/report/task/all?report_id=$reportId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      // Use the new consolidated endpoint
+      final details = await getTaskGroupDetails(reportId);
+      List<dynamic> tasksList = details['tasks']['all'] ?? [];
 
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        List<dynamic> tasksList = data['tasks'] ?? [];
-        return tasksList
-            .map((task) => Task(
-                  title: task['title'] ?? "",
-                  isCompleted: task['isDone'] ?? false,
-                ))
-            .toList();
-      } else {
-        throw Exception('Failed to load tasks');
-      }
+      return tasksList
+          .map((task) => Task(
+                title: task['title'] ?? "",
+                isCompleted: task['isDone'] ?? false,
+              ))
+          .toList();
     } catch (e) {
       print('Error fetching tasks: $e');
-      return _getMockTasksForGroup();
+      throw Exception('Failed to load tasks: $e');
     }
   }
 
-  List<Task> _getMockTasksForGroup() {
-    return [
-      Task(title: "Mock Task 1", isCompleted: true),
-      Task(title: "Mock Task 2", isCompleted: false),
-      Task(title: "Mock Task 3", isCompleted: false),
-    ];
+  // Get todo tasks for a specific group
+  Future<List<Task>> getTodoTasksForGroup(String reportId) async {
+    try {
+      final token = getAuthToken();
+      if (token == null) {
+        throw Exception('Authentication required');
+      }
+
+      // Use the new consolidated endpoint
+      final details = await getTaskGroupDetails(reportId);
+      List<dynamic> tasksList = details['tasks']['todo'] ?? [];
+
+      return tasksList
+          .map((task) => Task(
+                title: task['title'] ?? "",
+                isCompleted: false,
+              ))
+          .toList();
+    } catch (e) {
+      print('Error fetching todo tasks: $e');
+      throw Exception('Failed to load todo tasks: $e');
+    }
+  }
+
+  // Get completed tasks for a specific group
+  Future<List<Task>> getCompletedTasksForGroup(String reportId) async {
+    try {
+      final token = getAuthToken();
+      if (token == null) {
+        throw Exception('Authentication required');
+      }
+
+      // Use the new consolidated endpoint
+      final details = await getTaskGroupDetails(reportId);
+      List<dynamic> tasksList = details['tasks']['completed'] ?? [];
+
+      return tasksList
+          .map((task) => Task(
+                title: task['title'] ?? "",
+                isCompleted: true,
+              ))
+          .toList();
+    } catch (e) {
+      print('Error fetching completed tasks: $e');
+      throw Exception('Failed to load completed tasks: $e');
+    }
   }
 
   Future<bool> updateTaskStatus(
