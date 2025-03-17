@@ -44,7 +44,17 @@ class _HomePageState extends State<HomePage> {
       if (homePageData != null && mounted) {
         setState(() {
           firstName = homePageData['first_name'];
-          avatarUrl = homePageData['avatar_url'];
+
+          // Get avatar URL with timestamp for cache busting
+          if (homePageData['avatar_url'] != null &&
+              homePageData['avatar_url'].isNotEmpty) {
+            final String baseUrl = homePageData['avatar_url'];
+            final String separator = baseUrl.contains('?') ? '&' : '?';
+            avatarUrl =
+                '$baseUrl${separator}t=${DateTime.now().millisecondsSinceEpoch}';
+          } else {
+            avatarUrl = null;
+          }
         });
       }
     } catch (e) {
@@ -156,19 +166,23 @@ class _HomePageState extends State<HomePage> {
                     width: 2,
                   ),
                 ),
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.grey[100],
-                  backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
-                      ? NetworkImage(avatarUrl!)
-                      : null,
-                  child: (avatarUrl == null || avatarUrl!.isEmpty)
-                      ? Icon(
-                          Icons.person,
-                          color: Colors.grey[600],
-                          size: 26,
-                        )
-                      : null,
+                child: ClipOval(
+                  child: SizedBox(
+                    width: 44, // 2*radius
+                    height: 44, // 2*radius
+                    child: avatarUrl != null && avatarUrl!.isNotEmpty
+                        ? ImageUtils.networkImageWithFallback(
+                            url:
+                                '$avatarUrl&t=${DateTime.now().millisecondsSinceEpoch}',
+                            width: 44,
+                            height: 44,
+                          )
+                        : ImageUtils.defaultProfileAvatar(
+                            width: 44,
+                            height: 44,
+                            iconColor: Colors.grey[600],
+                          ),
+                  ),
                 ),
               ),
             ),

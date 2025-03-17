@@ -1,32 +1,50 @@
-import 'package:flutter_app/services/supabase/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomePageService {
-  final SupabaseService _supabaseService = SupabaseService();
+  final client = Supabase.instance.client;
 
   Future<Map<String, dynamic>?> getHomePageData() async {
-    if (!_supabaseService.isSignedIn) return null;
-
     try {
-      final userId = _supabaseService.currentUserId;
-      if (userId == null) {
-        print('User ID is null');
-        return null;
-      }
-      final userDetailResponse = await _supabaseService.client
+      // Get current user ID
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) return null;
+
+      // Get user details from database
+      final response = await client
           .from('UserDetails')
-          .select('firstName, lastName, role')
+          .select('firstName, role')
           .eq('userId', userId)
           .single();
 
+      if (response == null) return null;
+
+      // Check for avatar in multiple formats
+      String avatarUrl = '';
+      final extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+      for (final ext in extensions) {
+        try {
+          // Get public URL for potential avatar
+          final url = client.storage
+              .from('avatars')
+              .getPublicUrl('avatar_$userId.$ext');
+
+          // We'll add timestamp in the UI layer to ensure cache-busting
+          avatarUrl = url;
+          break;
+        } catch (e) {
+          // Continue trying other extensions
+        }
+      }
+
       return {
-        'first_name': userDetailResponse['firstName'] ?? 'User',
-        // Remove avatar_url from returned data
+        'first_name': response['firstName'] ?? '',
+        'role': response['role'] ?? '',
+        'avatar_url': avatarUrl,
       };
     } catch (e) {
-      print('Error getting home page data: $e');
-      return {
-        'first_name': 'User',
-      };
+      print('Error in getHomePageData: $e');
+      return null;
     }
   }
 }
