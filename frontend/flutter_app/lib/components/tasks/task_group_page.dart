@@ -21,6 +21,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
   List<TaskGroup> taskGroups = [];
   bool isLoading = true;
   String? errorMessage;
+  double overallProgress = 0.0; // Track overall progress separately
   // Add cache variables
   static List<TaskGroup> _cachedTaskGroups = [];
   static DateTime? _lastFetchTime;
@@ -30,6 +31,25 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
   void initState() {
     super.initState();
     _loadTaskGroups();
+    _loadOverallProgress(); // Add this to fetch overall progress directly
+  }
+
+  // Add a method to load overall progress directly from the API
+  Future<void> _loadOverallProgress() async {
+    try {
+      final TaskGroupService service = TaskGroupService();
+      final fetchedProgress = await service.getOverallProgress();
+
+      if (mounted) {
+        setState(() {
+          overallProgress = fetchedProgress;
+        });
+      }
+    } catch (e) {
+      print('Error fetching overall progress: $e');
+      // Fallback to calculated progress if API call fails
+      _calculateOverallProgress();
+    }
   }
 
   Future<void> _loadTaskGroups() async {
@@ -94,6 +114,9 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
             if (fetchedTaskGroups.isNotEmpty) {
               _cachedTaskGroups = fetchedTaskGroups;
               _lastFetchTime = DateTime.now();
+
+              // Recalculate overall progress with new data
+              _calculateOverallProgress();
             } else {
               print('Received empty task groups list, not updating cache');
             }
@@ -148,10 +171,23 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
     }
   }
 
+  // Update this method to update the overall progress state
   double _calculateOverallProgress() {
-    if (taskGroups.isEmpty) return 0.0;
-    return taskGroups.fold<double>(0.0, (sum, group) => sum + group.progress) /
-        taskGroups.length;
+    if (taskGroups.isEmpty) {
+      setState(() {
+        overallProgress = 0.0;
+      });
+      return 0.0;
+    }
+
+    final calculatedProgress =
+        taskGroups.fold<double>(0.0, (sum, group) => sum + group.progress) /
+            taskGroups.length;
+
+    setState(() {
+      overallProgress = calculatedProgress;
+    });
+    return calculatedProgress;
   }
 
   Widget _buildTaskGroupCard(TaskGroup taskGroup) {
@@ -276,7 +312,8 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
 
   @override
   Widget build(BuildContext context) {
-    double overallProgress = _calculateOverallProgress();
+    // Remove this line since we're now tracking overall progress separately
+    // double overallProgress = _calculateOverallProgress();
 
     return Scaffold(
       appBar: AppBar(

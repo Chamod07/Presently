@@ -21,6 +21,7 @@ import 'package:flutter_app/components/screens/splash_screen.dart';
 import 'package:flutter_app/components/settings/contact_support.dart';
 import 'package:flutter_app/components/settings/terms_privacy.dart';
 import 'package:flutter_app/components/settings/help_page.dart';
+import 'package:flutter_app/components/tasks/info_card.dart';
 import 'services/supabase/supabase_service.dart';
 
 late List<CameraDescription> cameras;
@@ -84,6 +85,7 @@ class MyApp extends StatelessWidget {
         '/terms_privacy': (context) => TermsPrivacyPage(),
         '/help': (context) => HelpPage(),
         '/about': (context) => AboutPage(),
+        '/info_card': (context) => InfoCard(), // Add route for InfoCard
       },
     );
   }

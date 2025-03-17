@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'task_group.dart'; // Import the TaskGroup model
 import 'package:flutter_app/components/dashboard/navbar.dart';
-import 'package:flutter_app/services/task_assign/task_group_service.dart'; // Add import
+import 'package:flutter_app/services/task_assign/task_group_service.dart';
+import 'package:flutter_app/components/tasks/info_card.dart';
 
 class TaskDetailPage extends StatefulWidget {
   final TaskGroup taskGroup;
@@ -18,31 +19,49 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   bool isLoading = false;
   final TaskGroupService _taskGroupService = TaskGroupService();
   List<Task> allTasks = [];
+  double progress = 0.0; // Track progress separately
 
   @override
   void initState() {
     super.initState();
-    // Start with the tasks we already have
+    // Start with the tasks we already have from TaskGroupPage
     allTasks = widget.taskGroup.tasks;
-    // Refresh tasks in background
-    _refreshTasks();
+    // Use initial progress from task group
+    progress = widget.taskGroup.progress;
+
+    // Only call API if we don't have tasks already (as a fallback)
+    if (allTasks.isEmpty) {
+      _refreshTasks();
+    } else {
+      // No need to show loading indicator since we already have data
+      isLoading = false;
+    }
   }
 
   Future<void> _refreshTasks() async {
+    // Only call this if we don't already have tasks
     setState(() {
       isLoading = true;
     });
 
     try {
-      // Use the consolidated API via service
-      final tasks = await _taskGroupService
-          .getTasksForGroup(widget.taskGroup.reportId ?? '');
+      if (widget.taskGroup.reportId != null) {
+        // Since the TaskGroupPage already fetched the complete data
+        // We can just get the tasks directly from the API without needing details
+        final tasks = await _taskGroupService
+            .getTasksForGroup(widget.taskGroup.reportId!);
 
-      if (mounted) {
-        setState(() {
-          allTasks = tasks;
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            allTasks = tasks;
+            // Calculate progress from task completion status
+            if (tasks.isNotEmpty) {
+              progress =
+                  tasks.where((task) => task.isCompleted).length / tasks.length;
+            }
+            isLoading = false;
+          });
+        }
       }
     } catch (e) {
       print('Error refreshing tasks: $e');
@@ -63,9 +82,26 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     return allTasks; // All tasks
   }
 
+  void handleTaskTap(Task task) {
+    // Navigate to InfoCard instead of toggling completion directly
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InfoCard(task: task, taskGroup: widget.taskGroup),
+      ),
+    );
+  }
+
   void toggleTaskCompletion(Task task) {
     setState(() {
       task.isCompleted = !task.isCompleted;
+
+      // Update progress immediately in the UI
+      if (allTasks.isNotEmpty) {
+        progress =
+            allTasks.where((t) => t.isCompleted).length / allTasks.length;
+      }
+
       // Update in backend
       _taskGroupService.updateTaskStatus(
         widget.taskGroup.reportId ?? '',
@@ -108,16 +144,16 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
               ],
             ),
             const SizedBox(height: 16),
-            // Progress Bar
+            // Progress Bar - use our local progress variable instead of widget.taskGroup.progress
             LinearProgressIndicator(
-              value: widget.taskGroup.progress,
+              value: progress,
               backgroundColor: Colors.grey.shade300,
               color: Color(0xFF7400B8),
               minHeight: 8,
             ),
             const SizedBox(height: 8),
             Text(
-              "Overall Progress: ${(widget.taskGroup.progress * 100).toInt()}%",
+              "Overall Progress: ${(progress * 100).toInt()}%",
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -130,17 +166,20 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       itemBuilder: (context, index) {
                         Task task = filteredTasks[index];
                         return GestureDetector(
-                          onTap: () => toggleTaskCompletion(task),
+                          onTap: () => handleTaskTap(task),
                           child: Card(
                             margin: const EdgeInsets.symmetric(vertical: 8.0),
                             child: ListTile(
-                              leading: Icon(
-                                task.isCompleted
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
-                                color: task.isCompleted
-                                    ? Color(0xFF7400B8)
-                                    : Colors.grey,
+                              leading: IconButton(
+                                icon: Icon(
+                                  task.isCompleted
+                                      ? Icons.check_circle
+                                      : Icons.radio_button_unchecked,
+                                  color: task.isCompleted
+                                      ? Color(0xFF7400B8)
+                                      : Colors.grey,
+                                ),
+                                onPressed: () => toggleTaskCompletion(task),
                               ),
                               title: Text(
                                 task.title,
@@ -152,9 +191,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              trailing: task.isCompleted
-                                  ? const Icon(Icons.check, color: Colors.white)
-                                  : null,
+                              trailing: Icon(Icons.arrow_forward_ios, size: 16),
                             ),
                           ),
                         );
@@ -204,29 +241,6 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           ),
           const SizedBox(width: 16),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTaskItem(Task task) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ListTile(
-        leading: Icon(
-          task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: task.isCompleted ? Color(0xFF7400B8) : Colors.grey,
-        ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            fontSize: 16,
-            color: task.isCompleted ? Colors.black : Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        trailing: task.isCompleted
-            ? const Icon(Icons.check, color: Colors.white)
-            : null,
       ),
     );
   }

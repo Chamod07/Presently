@@ -82,19 +82,27 @@ def _get_tasks(report_id: str):
     if not challenge_ids:
         return []  # Return empty list if no challenges are assigned
 
-    # Fetch challenge details (id and title) from Challenges table
+    # Fetch challenge details (now including instructions, description, points, duration)
     challenges_response = supabase.table("Challenges") \
-        .select("id, title") \
+        .select("id, title, description, instructions, points, duration") \
         .in_("id", challenge_ids) \
         .execute()
 
     # Handle errors in fetching challenges
     if hasattr(challenges_response, "error") and challenges_response.error:
-        raise Exception(f"Error fetching challenge titles: {challenges_response.error}")
+        raise Exception(f"Error fetching challenge details: {challenges_response.error}")
 
     # Combine the challenge details with the isDone status from our mapping
     return [
-        {"id": item["id"], "title": item["title"], "isDone": challenge_status_map.get(item["id"])}
+        {
+            "id": item["id"], 
+            "title": item["title"], 
+            "isDone": challenge_status_map.get(item["id"]),
+            "description": item.get("description", ""),
+            "instructions": item.get("instructions", []),
+            "points": item.get("points", 0),
+            "duration": item.get("duration", 30)
+        }
         for item in challenges_response.data if "id" in item and "title" in item
     ]
 

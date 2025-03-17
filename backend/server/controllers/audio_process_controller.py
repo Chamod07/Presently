@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 import subprocess
 import os
-from backend.server.services.whisper_service import transcribe_audio
+from services.whisper_service import transcribe_audio
 
 router = APIRouter()
 

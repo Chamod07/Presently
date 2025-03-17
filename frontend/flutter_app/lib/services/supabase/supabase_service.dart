@@ -44,7 +44,7 @@ class SupabaseService {
   /// Get the Supabase client instance
   SupabaseClient get client {
     assert(_initialized,
-    'Supabase must be initialized before accessing the client');
+        'Supabase must be initialized before accessing the client');
     return Supabase.instance.client;
   }
 
@@ -98,4 +98,10 @@ class SupabaseService {
       await client.auth.signOut();
     }
   }
+
+  // Update the API URL to point to your local backend server
+  final String apiUrl = 'http://127.0.0.1:8000';
+
+  // For production deployment, you might want to use environment variables instead:
+  // final String apiUrl = const String.fromEnvironment('API_URL', defaultValue: 'http://127.0.0.1:8000');
 }
