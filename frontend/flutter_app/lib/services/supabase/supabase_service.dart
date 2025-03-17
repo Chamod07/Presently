@@ -44,7 +44,7 @@ class SupabaseService {
   /// Get the Supabase client instance
   SupabaseClient get client {
     assert(_initialized,
-    'Supabase must be initialized before accessing the client');
+        'Supabase must be initialized before accessing the client');
     return Supabase.instance.client;
   }
 
@@ -96,6 +96,51 @@ class SupabaseService {
   Future<void> signOut() async {
     if (_initialized) {
       await client.auth.signOut();
+    }
+  }
+
+  /// Deletes the current user account and all associated data using a database function
+  Future<bool> deleteUserAccount(String password) async {
+    try {
+      // First verify the password by signing in
+      final currentEmail = client.auth.currentUser?.email;
+      final userId = currentUserId;
+
+      if (currentEmail == null || userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Verify the password by signing in
+      final AuthResponse res = await client.auth.signInWithPassword(
+        email: currentEmail,
+        password: password,
+      );
+
+      if (res.session == null) {
+        throw Exception('Password is incorrect');
+      }
+
+      // Call the database function via RPC instead of using an Edge Function
+      final response = await client.rpc(
+        'delete_user',
+        params: {'input_user_id': userId},
+      );
+
+      // Log the response for debugging
+      debugPrint('Delete user response: $response');
+
+      // Check if deletion was successful
+      final success = response['success'] as bool? ?? false;
+
+      if (!success) {
+        final errorMessage = response['error'] as String? ?? 'Unknown error';
+        throw Exception('Failed to delete account: $errorMessage');
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting user account: $e');
+      throw e;
     }
   }
 }
