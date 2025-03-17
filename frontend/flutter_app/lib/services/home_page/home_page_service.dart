@@ -12,27 +12,20 @@ class HomePageService {
         print('User ID is null');
         return null;
       }
-      final profileResponse = await _supabaseService.client
+      final userDetailResponse = await _supabaseService.client
           .from('UserDetails')
-          .select('firstName')
+          .select('firstName, lastName, role')
           .eq('userId', userId)
           .single();
 
-      final avatarResponse = await _supabaseService.client
-          .from('Profile')
-          .select('avatar_url')
-          .eq('userId', userId)
-          .maybeSingle();
-
       return {
-        'first_name': profileResponse['firstName'] ?? 'User',
-        'avatar_url': avatarResponse?['avatar_url'],
+        'first_name': userDetailResponse['firstName'] ?? 'User',
+        // Remove avatar_url from returned data
       };
     } catch (e) {
       print('Error getting home page data: $e');
       return {
         'first_name': 'User',
-        'avatar_url': null,
       };
     }
   }
