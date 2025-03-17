@@ -86,12 +86,15 @@ class TaskGroupService {
       );
 
       print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}'); // Debug the actual response
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
+        print('Number of task groups from API: ${data.length}');
+
         List<TaskGroup> taskGroups = [];
 
-        // Process each task group
+        // Process each task group from the API response directly
         for (var item in data) {
           final reportId = item['Id'];
 
@@ -99,6 +102,7 @@ class TaskGroupService {
             // Use the new consolidated API endpoint
             try {
               final taskGroupDetails = await getTaskGroupDetails(reportId);
+              print('Details for report $reportId: $taskGroupDetails');
 
               // Convert tasks from API response format to Task objects
               List<dynamic> allTasks = taskGroupDetails['tasks']['all'] ?? [];
@@ -110,7 +114,7 @@ class TaskGroupService {
                   .toList();
 
               taskGroups.add(TaskGroup(
-                title: taskGroupDetails['reportTopic'] ?? "Untitled Group",
+                title: taskGroupDetails['session_name'] ?? "Untitled Group",
                 taskCount: taskGroupDetails['taskCount'] ?? 0,
                 progress: (taskGroupDetails['progress'] ?? 0.0) / 100,
                 tasks: tasks,
@@ -131,6 +135,7 @@ class TaskGroupService {
           }
         }
 
+        print('Final number of task groups: ${taskGroups.length}');
         return taskGroups;
       } else {
         print('Error from server: ${response.body}');

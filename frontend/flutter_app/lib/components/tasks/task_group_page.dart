@@ -37,6 +37,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
     if (_cachedTaskGroups.isNotEmpty &&
         _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration) {
+      print('Using cached data: ${_cachedTaskGroups.length} task groups');
       // Use cached data if it's available and still valid
       setState(() {
         taskGroups = _cachedTaskGroups;
@@ -47,6 +48,7 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
       return;
     }
 
+    print('No valid cache, fetching fresh data');
     // If no valid cache, fetch data normally with loading indicator
     _fetchTaskGroups();
   }
@@ -81,14 +83,20 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
 
       try {
         final fetchedTaskGroups = await service.getTaskGroups();
+        print('TaskGroupPage received ${fetchedTaskGroups.length} task groups');
+
         if (mounted) {
           setState(() {
             taskGroups = fetchedTaskGroups;
             isLoading = false;
 
-            // Update cache
-            _cachedTaskGroups = fetchedTaskGroups;
-            _lastFetchTime = DateTime.now();
+            // Update cache only if we have valid data
+            if (fetchedTaskGroups.isNotEmpty) {
+              _cachedTaskGroups = fetchedTaskGroups;
+              _lastFetchTime = DateTime.now();
+            } else {
+              print('Received empty task groups list, not updating cache');
+            }
           });
         }
       } catch (e) {
@@ -119,6 +127,15 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
       }
       print('Unexpected error: $e');
     }
+  }
+
+  // Clear the cache if needed
+  void _clearCache() {
+    setState(() {
+      _cachedTaskGroups = [];
+      _lastFetchTime = null;
+    });
+    _fetchTaskGroups();
   }
 
   Future<void> _pickProfileImage() async {
@@ -328,10 +345,27 @@ class _TaskGroupPageState extends State<TaskGroupPage> {
                     ),
                   ],
                 ),
-                // Add refresh button
-                IconButton(
-                  icon: Icon(Icons.refresh),
-                  onPressed: _fetchTaskGroups,
+                // Add refresh button with clear cache action
+                PopupMenuButton<String>(
+                  onSelected: (String choice) {
+                    if (choice == 'refresh') {
+                      _fetchTaskGroups();
+                    } else if (choice == 'clear_cache') {
+                      _clearCache();
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'refresh',
+                      child: Text('Refresh'),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'clear_cache',
+                      child: Text('Clear Cache & Refresh'),
+                    ),
+                  ],
+                  child: Icon(Icons.more_vert),
                 ),
               ],
             ),
