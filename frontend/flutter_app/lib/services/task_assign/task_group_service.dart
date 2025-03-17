@@ -150,14 +150,26 @@ class TaskGroupService {
   // Get tasks for a specific group - now using the consolidated API
   Future<List<Task>> getTasksForGroup(String reportId) async {
     try {
+      print('TaskGroupService: Fetching tasks for report ID: $reportId');
       final token = getAuthToken();
       if (token == null) {
+        print('TaskGroupService: No auth token available');
         throw Exception('Authentication required');
       }
 
+      // Check for valid reportId
+      if (reportId.isEmpty) {
+        print('TaskGroupService: Empty reportId provided');
+        throw Exception('Invalid report ID');
+      }
+
       // Use the new consolidated endpoint
+      print('TaskGroupService: Getting task group details');
       final details = await getTaskGroupDetails(reportId);
+
+      print('TaskGroupService: Parsing tasks from details');
       List<dynamic> tasksList = details['tasks']['all'] ?? [];
+      print('TaskGroupService: Found ${tasksList.length} tasks in response');
 
       return tasksList
           .map((task) => Task(
@@ -166,7 +178,7 @@ class TaskGroupService {
               ))
           .toList();
     } catch (e) {
-      print('Error fetching tasks: $e');
+      print('TaskGroupService: Error fetching tasks: $e');
       throw Exception('Failed to load tasks: $e');
     }
   }
@@ -222,10 +234,18 @@ class TaskGroupService {
   Future<bool> updateTaskStatus(
       String reportId, String taskId, bool isCompleted) async {
     try {
+      print(
+          'TaskGroupService: Updating task "$taskId" to ${isCompleted ? "completed" : "not completed"}');
       final token = getAuthToken();
       if (token == null) {
+        print('TaskGroupService: No auth token available for task update');
         return false;
       }
+
+      // Log the request being made
+      print('TaskGroupService: Making API call to update task status');
+      print(
+          'TaskGroupService: reportId=$reportId, taskId=$taskId, isCompleted=$isCompleted');
 
       final response = await http.post(
         Uri.parse('$baseUrl/report/task/update'),
@@ -240,9 +260,16 @@ class TaskGroupService {
         }),
       );
 
+      print(
+          'TaskGroupService: Got status code ${response.statusCode} for task update');
+
+      if (response.statusCode != 200) {
+        print('TaskGroupService: Error response body: ${response.body}');
+      }
+
       return response.statusCode == 200;
     } catch (e) {
-      print('Error updating task: $e');
+      print('TaskGroupService: Exception in updateTaskStatus: $e');
       return false;
     }
   }
