@@ -11,6 +11,7 @@ import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/utils/image_utils.dart';
 import 'package:http/http.dart' as http;
 
 // Custom exception to handle partial success
@@ -240,11 +241,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF7400B8),
                         foregroundColor: Colors.white,
-                        minimumSize: Size(double.infinity, 54),
+                        minimumSize: const Size(double.infinity, 54),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 0,
+                        elevation: 5,
                       ),
                       onPressed: () async {
                         try {
@@ -294,7 +295,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildImprovedProfileSection() {
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
           // subtle and professional color scheme
           color: Colors.white),
       child: Column(
@@ -319,20 +320,23 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.white,
-                  backgroundImage: profileImageUrl.isNotEmpty
-                      ? NetworkImage(profileImageUrl,
-                          headers: {'Cache-Control': 'no-cache'})
-                      : null,
-                  child: profileImageUrl.isEmpty
-                      ? const Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Color(0xFF7400B8),
-                        )
-                      : null,
+                child: ClipOval(
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: profileImageUrl.isNotEmpty
+                        ? ImageUtils.networkImageWithFallback(
+                            url:
+                                '$profileImageUrl&t=${DateTime.now().millisecondsSinceEpoch}',
+                            width: 100,
+                            height: 100,
+                          )
+                        : ImageUtils.defaultProfileAvatar(
+                            width: 100,
+                            height: 100,
+                            iconColor: const Color(0xFF7400B8),
+                          ),
+                  ),
                 ),
               ),
               GestureDetector(
@@ -599,7 +603,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final file = File(image.path);
       final String fileExt = image.path.split('.').last;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final String fileName = 'avatar_${userId}_$timestamp.$fileExt';
+      final String fileName = 'avatar_${userId}.$fileExt';
 
       debugPrint('Uploading new avatar: $fileName');
 
@@ -612,8 +616,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
       debugPrint('Uploaded image URL with cache-buster: $imageUrl');
 
-      await precacheImage(NetworkImage(imageUrl), context);
+      // Clear image cache before setting new image
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
 
+      // Update state with new image URL
       setState(() {
         profileImageUrl = imageUrl;
       });
