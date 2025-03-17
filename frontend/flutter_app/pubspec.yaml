@@ -52,6 +52,7 @@ dependencies:
   shared_preferences: ^2.5.2
   disk_space_plus: ^0.2.4
   battery_plus: ^6.2.1
+  ffmpeg_kit_flutter: ^6.0.3
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app
