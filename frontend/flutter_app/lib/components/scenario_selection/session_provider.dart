@@ -247,16 +247,42 @@ class SessionProvider with ChangeNotifier {
     }
   }
 
-  // Get filtered sessions (all or favorites only)
-  List<Map<String, dynamic>> getFilteredSessions({bool favoritesOnly = false}) {
-    // Ensure we're working with the correct format
-    final safeList = sessions;
+  // Add this method to filter sessions with search capabilities:
 
+  List<Map<String, dynamic>> getFilteredSessions({
+    bool favoritesOnly = false,
+    String searchQuery = '',
+  }) {
+    List<Map<String, dynamic>> result = List.from(sessions);
+
+    // Filter by favorites if needed
     if (favoritesOnly) {
-      return safeList
-          .where((session) => session['is_favorite'] == true)
-          .toList();
+      result =
+          result.where((session) => session['is_favorite'] == true).toList();
     }
-    return safeList;
+
+    // Filter by search query if provided
+    if (searchQuery.isNotEmpty) {
+      final query = searchQuery.toLowerCase();
+      result = result.where((session) {
+        final name = (session['name'] ?? '').toLowerCase();
+        final topic = (session['topic'] ?? '').toLowerCase();
+
+        return name.contains(query) || topic.contains(query);
+      }).toList();
+    }
+
+    // Sort by creation date, newest first
+    result.sort((a, b) {
+      final dateA = a['created_at'] != null
+          ? DateTime.parse(a['created_at'])
+          : DateTime.now();
+      final dateB = b['created_at'] != null
+          ? DateTime.parse(b['created_at'])
+          : DateTime.now();
+      return dateB.compareTo(dateA);
+    });
+
+    return result;
   }
 }
