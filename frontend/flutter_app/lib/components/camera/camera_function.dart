@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import '../../services/upload/upload_service.dart';
+import '../../services/supabase/supabase_service.dart';
 
 class CameraFunctions {
   // Camera variables
@@ -113,7 +114,8 @@ class CameraFunctions {
     final camera = cameras[cameraIndex];
     controller = CameraController(
       camera,
-      ResolutionPreset.high,
+      //set to medium 480p resolution can try changing to high 720p
+      ResolutionPreset.medium,
       enableAudio: true,
       imageFormatGroup: Platform.isAndroid
           ? ImageFormatGroup.nv21
@@ -310,6 +312,20 @@ class CameraFunctions {
         StreamSubscription? statusSubscription;
         final completer = Completer<bool>();
 
+        final userId =  SupabaseService().currentUserId;
+        if(userId == null) {
+          print('User ID not found');
+          return false;
+        }
+        //fetching report ID from supabase
+        final response = await SupabaseService().client
+          .from('UserReport')
+          .select('reportId')
+          .eq('userId', userId)
+          .single();
+
+        final reportId = response['reportId'];
+
         statusSubscription = UploadService().statusStream.listen((status) {
           // Check for completion status with our recording ID in the message
           if (status['status'] == 'complete' &&
@@ -326,6 +342,7 @@ class CameraFunctions {
         UploadService().uploadVideo(
           videoFile: videoFile,
           metadata: videoMetaData,
+          reportId: reportId,
         );
         print('Video queued for upload: $videoFilePath');
 
