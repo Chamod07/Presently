@@ -1,13 +1,12 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_app/components/tasks/task_group.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_app/services/api_client.dart';
+import 'package:flutter_app/services/http_service.dart';
 
 class TaskGroupService {
-  final ApiClient _apiClient = ApiClient();
+  final HttpService _httpService = HttpService();
 
   // Choose the right URL based on platform
   String get baseUrl {
@@ -36,19 +35,8 @@ class TaskGroupService {
   // Fetch detailed information for a specific task group
   Future<Map<String, dynamic>> getTaskGroupDetails(String reportId) async {
     try {
-      final token = getAuthToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/report/details?report_id=$reportId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final url = '$baseUrl/report/details?report_id=$reportId';
+      final response = await _httpService.get(url);
 
       print('Response status for details: ${response.statusCode}');
 
@@ -67,7 +55,8 @@ class TaskGroupService {
   // Fetch task groups from backend
   Future<List<TaskGroup>> getTaskGroups() async {
     try {
-      final response = await _apiClient.get('/task-assign/report');
+      final url = '$baseUrl/report';
+      final response = await _httpService.get(url);
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
@@ -108,7 +97,7 @@ class TaskGroupService {
                       : [],
                   points: task['points'],
                   durationSeconds:
-                      task['duration'], // Note: using 'duration' from backend
+                      task['duration'], // Using 'duration' from backend
                 );
               }).toList();
 
@@ -140,8 +129,8 @@ class TaskGroupService {
   // Get tasks for a specific group using the new endpoint
   Future<List<Task>> getTasksForGroup(String reportId) async {
     try {
-      final response = await _apiClient
-          .get('/task-assign/report/details?report_id=$reportId');
+      final url = '$baseUrl/report/details?report_id=$reportId';
+      final response = await _httpService.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -156,8 +145,7 @@ class TaskGroupService {
                 ? List<String>.from(task['instructions'])
                 : [],
             points: task['points'],
-            durationSeconds:
-                task['duration'], // Changed to match backend field name
+            durationSeconds: task['duration'], // Using 'duration' from backend
           );
         }).toList();
       } else {
@@ -171,12 +159,7 @@ class TaskGroupService {
   // Get todo tasks for a specific group
   Future<List<Task>> getTodoTasksForGroup(String reportId) async {
     try {
-      final token = getAuthToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
-
-      // Use the new consolidated endpoint
+      // Use the consolidated endpoint
       final details = await getTaskGroupDetails(reportId);
       List<dynamic> tasksList = details['tasks']['todo'] ?? [];
 
@@ -195,12 +178,7 @@ class TaskGroupService {
   // Get completed tasks for a specific group
   Future<List<Task>> getCompletedTasksForGroup(String reportId) async {
     try {
-      final token = getAuthToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
-
-      // Use the new consolidated endpoint
+      // Use the consolidated endpoint
       final details = await getTaskGroupDetails(reportId);
       List<dynamic> tasksList = details['tasks']['completed'] ?? [];
 
@@ -219,14 +197,14 @@ class TaskGroupService {
   Future<void> updateTaskStatus(
       String reportId, String taskId, bool isCompleted) async {
     try {
-      await _apiClient.post(
-        '/task-assign/update-task-status',
-        body: {
-          'reportId': reportId,
-          'taskId': taskId,
-          'isCompleted': isCompleted,
-        },
-      );
+      final url = '$baseUrl/update-task-status';
+      final body = jsonEncode({
+        'reportId': reportId,
+        'taskId': taskId,
+        'isCompleted': isCompleted,
+      });
+
+      await _httpService.post(url, body: body);
     } catch (e) {
       throw Exception('Failed to update task status: $e');
     }
@@ -235,7 +213,8 @@ class TaskGroupService {
   // Fetch overall progress directly from the backend
   Future<double> getOverallProgress() async {
     try {
-      final response = await _apiClient.get('/task-assign/overall-progress');
+      final url = '$baseUrl/overall-progress';
+      final response = await _httpService.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
