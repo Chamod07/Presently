@@ -93,7 +93,7 @@ def generate_posture_report(video_path):
 
     # Generate timestamp for report
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_filename = f"posture_analysis_report_{timestamp}.txt"
+    report_filename = f"res/report/posture_analysis_report_{timestamp}.txt"
 
     # Write report
     with open(report_filename, 'w') as report_file:
