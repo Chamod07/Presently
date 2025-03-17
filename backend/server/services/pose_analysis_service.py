@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import os
 import math
 from datetime import datetime
 
@@ -17,6 +18,12 @@ def analyze_posture(video_path):
     # Initialize MediaPipe Pose
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
+
+    # Check if the video file exists
+    if not os.path.exists(video_path):
+        return {
+            'error': f"Video file not found at path: {video_path}"
+        }
 
     # Open video
     cap = cv2.VideoCapture(video_path)
@@ -88,7 +95,15 @@ def analyze_posture(video_path):
 
 
 def generate_posture_report(video_path):
+
+    if not os.path.exists(video_path):
+        return {
+            'error': f"Video file not found at path: {video_path}"
+
+        }
+
     # Analyze posture
+
     analysis_results = analyze_posture(video_path)
 
     # Generate timestamp for report
@@ -125,4 +140,4 @@ def generate_posture_report(video_path):
     return report_filename
 
 # Example usage
-generate_posture_report('video.mp4')
+#generate_posture_report('../res/video/temp_lvideo.mp4')

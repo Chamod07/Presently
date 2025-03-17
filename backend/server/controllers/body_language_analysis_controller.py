@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from services.auth_service import get_current_user_id
-from services import storage_service, pose_analysis
+from services import storage_service, pose_analysis_service
 
 router = APIRouter(tags=["Body Language Analysis"])
 
@@ -8,7 +8,6 @@ router = APIRouter(tags=["Body Language Analysis"])
 async def get_body_language_score(
     report_id: str = Query(..., description="Report ID"), 
     user_id: str = Depends(get_current_user_id)):
-    
     response = storage_service.supabase.table("UserReport") \
         .select("scoreBodyLanguage") \
         .eq("reportId", report_id) \
@@ -35,9 +34,9 @@ async def get_body_language_weaknesses(
     return {"weaknessTopics": response.data[0]["weaknessTopicsBodylan"]}
 
 @router.get("/analyze_video")
-async def analyze_video(user_id: str = Depends(get_current_user_id)):
+async def analyze_video():
     try:
-        report_path = pose_analysis.generate_posture_report("res/video/temp_video.mp4")
+        report_path = pose_analysis_service.generate_posture_report('res/video/temp_video.mp4')
         return {"report_path": report_path}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
