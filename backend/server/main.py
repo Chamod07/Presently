@@ -41,6 +41,7 @@ app.add_middleware(
     expose_headers=["*"],  # This is important for proper CORS operation
 )
 
+# Register all API routes
 app.include_router(task_assign_router, prefix="/api/task-assign", tags=["task assign"])
 app.include_router(auth.router, prefix="/api/auth")
 app.include_router(upload.router, tags=["upload"])
@@ -50,7 +51,7 @@ app.include_router(body_language_router, prefix="/api/analyser/body-language", t
 app.include_router(voice_router, prefix="/api/analyser/voice", tags=["Voice Analysis"])
 app.include_router(video_process_router, prefix="/api/process/video", tags=["Video Processing"])
 app.include_router(audio_process_router, prefix="/api/process/audio", tags=["Audio Processing"])
-app.include_router(main_controller, prefix="/api/process/main", tags=["Main Processing"])
+app.include_router(main_controller, prefix="/api/process", tags=["Process Controller"])
 app.include_router(report_router, prefix="/api/report", tags=["Report"])
 
 if __name__ == "__main__":
