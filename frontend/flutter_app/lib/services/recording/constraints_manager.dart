@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'recording_constraints.dart';
 import 'storage_check.dart';
 import 'battery_monitor.dart';

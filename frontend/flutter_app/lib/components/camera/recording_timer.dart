@@ -24,7 +24,7 @@ class RecordingTimer extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: isRecording
-            ? (isWarning ? Colors.orange.withOpacity(0.8) : Colors.red.withOpacity(0.7))
+            ? (isWarning ? const Color(0xCCFF9800): const Color(0xB3FF0000))
             : Colors.black45,
         borderRadius: BorderRadius.circular(20),
       ),

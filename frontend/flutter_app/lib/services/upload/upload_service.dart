@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase/supabase_service.dart';
@@ -70,7 +69,7 @@ class UploadService {
   Future<void> uploadVideo({
     required File videoFile,
     required Map<String, dynamic> metadata,
-    required String reportId,
+    //required String reportId,
   }) async {
     if (!_supabaseService.isInitialized) {
       debugPrint('Error: Supabase is not initialized');
@@ -81,9 +80,9 @@ class UploadService {
     // Create a unique upload ID and file path
     final userId = _supabaseService.currentUserId ?? 'anonymous';
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final folderPath = 'user_${userId}/presentation_${reportId}';
-    final fileName = '$folderPath/video_${reportId}.mp4';
-    final metadataFileName = 'user_${userId}/presentation_${reportId}_at_${timestamp}_metadata.json';
+    final folderPath = 'user_${userId}/presentation_${timestamp}';
+    final fileName = '$folderPath/video_${timestamp}.mp4';
+    final metadataFileName = 'user_${userId}/presentation_(reportId)_at_${timestamp}_metadata.json';
     final uploadId = 'upload_$timestamp';
 
     // Check if the file needs chunking

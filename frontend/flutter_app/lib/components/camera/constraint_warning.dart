@@ -12,7 +12,7 @@ class ConstraintWarning extends StatelessWidget {
       case ConstraintViolation.insufficientStorage:
         return _buildWarning(
             'Not enough storage space',
-            'Free up at least 500MB to record presentations',
+            'Free up at least 200MB to record presentations',
             Icons.storage,
             Colors.red
         );

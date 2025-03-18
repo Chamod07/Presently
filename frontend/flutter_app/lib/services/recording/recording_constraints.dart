@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+
 
 class RecordingConstraints {
   // Maximum recording time in seconds
-  static const int maxRecordingDuration = 300; // 5 minutes
+  static const int maxRecordingDuration = 120; // 5 minutes
 
   // Minimum recording time in seconds
   static const int minRecordingDuration = 30; // 30 seconds

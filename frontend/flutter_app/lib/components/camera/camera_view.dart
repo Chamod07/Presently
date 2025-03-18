@@ -2,8 +2,10 @@ import 'dart:io';
 import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/services/recording/constraints_manager.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import './camera_function.dart';
+import 'recording_timer.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -37,6 +39,8 @@ class _CameraViewState extends State<CameraView> {
   // Camera functionality handler
   late CameraFunctions _cameraFunctions;
 
+  late ConstraintsManager _constraintsManager;
+  StreamSubscription? _constraintsSubscription;
   @override
   void initState() {
     super.initState();
@@ -50,8 +54,75 @@ class _CameraViewState extends State<CameraView> {
       onCameraLensDirectionChanged: widget.onCameraLensDirectionChanged,
       initialCameraLensDirection: widget.initialCameraLensDirection,
     );
+    //initialize constrains manager
+    _constraintsManager = ConstraintsManager();
+
+    _constraintsSubscription = _constraintsManager.constraintStream.listen(_handleConstraintViolation);
 
     _initialize();
+  }
+
+  Future<void> _handleConstraintViolation(ConstraintViolation violation) async{
+    String message = '';
+    switch (violation) {
+      case ConstraintViolation.insufficientStorage:
+        message = 'Insufficient storage space';
+        break;
+      case ConstraintViolation.lowBattery:
+        message = 'Low battery';
+        break;
+      case ConstraintViolation.maxDurationExceeded:
+        message = 'Maximum recording duration exceeded';
+        break;
+      default:
+        break;
+    }
+
+    showNotification(message);
+
+    if(violation == ConstraintViolation.maxDurationExceeded && _isRecording){
+      try{
+        setState(() {
+          _isRecording = false;
+          _cameraFunctions.isRecording = false;
+          _cameraFunctions.stopTimer();
+        });
+
+        final videoFile = await _cameraFunctions.controller?.stopVideoRecording();
+
+        if(videoFile != null){
+          await _cameraFunctions.processRecording(videoFile);
+
+          bool uploadSuccess = await _cameraFunctions.videoUpload();
+
+          if(uploadSuccess){
+            _dismissNotification();
+            _cameraFunctions.videoMetaData['uploadSuccess'] = true;
+          }
+          else{
+            showNotification("Error saving video");
+          }
+          await _stopLiveFeed();
+          Navigator.pushReplacementNamed(
+            context,
+            '/summary',
+            arguments: {
+              'selectedIndex': 1,
+              'videoPath': _cameraFunctions.videoFilePath,
+              'metadata': _cameraFunctions.videoMetaData,
+            }
+          );
+        }
+      }
+      catch(e){
+        print("Error handling max duration: $e");
+        showNotification("Error processing video");
+        _stopLiveFeed().then((_) {
+          Navigator.pushReplacementNamed(context, '/summary');
+        });
+      }
+    }
+
   }
 
   void _initialize() async {
@@ -60,6 +131,8 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   void dispose() {
+    _constraintsSubscription?.cancel();
+    _constraintsManager.dispose();
     _stopLiveFeed();
     super.dispose();
   }
@@ -139,31 +212,8 @@ class _CameraViewState extends State<CameraView> {
     child: AnimatedOpacity(
       opacity: _isRecording ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 300),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.circle,
-              color: Colors.red,
-              size: 12,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _cameraFunctions.formatTime(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ],
+      child: Center(
+        child: RecordingTimer(durationSeconds: _cameraFunctions.seconds, isRecording: _isRecording,
         ),
       ),
     ),
@@ -416,7 +466,7 @@ class _CameraViewState extends State<CameraView> {
                 _cameraFunctions.isRecording = false;
                 _cameraFunctions.stopTimer();
               });
-
+              _constraintsManager.stopMonitoring();
               try {
                 // Show processing notification
                 showNotification("Processing video...");
