@@ -14,6 +14,13 @@ from controllers.audio_process_controller import router as audio_process_router
 from controllers.main_process_controller import router as main_controller
 from controllers.report_controller import router as report_router
 from routers import auth, upload
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 
 load_dotenv()  # Load environment variables from .env

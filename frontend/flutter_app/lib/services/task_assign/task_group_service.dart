@@ -129,12 +129,26 @@ class TaskGroupService {
   // Get tasks for a specific group using the new endpoint
   Future<List<Task>> getTasksForGroup(String reportId) async {
     try {
-      final url = '$baseUrl/report/details?report_id=$reportId';
-      final response = await _httpService.get(url);
+      print('TaskGroupService: Fetching tasks for report ID: $reportId');
+      final token = getAuthToken();
+      if (token == null) {
+        print('TaskGroupService: No auth token available');
+        throw Exception('Authentication required');
+      }
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final tasks = data['tasks']['all'] as List<dynamic>;
+      // Check for valid reportId
+      if (reportId.isEmpty) {
+        print('TaskGroupService: Empty reportId provided');
+        throw Exception('Invalid report ID');
+      }
+
+      // Use the new consolidated endpoint
+      print('TaskGroupService: Getting task group details');
+      final details = await getTaskGroupDetails(reportId);
+
+      print('TaskGroupService: Parsing tasks from details');
+      List<dynamic> tasksList = details['tasks']['all'] ?? [];
+      print('TaskGroupService: Found ${tasksList.length} tasks in response');
 
         return tasks.map((task) {
           return Task(
@@ -152,7 +166,8 @@ class TaskGroupService {
         throw Exception('Failed to load tasks: ${response.reasonPhrase}');
       }
     } catch (e) {
-      throw Exception('Failed to fetch tasks: $e');
+      print('TaskGroupService: Error fetching tasks: $e');
+      throw Exception('Failed to load tasks: $e');
     }
   }
 
@@ -197,35 +212,43 @@ class TaskGroupService {
   Future<void> updateTaskStatus(
       String reportId, String taskId, bool isCompleted) async {
     try {
-      final url = '$baseUrl/update-task-status';
-      final body = jsonEncode({
-        'reportId': reportId,
-        'taskId': taskId,
-        'isCompleted': isCompleted,
-      });
-
-      await _httpService.post(url, body: body);
-    } catch (e) {
-      throw Exception('Failed to update task status: $e');
-    }
-  }
-
-  // Fetch overall progress directly from the backend
-  Future<double> getOverallProgress() async {
-    try {
-      final url = '$baseUrl/overall-progress';
-      final response = await _httpService.get(url);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return (data['overallProgressPercentage'] ?? 0.0) /
-            100.0; // Convert to decimal
-      } else {
-        throw Exception(
-            'Failed to load overall progress: ${response.reasonPhrase}');
+      print(
+          'TaskGroupService: Updating task "$taskId" to ${isCompleted ? "completed" : "not completed"}');
+      final token = getAuthToken();
+      if (token == null) {
+        print('TaskGroupService: No auth token available for task update');
+        return false;
       }
+
+      // Log the request being made
+      print('TaskGroupService: Making API call to update task status');
+      print(
+          'TaskGroupService: reportId=$reportId, taskId=$taskId, isCompleted=$isCompleted');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/report/task/update'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'reportId': reportId,
+          'taskId': taskId,
+          'isDone': isCompleted,
+        }),
+      );
+
+      print(
+          'TaskGroupService: Got status code ${response.statusCode} for task update');
+
+      if (response.statusCode != 200) {
+        print('TaskGroupService: Error response body: ${response.body}');
+      }
+
+      return response.statusCode == 200;
     } catch (e) {
-      throw Exception('Failed to fetch overall progress: $e');
+      print('TaskGroupService: Exception in updateTaskStatus: $e');
+      return false;
     }
   }
 }
