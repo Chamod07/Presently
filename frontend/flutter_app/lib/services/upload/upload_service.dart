@@ -82,7 +82,7 @@ class UploadService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final folderPath = 'user_${userId}/presentation_${timestamp}';
     final fileName = '$folderPath/video_${timestamp}.mp4';
-    final metadataFileName = 'user_${userId}/presentation_(reportId)_at_${timestamp}_metadata.json';
+    final metadataFileName = '$folderPath/metadata.json';
     final uploadId = 'upload_$timestamp';
 
     // Check if the file needs chunking
