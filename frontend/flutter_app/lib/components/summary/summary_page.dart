@@ -6,6 +6,7 @@ import 'package:flutter_app/providers/report_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 
+
 import '../../models/report.dart';
 
 class SummaryPage extends StatefulWidget {
