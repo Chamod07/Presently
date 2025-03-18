@@ -372,6 +372,49 @@ def analyze_posture(video_path, calibration_seconds=3):
                         # Handle case where landmarks might be detected but not accurate
                         pass
                 
+                # For gesture analysis
+                try:
+                    from services.gesture_analysis_service import analyze_hand_gestures
+                    gesture_data = analyze_hand_gestures(landmarks, frame_count)
+                    if gesture_data:
+                        frame_data.update(gesture_data)
+                        
+                        # Store in history for analysis
+                        if 'gesture_metrics' not in analysis_results:
+                            analysis_results['gesture_metrics'] = []
+                        analysis_results['gesture_metrics'].append(gesture_data)
+                except Exception as e:
+                    print(f"Warning: Error in gesture analysis: {e}")
+                
+                # For movement analysis (requires pose history)
+                if frame_count % 5 == 0:  # Analyze every 5th frame for efficiency
+                    try:
+                        from services.movement_analysis_service import analyze_presenter_movement
+                        if 'pose_history' not in locals():
+                            pose_history = []
+                        
+                        # Add current pose to history
+                        pose_data = {'frame': frame_count, 'hip_center': [0, 0]}
+                        if visibility['lower_body_visible']:
+                            left_hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP].x, 
+                                      landmarks[mp_pose.PoseLandmark.LEFT_HIP].y]
+                            right_hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP].x, 
+                                       landmarks[mp_pose.PoseLandmark.RIGHT_HIP].y]
+                            pose_data['hip_center'] = [(left_hip[0] + right_hip[0])/2, 
+                                                    (left_hip[1] + right_hip[1])/2]
+                        
+                        pose_history.append(pose_data)
+                        
+                        # Process movement after collecting enough frames
+                        if len(pose_history) >= 10:
+                            movement_data = analyze_presenter_movement(
+                                pose_history, frame_count, frame_rate)
+                            if movement_data:
+                                if 'movement_metrics' not in analysis_results:
+                                    analysis_results['movement_metrics'] = movement_data
+                    except Exception as e:
+                        print(f"Warning: Error in movement analysis: {e}")
+
                 # Store frame metrics if we have valid measurements
                 if len(frame_data) > 1:  # More than just the frame number
                     frame_metrics.append(frame_data)
