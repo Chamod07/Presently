@@ -7,6 +7,10 @@ import datetime
 import uuid
 from fastapi import status
 from services.auth_service import get_current_user_id
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
@@ -26,9 +30,15 @@ async def analyze_grammar(request: Request):
         try:
             uuid.UUID(report_id, version=4)
         except ValueError:
+            logger.error(f"Invalid reportId format: {report_id}")
             raise HTTPException(status_code=400, detail="Invalid reportId format")
 
-        analysis_results = analyzer.analyze_grammar(transcription)
+        try:
+            analysis_results = analyzer.analyze_grammar(transcription)
+        except Exception as e:
+            logger.error(f"Error during grammar analysis: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+            
 
         user_report = UserReport(
             reportId=report_id,
