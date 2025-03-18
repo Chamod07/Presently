@@ -33,10 +33,10 @@ async def get_body_language_weaknesses(
 
     return {"weaknessTopics": response.data[0]["weaknessTopicsBodylan"]}
 
-@router.get("/analyze_video")
-async def analyze_video():
+@router.post("/analyze_video")
+async def analyze_video(report_id: str = Query(...)):
     try:
-        report_path = pose_analysis_service.generate_posture_report('res/video/temp_video.mp4')
+        report_path = pose_analysis_service.generate_posture_report(f'res/video/{report_id}_video.mp4',report_id)
         return {"report_path": report_path}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

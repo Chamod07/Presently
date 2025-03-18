@@ -9,8 +9,8 @@ router = APIRouter()
 async def convert_to_mp3(report_id: str = Query(...)):
     try:
         # Define input and output file paths
-        input_video_path = "res/video/temp_video.mp4"
-        output_audio_path = "res/audio/converted_audio.mp3"
+        input_video_path = f"res/video/{report_id}_video.mp4"
+        output_audio_path = f"res/audio/{report_id}_audio.mp3"
         
         #create directories if they don't exist
         os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
@@ -42,7 +42,7 @@ async def convert_to_mp3(report_id: str = Query(...)):
 async def transcribe(report_id: str = Query(...)):
     try:
         # Define the audio file path
-        audio_file_path = "res/audio/converted_audio.mp3"
+        audio_file_path = f"res/audio/{report_id}_audio.mp3"
 
         # Transcribe the audio
         transcription, _ = transcribe_audio(audio_file_path)
@@ -50,7 +50,7 @@ async def transcribe(report_id: str = Query(...)):
         if not transcription:
             raise HTTPException(status_code=404, detail="Transcription failed or returned empty.")
 
-        output_file = "res/transcription/transcription.txt"
+        output_file = f"res/transcription/{report_id}_transcription.txt"
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(transcription)

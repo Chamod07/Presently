@@ -69,7 +69,7 @@ async def analyze_grammar(request: Request):
                 #"updatedAt": datetime.datetime.now().isoformat()
             }
             
-            print(f"\nUpdating grammar fields for report {report_id}: {update_data}")
+            print(f"\nUpdating grammar fields for report {report_id}")
             response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
             print(f"Update result: {response.data}")
             if response.data and "error" in response.data:

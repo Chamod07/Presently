@@ -23,20 +23,19 @@ async def process_video(video_url: str, report_id: str = Query(...)):
             transcribe_response.raise_for_status()
             transcription = transcribe_response.json()["transcription"]
 
-            # Analyze pose
-            # Analyze pose
-            pose_analysis_url = "http://localhost:8000/api/analyser/body/analyze_video"
+            # 4. Analyze pose
+            pose_analysis_url = f"http://localhost:8000/api/analyser/body-language/analyze_video?report_id={report_id}"
             pose_response = await client.post(pose_analysis_url)
             pose_response.raise_for_status()
 
-            # 4. Analyze context
+            # 5. Analyze context
             context_analysis_url = "http://localhost:8000/api/analyser/context/analyze"
             context_payload = {"transcription": transcription, "reportId": report_id}
             context_response = await client.post(context_analysis_url, json=context_payload)
             context_response.raise_for_status()
             
 
-            # 5. Analyze grammar
+            # 6. Analyze grammar
             grammar_analysis_url = "http://localhost:8000/api/analyser/grammar/analyze"
             grammar_payload = {"transcription": transcription, "reportId": report_id}
             grammar_response = await client.post(grammar_analysis_url, json=grammar_payload)
