@@ -1,1 +1,0 @@
- This is the second on device audio test on project presently and the audio test from the emulator was a success but the audio was shockingly shit. Let's hope that the test on the mobile device works fine.

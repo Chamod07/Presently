@@ -4,6 +4,14 @@ import os
 import uuid
 from services import storage_service
 import re
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -13,16 +21,22 @@ async def download_video(video_url: str, report_id: str = Query(...)):
     try:
         uuid.UUID(report_id, version=4)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid reportId format")
+        error_msg = f"Invalid reportId format: {report_id}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
 
     # Check if report_id exists in Supabase
     report_exists = storage_service.supabase.table("UserReport").select("reportId").eq("reportId", report_id).execute()
     if not report_exists.data:
-        raise HTTPException(status_code=404, detail="Report ID not found")
+        error_msg = f"Report ID not found: {report_id}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=404, detail=error_msg)
 
     # Basic URL validation
     if not re.match(r"^https?://", video_url):
-        raise HTTPException(status_code=400, detail="Invalid video URL format")
+        error_msg = f"Invalid video URL format: {video_url}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
     
     try:
         # Download the video file
@@ -42,6 +56,14 @@ async def download_video(video_url: str, report_id: str = Query(...)):
         return {"message": f"Successfully downloaded video. File saved at: {video_path}"}
 
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Failed to download video: {e}")
+        error_msg = f"Failed to download video: {e}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
+        
     except HTTPException as e:
+        logger.error(e.detail)
         raise
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)

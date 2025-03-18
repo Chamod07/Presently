@@ -21,7 +21,7 @@ def transcribe_audio(file_path):
     # Extract transcription and segments
     transcription = result['text']
     segments = result.get('segments', [])
-    print("Transcription completed.")
+    #print("Transcription completed.")
 
     return transcription, segments
 
