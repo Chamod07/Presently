@@ -1,9 +1,13 @@
 import os
 import json
+# noinspection PyUnresolvedReferences
 import google.generativeai as genai
 from dotenv import load_dotenv
 from typing import Dict, Any
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GeminiContextAnalyzer:
     def __init__(self):
@@ -61,8 +65,8 @@ class GeminiContextAnalyzer:
 
         try:
             response = self.model.generate_content(prompt)
-            print("\nRaw Gemini Response:")
-            print(response.text)
+            #print("\nRaw Gemini Response:")
+            #print(response.text)
             print("\nAttempting to parse response...")
             
             # Clean the response text to ensure it's valid JSON
@@ -73,10 +77,10 @@ class GeminiContextAnalyzer:
             return json.loads(response_text)
             
         except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {str(e)}")
+            logger.error(f"JSON parsing error: {str(e)}")
             raise
         except Exception as e:
-            print(f"Error in API response: {str(e)}")
+            logger.error(f"Error in API response: {str(e)}")
             raise
 
 def main():

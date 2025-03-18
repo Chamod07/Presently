@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_app/utils/url_utils.dart';
 
 /// A service class that provides a centralized Supabase client instance
 /// and authentication functionality for the application.
@@ -44,7 +45,7 @@ class SupabaseService {
   /// Get the Supabase client instance
   SupabaseClient get client {
     assert(_initialized,
-    'Supabase must be initialized before accessing the client');
+        'Supabase must be initialized before accessing the client');
     return Supabase.instance.client;
   }
 
@@ -96,6 +97,96 @@ class SupabaseService {
   Future<void> signOut() async {
     if (_initialized) {
       await client.auth.signOut();
+    }
+  }
+
+  /// Get the avatar URL for the given user ID or current user
+  /// Returns null if no avatar is found
+  String? getAvatarUrl({String? userId}) {
+    if (!_initialized) return null;
+
+    userId ??= currentUserId;
+    if (userId == null) return null;
+
+    // Try a deterministic approach - always return the most likely format first (.jpg)
+    // This is better than checking for existence because it avoids network requests
+    try {
+      // Always use jpg by default as it's most common
+      final defaultExt = 'jpg';
+      final url = client.storage
+          .from('avatars')
+          .getPublicUrl('avatar_$userId.$defaultExt');
+
+      // Return URL with cache buster
+      return addCacheBusterToUrl(url);
+    } catch (e) {
+      // If specific file fetch fails, rely on our fallback mechanism
+      debugPrint('Using fallback mechanism to find avatar: ${e.toString()}');
+
+      // Try other extensions as fallback
+      try {
+        final extensions = ['jpeg', 'png', 'gif', 'webp'];
+        for (final ext in extensions) {
+          try {
+            final url = client.storage
+                .from('avatars')
+                .getPublicUrl('avatar_$userId.$ext');
+
+            return addCacheBusterToUrl(url);
+          } catch (e) {
+            // Continue trying other extensions
+          }
+        }
+      } catch (e) {
+        debugPrint('Error with fallback avatar search: $e');
+      }
+    }
+
+    return null;
+  }
+
+  /// Deletes the current user account and all associated data using a database function
+  Future<bool> deleteUserAccount(String password) async {
+    try {
+      // First verify the password by signing in
+      final currentEmail = client.auth.currentUser?.email;
+      final userId = currentUserId;
+
+      if (currentEmail == null || userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Verify the password by signing in
+      final AuthResponse res = await client.auth.signInWithPassword(
+        email: currentEmail,
+        password: password,
+      );
+
+      if (res.session == null) {
+        throw Exception('Password is incorrect');
+      }
+
+      // Call the database function via RPC instead of using an Edge Function
+      final response = await client.rpc(
+        'delete_user',
+        params: {'input_user_id': userId},
+      );
+
+      // Log the response for debugging
+      debugPrint('Delete user response: $response');
+
+      // Check if deletion was successful
+      final success = response['success'] as bool? ?? false;
+
+      if (!success) {
+        final errorMessage = response['error'] as String? ?? 'Unknown error';
+        throw Exception('Failed to delete account: $errorMessage');
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting user account: $e');
+      throw e;
     }
   }
 }

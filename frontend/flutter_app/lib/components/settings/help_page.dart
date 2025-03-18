@@ -128,28 +128,42 @@ class _HelpPageState extends State<HelpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Help', style: TextStyle(fontFamily: 'Roboto')),
+        title: const Text(
+          'Help',
+          style: TextStyle(
+            fontFamily: 'Roboto',
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
         backgroundColor: Colors.white,
+        elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).primaryColor),
           onPressed: () => Navigator.pushReplacementNamed(context, '/settings'),
         ),
+        centerTitle: true,
       ),
-      body: SafeArea( child:
-      ListView.builder(
-        itemCount: _helpCategories.length,
-        itemBuilder: (context, categoryIndex) {
-          final category = _helpCategories[categoryIndex];
-          return _buildHelpSection(
-            context,
-            category['title'],
-            category['description'],
-            category['icon'],
-            category['items'],
-            categoryIndex,
-          );
-        },
-      ),
+      backgroundColor: const Color(0xFFF9F9F9),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: ListView.builder(
+            physics: const BouncingScrollPhysics(),
+            itemCount: _helpCategories.length,
+            itemBuilder: (context, categoryIndex) {
+              final category = _helpCategories[categoryIndex];
+              return _buildHelpSection(
+                context,
+                category['title'],
+                category['description'],
+                category['icon'],
+                category['items'],
+                categoryIndex,
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -162,70 +176,124 @@ class _HelpPageState extends State<HelpPage> {
     List<dynamic> items,
     int categoryIndex,
   ) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      color: Colors.white,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8.0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          ListTile(
-            title: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18.0,
-                fontFamily: 'Roboto',
-              ),
-            ),
-            subtitle: Text(
-              description,
-              style: const TextStyle(fontFamily: 'Roboto'),
-            ),
-            leading: Icon(
-              icon,
-              color: const Color(0xFF7400B8),
-              size: 36.0,
-            ),
-          ),
-          ExpansionPanelList(
-            expandedHeaderPadding: EdgeInsets.zero,
-            expansionCallback: (int index, bool isExpanded) {
-              setState(() {
-                _helpCategories[categoryIndex]['items'][index]['isExpanded'] =
-                    !isExpanded;
-              });
-            },
-            children: items.asMap().entries.map<ExpansionPanel>((entry) {
-              final int index = entry.key;
-              final Map<String, dynamic> item = entry.value;
-              return ExpansionPanel(
-                headerBuilder: (BuildContext context, bool isExpanded) {
-                  return ListTile(
-                    title: Text(
-                      item['title'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Roboto',
-                      ),
-                    ),
-                    subtitle: Text(
-                      item['summary'],
-                      style: const TextStyle(fontFamily: 'Roboto'),
-                    ),
-                  );
-                },
-                body: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 8.0),
-                  child: Text(
-                    item['detail'],
-                    style: const TextStyle(fontFamily: 'Roboto'),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7400B8).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: const Color(0xFF7400B8),
+                    size: 28.0,
                   ),
                 ),
-                isExpanded: item['isExpanded'],
-                canTapOnHeader: true,
-                backgroundColor: Colors.white,
+                const SizedBox(width: 16.0),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18.0,
+                          fontFamily: 'Roboto',
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                      const SizedBox(height: 4.0),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 14.0,
+                          color: Color(0xFF666666),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+          ListView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                elevation: 0,
+                margin: EdgeInsets.zero,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                ),
+                child: ExpansionTile(
+                  title: Text(
+                    item['title'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16.0,
+                      fontFamily: 'Roboto',
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  subtitle: Text(
+                    item['summary'],
+                    style: const TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 14.0,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  tilePadding: const EdgeInsets.all(16.0),
+                  iconColor: const Color(0xFF7400B8),
+                  collapsedIconColor: Colors.grey[600],
+                  childrenPadding:
+                      const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFAFAFA),
+                        borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                      ),
+                      child: Text(
+                        item['detail'],
+                        style: const TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 15.0,
+                          height: 1.5,
+                          color: Color(0xFF555555),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
-            }).toList(),
+            },
           ),
         ],
       ),

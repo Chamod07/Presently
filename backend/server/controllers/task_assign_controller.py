@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Body
 from pydantic import BaseModel
 from typing import List
 from services.task_assign_service import *
@@ -19,6 +19,11 @@ class TaskGroupDetailsResponse(BaseModel):
     completedCount: int
     pendingCount: int
     tasks: dict
+
+class TaskUpdateRequest(BaseModel):
+    reportId: str
+    taskId: str
+    isDone: bool
 
 # API endpoint to assign challenges to a report
 @router.post("/assign_challenges", response_model=ReportAssignmentResponse)
@@ -77,4 +82,32 @@ def get_task_group_details_endpoint(
         return task_group_details
     except Exception as e:
         logging.error(f"Error in /report/details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# API endpoint to update task status
+@router.post("/report/task/update")
+async def update_task_status_endpoint(
+    update_data: TaskUpdateRequest = Body(...),
+    user_id: str = Depends(get_current_user_id)
+):
+    try:
+        report_id = update_data.reportId
+        task_id = update_data.taskId
+        is_done = update_data.isDone
+        
+        if not report_id or not task_id:
+            raise HTTPException(status_code=400, detail="Missing required fields: reportId or taskId")
+            
+        # Verify user has access to this report
+        if not user_has_access_to_report(report_id, user_id):
+            raise HTTPException(status_code=403, detail="You don't have access to this report")
+            
+        result = update_task_status(report_id, task_id, is_done)
+        if result:
+            return {"success": True, "message": "Task status updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Task not found or status update failed")
+            
+    except Exception as e:
+        logging.error(f"Error in /report/task/update: {e}")
         raise HTTPException(status_code=500, detail=str(e))

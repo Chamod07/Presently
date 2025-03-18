@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/services.dart';
 
 class ContactSupportPage extends StatefulWidget {
   const ContactSupportPage({Key? key}) : super(key: key);
@@ -30,34 +32,56 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
       });
 
       try {
-        final Uri emailUri = Uri(
-          scheme: 'mailto',
-          path: 'chamodkarunathilake@gmail.com',
-          query:
-              'subject=Presently Support Request&body=Name: ${_nameController.text}\nEmail: ${_emailController.text}\n\n${_messageController.text}',
-        );
+        // Properly encode the email body content
+        final String encodedSubject =
+            Uri.encodeComponent("Presently Support Request");
+        final String encodedBody = Uri.encodeComponent(
+            "Name: ${_nameController.text}\nEmail: ${_emailController.text}\n\n${_messageController.text}");
 
-        if (await canLaunchUrl(emailUri)) {
-          await launchUrl(emailUri);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Email app opened successfully')),
-            );
-            _nameController.clear();
-            _emailController.clear();
-            _messageController.clear();
+        // Create different URIs based on platform for better compatibility
+        Uri emailUri;
+
+        if (Platform.isIOS) {
+          // iOS handles mailto URLs differently
+          emailUri = Uri.parse(
+              'mailto:presently.coach@gmail.com?subject=$encodedSubject&body=$encodedBody');
+        } else {
+          emailUri = Uri(
+            scheme: 'mailto',
+            path: 'presently.coach@gmail.com',
+            queryParameters: {
+              'subject': 'Presently Support Request',
+              'body':
+                  'Name: ${_nameController.text}\nEmail: ${_emailController.text}\n\n${_messageController.text}',
+            },
+          );
+        }
+
+        // Check if URL can be launched
+        final bool canLaunch = await canLaunchUrl(emailUri);
+
+        if (canLaunch) {
+          final bool launched = await launchUrl(emailUri);
+          if (launched) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Email app opened successfully')),
+              );
+              _nameController.clear();
+              _emailController.clear();
+              _messageController.clear();
+            }
+          } else {
+            throw 'Could not launch email client';
           }
         } else {
-          throw 'Could not launch email client';
+          // Fallback for when email client can't be launched
+          _showCopyToClipboardDialog();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error sending email: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          // Show fallback dialog instead of just an error message
+          _showCopyToClipboardDialog();
         }
       } finally {
         if (mounted) {
@@ -67,6 +91,63 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
         }
       }
     }
+  }
+
+  // New method to show a fallback dialog when email client cannot be launched
+  void _showCopyToClipboardDialog() {
+    final String messageText =
+        'Name: ${_nameController.text}\nEmail: ${_emailController.text}\n\n${_messageController.text}';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unable to open email app'),
+        content: const Text(
+            'We couldn\'t open your email app automatically. Would you like to copy your message to clipboard and send it manually to presently.coach@gmail.com?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7400B8),
+            ),
+            onPressed: () {
+              // Copy email information to clipboard
+              final String emailInfo = 'To: presently.coach@gmail.com\n'
+                  'Subject: Presently Support Request\n\n'
+                  '$messageText';
+
+              // Copy to clipboard functionality
+              // Using Flutter's Clipboard feature
+              Navigator.of(context).pop();
+              try {
+                // Import services package
+                // import 'package:flutter/services.dart';
+                // Clipboard.setData(ClipboardData(text: emailInfo));
+
+                // For now, show another snackbar with instructions
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'Please manually email us at presently.coach@gmail.com'),
+                    duration: Duration(seconds: 5),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Copy & Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

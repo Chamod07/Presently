@@ -1,39 +1,36 @@
 import 'package:flutter_app/services/supabase/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomePageService {
-  final SupabaseService _supabaseService = SupabaseService();
+  final client = Supabase.instance.client;
+  final supabaseService = SupabaseService();
 
   Future<Map<String, dynamic>?> getHomePageData() async {
-    if (!_supabaseService.isSignedIn) return null;
-
     try {
-      final userId = _supabaseService.currentUserId;
-      if (userId == null) {
-        print('User ID is null');
-        return null;
-      }
-      final profileResponse = await _supabaseService.client
+      // Get current user ID
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) return null;
+
+      // Get user details from database
+      final response = await client
           .from('UserDetails')
-          .select('firstName')
+          .select('firstName, role')
           .eq('userId', userId)
           .single();
 
-      final avatarResponse = await _supabaseService.client
-          .from('Profile')
-          .select('avatar_url')
-          .eq('userId', userId)
-          .maybeSingle();
+      if (response == null) return null;
+
+      // Get avatar URL using the centralized method
+      final avatarUrl = supabaseService.getAvatarUrl(userId: userId) ?? '';
 
       return {
-        'first_name': profileResponse['firstName'] ?? 'User',
-        'avatar_url': avatarResponse?['avatar_url'],
+        'first_name': response['firstName'] ?? '',
+        'role': response['role'] ?? '',
+        'avatar_url': avatarUrl,
       };
     } catch (e) {
-      print('Error getting home page data: $e');
-      return {
-        'first_name': 'User',
-        'avatar_url': null,
-      };
+      print('Error in getHomePageData: $e');
+      return null;
     }
   }
 }
