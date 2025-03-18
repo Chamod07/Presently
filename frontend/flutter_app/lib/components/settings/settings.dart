@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/screens/splash_screen.dart';
 import 'package:flutter_app/components/settings/about_page.dart';
 import 'package:flutter_app/components/settings/contact_support.dart';
 import 'package:flutter_app/components/settings/faq.dart';
@@ -68,29 +69,9 @@ class _SettingsPageState extends State<SettingsPage> {
         role = userDetailResponse['role'] ?? '';
       }
 
-      final extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      String? avatarUrl;
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-
-      // Get avatar URL
-      for (final ext in extensions) {
-        try {
-          final url =
-              '${_supabaseService.client.storage.from('avatars').getPublicUrl('avatar_$userId.$ext')}?t=$timestamp';
-
-          // Test if URL exists
-          final response = await http.head(Uri.parse(url));
-          if (response.statusCode == 200) {
-            avatarUrl = url;
-            break;
-          }
-        } catch (_) {
-          // Continue trying other extensions
-        }
-      }
-
+      // Use the centralized method to get avatar URL
+      final avatarUrl = _supabaseService.getAvatarUrl();
       if (avatarUrl != null) {
-        debugPrint('Found avatar URL: $avatarUrl');
         profileImageUrl = avatarUrl;
       }
     } catch (e) {
@@ -253,7 +234,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           if (context.mounted) {
                             Navigator.of(context).pushAndRemoveUntil(
                               MaterialPageRoute(
-                                  builder: (context) => SignInPage()),
+                                  builder: (context) => SplashScreen()),
                               (route) => false,
                             );
                           }
@@ -295,9 +276,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildImprovedProfileSection() {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-          // subtle and professional color scheme
-          color: Colors.white),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         children: [
           const SizedBox(height: 30),
@@ -327,7 +306,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: profileImageUrl.isNotEmpty
                         ? ImageUtils.networkImageWithFallback(
                             url:
-                                '$profileImageUrl&t=${DateTime.now().millisecondsSinceEpoch}',
+                                profileImageUrl, // Use directly, timestamp is already included
                             width: 100,
                             height: 100,
                           )
@@ -602,7 +581,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
       final file = File(image.path);
       final String fileExt = image.path.split('.').last;
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final String fileName = 'avatar_${userId}.$fileExt';
 
       debugPrint('Uploading new avatar: $fileName');
@@ -611,10 +589,10 @@ class _SettingsPageState extends State<SettingsPage> {
           .from('avatars')
           .upload(fileName, file, fileOptions: FileOptions(upsert: true));
 
-      final imageUrl =
-          '${_supabaseService.client.storage.from('avatars').getPublicUrl(fileName)}?t=$timestamp';
+      // Get the new avatar URL using the centralized method
+      final imageUrl = _supabaseService.getAvatarUrl();
 
-      debugPrint('Uploaded image URL with cache-buster: $imageUrl');
+      debugPrint('Uploaded image URL: $imageUrl');
 
       // Clear image cache before setting new image
       PaintingBinding.instance.imageCache.clear();
@@ -622,7 +600,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Update state with new image URL
       setState(() {
-        profileImageUrl = imageUrl;
+        profileImageUrl = imageUrl ?? '';
       });
 
       if (context.mounted) {

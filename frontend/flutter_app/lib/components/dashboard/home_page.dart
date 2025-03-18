@@ -45,16 +45,10 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           firstName = homePageData['first_name'];
 
-          // Get avatar URL with timestamp for cache busting
-          if (homePageData['avatar_url'] != null &&
-              homePageData['avatar_url'].isNotEmpty) {
-            final String baseUrl = homePageData['avatar_url'];
-            final String separator = baseUrl.contains('?') ? '&' : '?';
-            avatarUrl =
-                '$baseUrl${separator}t=${DateTime.now().millisecondsSinceEpoch}';
-          } else {
-            avatarUrl = null;
-          }
+          // Just use the avatar URL directly - it already has cache busting
+          avatarUrl = homePageData['avatar_url'].isNotEmpty
+              ? homePageData['avatar_url']
+              : null;
         });
       }
     } catch (e) {
@@ -172,8 +166,7 @@ class _HomePageState extends State<HomePage> {
                     height: 44, // 2*radius
                     child: avatarUrl != null && avatarUrl!.isNotEmpty
                         ? ImageUtils.networkImageWithFallback(
-                            url:
-                                '$avatarUrl&t=${DateTime.now().millisecondsSinceEpoch}',
+                            url: avatarUrl!, // Don't add extra timestamp
                             width: 44,
                             height: 44,
                           )
@@ -631,17 +624,19 @@ class _HomePageState extends State<HomePage> {
     required Map<String, dynamic> session,
     required String navigateTo,
   }) {
-    final String sessionName = session['name'];
+    // Add null safety to all session data fields
+    final String sessionName = session['name'] as String? ?? 'Untitled Session';
     final String sessionType = _formatSessionType(session['type']);
     final String audience = _formatAudience(session['audience']);
-    final bool isFavorite = session['is_favorite'] ?? false;
-    final String topic = session['topic'] ?? 'General Topic';
+    final bool isFavorite = session['is_favorite'] as bool? ?? false;
+    final String topic = session['topic'] as String? ?? 'General Topic';
 
     // Format the creation date
     String createdAt = 'Recently created';
     if (session['created_at'] != null) {
       try {
-        final DateTime dateTime = DateTime.parse(session['created_at']);
+        final DateTime dateTime =
+            DateTime.parse(session['created_at'] as String);
         final DateTime now = DateTime.now();
         final Duration difference = now.difference(dateTime);
 

@@ -1,7 +1,9 @@
+import 'package:flutter_app/services/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomePageService {
   final client = Supabase.instance.client;
+  final supabaseService = SupabaseService();
 
   Future<Map<String, dynamic>?> getHomePageData() async {
     try {
@@ -18,24 +20,8 @@ class HomePageService {
 
       if (response == null) return null;
 
-      // Check for avatar in multiple formats
-      String avatarUrl = '';
-      final extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-
-      for (final ext in extensions) {
-        try {
-          // Get public URL for potential avatar
-          final url = client.storage
-              .from('avatars')
-              .getPublicUrl('avatar_$userId.$ext');
-
-          // We'll add timestamp in the UI layer to ensure cache-busting
-          avatarUrl = url;
-          break;
-        } catch (e) {
-          // Continue trying other extensions
-        }
-      }
+      // Get avatar URL using the centralized method
+      final avatarUrl = supabaseService.getAvatarUrl(userId: userId) ?? '';
 
       return {
         'first_name': response['firstName'] ?? '',
