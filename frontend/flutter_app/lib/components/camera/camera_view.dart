@@ -97,6 +97,7 @@ class _CameraViewState extends State<CameraView> {
     if (CameraFunctions.cameras.isEmpty) return Container();
     if (_cameraFunctions.controller == null) return Container();
     if (_cameraFunctions.controller?.value.isInitialized == false) return Container();
+
     return ColoredBox(
       color: Colors.black,
       child: Stack(
@@ -494,25 +495,40 @@ class _CameraViewState extends State<CameraView> {
               border: Border.all(color: Colors.white, width: 5),
             ),
             child: Center(
-              child: AnimatedContainer(
-                duration: Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                width: _isRecording ? 40.0 : 74.0,
-                height: _isRecording ? 40.0 : 74.0,
-                decoration:
-                  _isRecording ? BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.rectangle,
-                    borderRadius: BorderRadius.circular(12),
-                ) : BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AnimatedOpacity(
+                    opacity: _isRecording ? 0.0 : 1.0,
+                    duration: Duration(milliseconds: 300),
+                    child: Container(
+                      width: 74.0,
+                      height: 74.0,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
+                  AnimatedOpacity(
+                      opacity: _isRecording ? 1.0 : 0.0,
+                      duration: Duration(milliseconds: 300),
+                    child: Container(
+                      width: 40.0,
+                      height: 40.0,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+
               ),
             ),
           ),
         ),
       ),
-    ),
   );
 }

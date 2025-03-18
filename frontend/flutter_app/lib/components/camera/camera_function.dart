@@ -30,6 +30,7 @@ class CameraFunctions {
   bool isFaceWellPositioned = true;
   bool isRecordingQualitySufficient = true;
 
+
   // Video data
   File? recordedVideoFile;
   Map<String, dynamic> videoMetaData = {};
@@ -167,6 +168,13 @@ class CameraFunctions {
   Future<void> stopLiveFeed() async {
     try {
       if (controller != null) {
+
+        final tempController = controller;
+        controller = null;
+
+        if(tempController!.value.isInitialized && tempController.value.isStreamingImages) {
+          await tempController.stopImageStream();
+        }
         // Check if controller is initialized and streaming before stopping
         if (controller!.value.isInitialized && controller!.value.isStreamingImages) {
           await controller!.stopImageStream();
@@ -318,13 +326,13 @@ class CameraFunctions {
           return false;
         }
         //fetching report ID from supabase
-        final response = await SupabaseService().client
-          .from('UserReport')
-          .select('reportId')
-          .eq('userId', userId)
-          .single();
+        // final response = await SupabaseService().client
+        //   .from('UserReport')
+        //   .select('reportId')
+        //   .eq('userId', userId)
+        //   .single();
 
-        final reportId = response['reportId'];
+        // final reportId = response['reportId'];
 
         statusSubscription = UploadService().statusStream.listen((status) {
           // Check for completion status with our recording ID in the message
@@ -342,7 +350,7 @@ class CameraFunctions {
         UploadService().uploadVideo(
           videoFile: videoFile,
           metadata: videoMetaData,
-          reportId: reportId,
+         // reportId: reportId,
         );
         print('Video queued for upload: $videoFilePath');
 
