@@ -529,6 +529,8 @@ class _CameraViewState extends State<CameraView> {
                     _cameraFunctions.isRecording = true;
                     _cameraFunctions.startTimer();
                   });
+
+                  _constraintsManager.startMonitoring();
                   showNotification("Recording started");
                 } catch (e) {
                   print("Error starting recording: $e");
