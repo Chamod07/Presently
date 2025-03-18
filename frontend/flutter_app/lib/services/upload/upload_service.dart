@@ -5,8 +5,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../supabase/supabase_service.dart';
-
 
 class UploadService {
   // Singleton pattern
@@ -34,15 +34,15 @@ class UploadService {
   // For tracking pending uploads across app restarts
   Future<void> savePendingUploads() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> pendingUploads = _uploadQueue
-        .map((upload) => jsonEncode(upload))
-        .toList();
+    final List<String> pendingUploads =
+        _uploadQueue.map((upload) => jsonEncode(upload)).toList();
     await prefs.setStringList('pending_uploads', pendingUploads);
   }
 
   Future<void> loadPendingUploads() async {
     if (!_supabaseService.isInitialized) {
-      debugPrint('Warning: Trying to load pending uploads but Supabase is not initialized');
+      debugPrint(
+          'Warning: Trying to load pending uploads but Supabase is not initialized');
       return;
     }
 
@@ -50,9 +50,8 @@ class UploadService {
     final List<String>? pendingUploads = prefs.getStringList('pending_uploads');
 
     if (pendingUploads != null && pendingUploads.isNotEmpty) {
-      _uploadQueue.addAll(
-          pendingUploads.map((upload) => jsonDecode(upload) as Map<String, dynamic>)
-      );
+      _uploadQueue.addAll(pendingUploads
+          .map((upload) => jsonDecode(upload) as Map<String, dynamic>));
 
       // Start processing queue if there are pending uploads
       _processQueue();
@@ -82,7 +81,8 @@ class UploadService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final folderPath = 'user_${userId}/presentation_${timestamp}';
     final fileName = '$folderPath/video_${timestamp}.mp4';
-    final metadataFileName = 'user_${userId}/presentation_(reportId)_at_${timestamp}_metadata.json';
+    final metadataFileName =
+        'user_${userId}/presentation_(reportId)_at_${timestamp}_metadata.json';
     final uploadId = 'upload_$timestamp';
 
     // Check if the file needs chunking
@@ -113,7 +113,8 @@ class UploadService {
   }
 
   // Update the status of an upload
-  void _updateStatus(String? uploadId, String status, String message, [double progress = 0.0]) {
+  void _updateStatus(String? uploadId, String status, String message,
+      [double progress = 0.0]) {
     _statusController.add({
       'id': uploadId,
       'status': status,
@@ -142,8 +143,10 @@ class UploadService {
       }
 
       // Check if Supabase session is valid
-      if (_supabaseService.isSignedIn && !await _supabaseService.hasValidSession()) {
-        _updateStatus(uploadId, 'error', 'Session expired. Please sign in again.');
+      if (_supabaseService.isSignedIn &&
+          !await _supabaseService.hasValidSession()) {
+        _updateStatus(
+            uploadId, 'error', 'Session expired. Please sign in again.');
         _isUploading = false;
         return;
       }
@@ -151,12 +154,8 @@ class UploadService {
       try {
         // Attempt the upload
         upload['attempts'] = (upload['attempts'] ?? 0) + 1;
-        _updateStatus(
-            uploadId,
-            'uploading',
-            'Upload attempt ${upload['attempts']}...',
-            0.1
-        );
+        _updateStatus(uploadId, 'uploading',
+            'Upload attempt ${upload['attempts']}...', 0.1);
 
         final videoFile = File(upload['videoPath']);
         if (!await videoFile.exists()) {
@@ -182,7 +181,6 @@ class UploadService {
 
         // Save updated queue
         await savePendingUploads();
-
       } catch (e) {
         debugPrint('Upload error: $e');
 
@@ -193,7 +191,8 @@ class UploadService {
           _uploadQueue.removeAt(0);
         } else {
           // Retry after delay
-          _updateStatus(uploadId, 'retrying', 'Upload failed. Retrying in 10 seconds...');
+          _updateStatus(
+              uploadId, 'retrying', 'Upload failed. Retrying in 10 seconds...');
           await Future.delayed(const Duration(seconds: 10));
         }
 
@@ -208,75 +207,84 @@ class UploadService {
 
   // Execute a single upload to Supabase bucket
   Future<void> _executeSupabaseUpload(
-      String uploadId,
-      File videoFile,
-      String fileName,
-      String metadataFileName,
-      Map<String, dynamic> metadata,
-      ) async {
+    String uploadId,
+    File videoFile,
+    String fileName,
+    String metadataFileName,
+    Map<String, dynamic> metadata,
+  ) async {
     try {
       _updateStatus(uploadId, 'uploading', 'Preparing video...', 0.1);
 
       // Determine if chunking is needed
-     // bool needsChunking = await _chunkingService.needsChunking(videoFile);
+      // bool needsChunking = await _chunkingService.needsChunking(videoFile);
 
       // if (needsChunking) {
       //   // Handle chunked upload
       //   await _uploadInChunks(uploadId, videoFile, fileName, metadataFileName, metadata);
       // } else {
-        // Normal single file upload
-        _updateStatus(uploadId, 'uploading', 'Uploading video...', 0.2);
+      // Normal single file upload
+      _updateStatus(uploadId, 'uploading', 'Uploading video...', 0.2);
 
-        // Upload video file to Supabase bucket
-        await _supabaseService.client
-            .storage
-            .from(bucketName)
-            .upload(
-          fileName,
-          videoFile,
-          fileOptions: FileOptions(
-            cacheControl: '3600',
-            upsert: true,
-          ),
-        );
+      // Upload video file to Supabase bucket
+      await _supabaseService.client.storage.from(bucketName).upload(
+            fileName,
+            videoFile,
+            fileOptions: FileOptions(
+              cacheControl: '3600',
+              upsert: true,
+            ),
+          );
 
-        _updateStatus(uploadId, 'uploading', 'Video uploaded. Processing metadata...', 0.8);
+      _updateStatus(
+          uploadId, 'uploading', 'Video uploaded. Processing metadata...', 0.8);
 
-        // Upload metadata as JSON file
-        final metadataJson = jsonEncode(metadata);
-        final metadataBytes = utf8.encode(metadataJson);
+      // Upload metadata as JSON file
+      final metadataJson = jsonEncode(metadata);
+      final metadataBytes = utf8.encode(metadataJson);
 
-        await _supabaseService.client
-            .storage
-            .from(bucketName)
-            .uploadBinary(
-          metadataFileName,
-          metadataBytes,
-          fileOptions: FileOptions(
-            contentType: 'application/json',
-            upsert: true,
-          ),
-        );
+      await _supabaseService.client.storage.from(bucketName).uploadBinary(
+            metadataFileName,
+            metadataBytes,
+            fileOptions: FileOptions(
+              contentType: 'application/json',
+              upsert: true,
+            ),
+          );
       //}
 
       _updateStatus(uploadId, 'processing', 'Creating database record...', 0.9);
 
       // Get the public URL of the video (or first chunk if chunked)
-      final videoUrl = _supabaseService.client
-          .storage
+      final videoUrl = _supabaseService.client.storage
           .from(bucketName)
           .getPublicUrl(fileName);
 
-      // Create a database record for the upload
-      // await _supabaseService.client
-      //     .from('presentation_recordings')
-      //     .insert({
-      //   'video_url': videoUrl,
-      //   'metadata_file': metadataFileName,
-      //   'created_at': DateTime.now().toIso8601String(),
-      //   'status': 'uploaded',
-      //   'user_id': _supabaseService.currentUserId,
-      // });
+      // After successful upload, trigger the backend analysis
+      try {
+        // Get reportId from metadata or generate if not available
+        final reportId = metadata['reportId'] ??
+            'report_${DateTime.now().millisecondsSinceEpoch}';
+
+        // Call the backend processing API
+        final response = await http.post(
+          Uri.parse('http://10.0.2.2:8000/api/process'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'video_url': videoUrl,
+            'report_id': reportId,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          _updateStatus(
+              uploadId, 'analyzing', 'Video analysis started...', 0.95);
+        } else {
+          print("Warning: Failed to trigger analysis: ${response.statusCode}");
+        }
+      } catch (e) {
+        print("Warning: Could not trigger analysis: $e");
+      }
 
       // Clean up the original local video file after successful upload
       try {
@@ -285,11 +293,13 @@ class UploadService {
           final directory = videoFile.parent;
           if (await directory.exists()) {
             await directory.delete(recursive: true);
-            debugPrint('Original video directory deleted after successful upload: ${directory.path}');
+            debugPrint(
+                'Original video directory deleted after successful upload: ${directory.path}');
           } else {
             // If directory doesn't exist, try to delete just the file
             await videoFile.delete();
-            debugPrint('Original video file deleted after successful upload: ${videoFile.path}');
+            debugPrint(
+                'Original video file deleted after successful upload: ${videoFile.path}');
           }
         }
       } catch (e) {
@@ -298,7 +308,6 @@ class UploadService {
       }
 
       _updateStatus(uploadId, 'complete', 'Upload complete!', 1.0);
-
     } catch (e) {
       debugPrint('Supabase upload error: $e');
       throw Exception('Failed to upload to Supabase: $e');
