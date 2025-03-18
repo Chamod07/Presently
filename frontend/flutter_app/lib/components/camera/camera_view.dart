@@ -171,6 +171,10 @@ class _CameraViewState extends State<CameraView> {
     if (_cameraFunctions.controller == null) return Container();
     if (_cameraFunctions.controller?.value.isInitialized == false) return Container();
 
+    if (_cameraFunctions.controller?.value.isRecordingVideo == false &&
+        !(_cameraFunctions.controller?.value.isStreamingImages ?? false)) {
+      return Container();
+    }
     return ColoredBox(
       color: Colors.black,
       child: Stack(
@@ -256,7 +260,7 @@ class _CameraViewState extends State<CameraView> {
         ),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
+          color: Color(0xB3000000),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.redAccent, width: 1.5),
         ),

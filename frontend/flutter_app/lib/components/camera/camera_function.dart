@@ -169,14 +169,8 @@ class CameraFunctions {
     try {
       if (controller != null) {
 
-        final tempController = controller;
-        controller = null;
-
-        if(tempController!.value.isInitialized && tempController.value.isStreamingImages) {
-          await tempController.stopImageStream();
-        }
         // Check if controller is initialized and streaming before stopping
-        if (controller!.value.isInitialized && controller!.value.isStreamingImages) {
+        if (controller!.value.isStreamingImages) {
           await controller!.stopImageStream();
         }
         await controller!.dispose();
