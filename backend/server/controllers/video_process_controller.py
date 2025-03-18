@@ -11,9 +11,7 @@ async def download_video(video_url: str, report_id: str = Query(...)):
         video_file = requests.get(video_url, stream=True)
         video_file.raise_for_status()
 
-        video_path = "res/video/temp_video"
-        file_extension = ".mp4"
-        video_path += file_extension
+        video_path = f"res/video/{report_id}_video.mp4"
 
         with open(video_path, "wb") as f:
             for chunk in video_file.iter_content(chunk_size=8192):

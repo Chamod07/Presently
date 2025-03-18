@@ -21,9 +21,7 @@ def analyze_posture(video_path):
 
     # Check if the video file exists
     if not os.path.exists(video_path):
-        return {
-            'error': f"Video file not found at path: {video_path}"
-        }
+        raise FileNotFoundError(f"Video file not found at path: {video_path}")
 
     # Open video
     cap = cv2.VideoCapture(video_path)
@@ -94,13 +92,10 @@ def analyze_posture(video_path):
     }
 
 
-def generate_posture_report(video_path):
+def generate_posture_report(video_path, report_id):
 
     if not os.path.exists(video_path):
-        return {
-            'error': f"Video file not found at path: {video_path}"
-
-        }
+        raise FileNotFoundError(f"Video file not found at path: {video_path}")
 
     # Analyze posture
 
@@ -108,7 +103,7 @@ def generate_posture_report(video_path):
 
     # Generate timestamp for report
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_filename = f"res/report/posture_analysis_report_{timestamp}.txt"
+    report_filename = f"res/report/{report_id}_body.txt"
 
     # Write report
     with open(report_filename, 'w') as report_file:

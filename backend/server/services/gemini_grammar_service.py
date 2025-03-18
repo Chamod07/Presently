@@ -61,8 +61,8 @@ class GeminiGrammarAnalyzer:
 
         try:
             response = self.model.generate_content(prompt)
-            print("\nRaw Gemini Response:")
-            print(response.text)
+            #print("\nRaw Gemini Response:")
+            #print(response.text)
             print("\nAttempting to parse response...")
             
             # Clean the response text to ensure it's valid JSON

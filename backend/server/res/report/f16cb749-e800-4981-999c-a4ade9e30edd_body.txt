@@ -1,0 +1,17 @@
+Body Language Posture Analysis Report
+======================================
+
+Video Analyzed: res/video/f16cb749-e800-4981-999c-a4ade9e30edd_video.mp4
+Analysis Timestamp: 20250318_105457
+
+Frames with Pose Detected: 897
+Poor Posture Frames: 897
+Poor Posture Percentage: 100.00%
+
+Posture Issues Detected:
+- Misaligned hips
+- Uneven shoulders
+
+Recommendations:
+- Significant posture issues detected. Consider consulting a physiotherapist.
+- Practice core strengthening and alignment exercises.
