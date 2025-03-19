@@ -262,31 +262,31 @@ class UploadService {
       _updateStatus(uploadId, 'processing', 'Creating database record...', 0.9);
 
       // Get the public URL of the video (or first chunk if chunked)
-      final videoUrl = _supabaseService.client.storage.from(bucketName).getPublicUrl(fileName);
-      debugPrint(videoUrl);;
+      // final videoUrl = _supabaseService.client.storage.from(bucketName).getPublicUrl(fileName);
+      // debugPrint(videoUrl);
       final reportId = metadata['reportId'];
 
       if (reportId != null) {
         try {
           debugPrint('Checking if reportId $reportId exists in UserReport...');
 
-          // First check if the record with this session_id exists
+          // First check if the record with this reportId exists
           final checkResponse = await Supabase.instance.client.from('UserReport').select('reportId').eq('reportId', reportId).single();
 
           if (checkResponse != null) {
             debugPrint('Found reportId $reportId in UserReport, proceeding with update');
 
-            // Get the public URL of the video
-            final videoUrl = _supabaseService.client.storage.from(bucketName).getPublicUrl(fileName);
+            // Get the signed URL of the video
+            final videoUrl = await _supabaseService.client.storage.from(bucketName).createSignedUrl(fileName, 604800);
             debugPrint('Generated video URL: $videoUrl');
 
             // Perform the update
-            final response = await Supabase.instance.client.from('UserReport').update({'videoUrl': videoUrl}).eq('reportId', reportId).select();
+            final response = await Supabase.instance.client.from('UserReport').update({'videoUrl': videoUrl.toString()}).eq('reportId', reportId).select();
 
             if (response != null && response.isNotEmpty) {
               debugPrint('Successfully updated UserReport video URL.');
               debugPrint('Updated records: ${response.length}');
-              await callPythonVideoController(videoUrl, reportId); //calling the python video controller
+              // await callPythonVideoController(videoUrl, reportId); //calling the python video controller
             } else {
               debugPrint('Update query executed but no records were updated in UserReport.');
             }
