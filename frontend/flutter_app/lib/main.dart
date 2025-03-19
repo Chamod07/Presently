@@ -85,7 +85,26 @@ class MyApp extends StatelessWidget {
         '/terms_privacy': (context) => TermsPrivacyPage(),
         '/help': (context) => HelpPage(),
         '/about': (context) => AboutPage(),
-        '/info_card': (context) => InfoCard(), // Add route for InfoCard
+      },
+      // Add onGenerateRoute to handle routes that need arguments
+      onGenerateRoute: (settings) {
+        if (settings.name == '/info_card') {
+          // Extract the arguments passed to the route
+          final args = settings.arguments as Map<String, dynamic>?;
+
+          // Return the InfoCard with the required parameters
+          return MaterialPageRoute(
+            builder: (context) => InfoCard(
+              taskTitle: args?['taskTitle'] ?? 'Task Title',
+              reportId: args?['reportId'],
+              taskDescription: args?['taskDescription'],
+              taskSubtitle: args?['taskSubtitle'],
+              points: args?['points'],
+              duration: args?['duration'],
+            ),
+          );
+        }
+        return null; // Let the routes table handle other routes
       },
     );
   }

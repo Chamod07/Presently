@@ -70,19 +70,28 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     });
 
     try {
-      print(
+      debugPrint(
           'Fetching tasks for group: ${widget.taskGroup.reportId ?? "unknown"}');
 
       if (widget.taskGroup.reportId == null ||
           widget.taskGroup.reportId!.isEmpty) {
-        print(
+        debugPrint(
             'Warning: Empty reportId for task group ${widget.taskGroup.title}');
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
 
       final tasks = await _taskGroupService
           .getTasksForGroup(widget.taskGroup.reportId ?? '');
 
-      print('Received ${tasks.length} tasks from API');
+      debugPrint('Received ${tasks.length} tasks from API');
+
+      // Add diagnostic output for all tasks
+      for (var task in tasks) {
+        debugPrint('Task: ${task.title}, isCompleted: ${task.isCompleted}');
+      }
 
       if (mounted) {
         setState(() {
@@ -91,7 +100,7 @@ class _TaskDetailPageState extends State<TaskDetailPage>
         });
       }
     } catch (e) {
-      print('Error refreshing tasks: $e');
+      debugPrint('Error refreshing tasks: $e');
 
       // Show snackbar with error message
       if (mounted) {
@@ -158,9 +167,13 @@ class _TaskDetailPageState extends State<TaskDetailPage>
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => InfoCard(
           taskTitle: task.title,
-          taskDescription:
-              "This task is to enhance your eye contact skills, which are crucial for effective communication and building rapport.",
-          // Add other details you want to pass
+          reportId: widget.taskGroup.reportId,
+          taskDescription: task.description,
+          points: task.points ?? 2,
+          duration: task.durationSeconds != null
+              ? "${task.durationSeconds} sec"
+              : "30 sec",
+          taskSubtitle: widget.taskGroup.title,
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           var begin = const Offset(1.0, 0.0);
