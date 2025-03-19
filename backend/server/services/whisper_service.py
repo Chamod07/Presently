@@ -11,8 +11,8 @@ def transcribe_audio(file_path):
 
     # Check if the file exists
     if not os.path.exists(file_path):
-        print(f"Error: File '{file_path}' does not exist.")
-        return
+        print(f"Error: File {file_path} does not exist.")
+        return "", []
 
     # Transcribe the audio file with word timestamps
     print("Transcribing audio...")
@@ -21,7 +21,7 @@ def transcribe_audio(file_path):
     # Extract transcription and segments
     transcription = result['text']
     segments = result.get('segments', [])
-    print("Transcription completed.")
+    #print("Transcription completed.")
 
     return transcription, segments
 
@@ -59,14 +59,14 @@ def analyze_stuttering(segments):
 
 def main():
     # Path to your MP3 file
-    file_path = input("Enter the path to your MP3 file: ")
+    file_path = "../res/audio/converted_audio.mp3"
 
     # Transcribe the audio file
     transcription, segments = transcribe_audio(file_path)
 
     # Save the transcription to a text file
     if transcription:
-        output_file = "transcription.txt"
+        output_file = "../res/transcription/transcription.txt"
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(transcription)
         print(f"Transcription saved to '{output_file}'.")

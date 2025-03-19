@@ -18,6 +18,9 @@ class _HomePageState extends State<HomePage> {
   String? avatarUrl;
   bool isLoading = true;
   bool showFavoritesOnly = false;
+  String searchQuery = ''; // Add search query state variable
+  final TextEditingController searchController =
+      TextEditingController(); // Controller for search field
 
   @override
   void initState() {
@@ -25,6 +28,12 @@ class _HomePageState extends State<HomePage> {
     Provider.of<SessionProvider>(context, listen: false)
         .loadSessionsFromSupabase();
     _loadHomePageData();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose(); // Dispose controller when widget is disposed
+    super.dispose();
   }
 
   Future<void> _loadHomePageData() async {
@@ -35,7 +44,11 @@ class _HomePageState extends State<HomePage> {
       if (homePageData != null && mounted) {
         setState(() {
           firstName = homePageData['first_name'];
-          avatarUrl = homePageData['avatar_url'];
+
+          // Just use the avatar URL directly - it already has cache busting
+          avatarUrl = homePageData['avatar_url'].isNotEmpty
+              ? homePageData['avatar_url']
+              : null;
         });
       }
     } catch (e) {
@@ -147,19 +160,22 @@ class _HomePageState extends State<HomePage> {
                     width: 2,
                   ),
                 ),
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.grey[100],
-                  backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
-                      ? NetworkImage(avatarUrl!)
-                      : null,
-                  child: (avatarUrl == null || avatarUrl!.isEmpty)
-                      ? Icon(
-                          Icons.person,
-                          color: Colors.grey[600],
-                          size: 26,
-                        )
-                      : null,
+                child: ClipOval(
+                  child: SizedBox(
+                    width: 44, // 2*radius
+                    height: 44, // 2*radius
+                    child: avatarUrl != null && avatarUrl!.isNotEmpty
+                        ? ImageUtils.networkImageWithFallback(
+                            url: avatarUrl!, // Don't add extra timestamp
+                            width: 44,
+                            height: 44,
+                          )
+                        : ImageUtils.defaultProfileAvatar(
+                            width: 44,
+                            height: 44,
+                            iconColor: Colors.grey[600],
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -243,9 +259,9 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              SizedBox(height: 24.0),
+              SizedBox(height: 20.0),
 
-              // Action buttons row with improved styling
+              // Action buttons row with improved styling (Filter button removed)
               Row(
                 children: [
                   // Start Session button with shadow and improved styling - fixed icon visibility
@@ -316,10 +332,62 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
+                ],
+              ),
+
+              SizedBox(height: 20.0),
+
+              // Search Bar with Filter Button - MOVED to here after action buttons
+              Row(
+                children: [
+                  // Search Bar
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Color(0xFFE0E0E0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search sessions',
+                          prefixIcon:
+                              Icon(Icons.search, color: Color(0xFF7400B8)),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, color: Colors.grey),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setState(() {
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ),
 
                   SizedBox(width: 12),
 
-                  // Filter button with improved styling
+                  // Filter/Bookmark button
                   Container(
                     decoration: BoxDecoration(
                       color: showFavoritesOnly
@@ -373,7 +441,9 @@ class _HomePageState extends State<HomePage> {
                     Text(
                       showFavoritesOnly
                           ? 'Bookmarked Sessions'
-                          : 'Your Sessions',
+                          : searchQuery.isNotEmpty
+                              ? 'Search Results'
+                              : 'Your Sessions',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -382,11 +452,12 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Consumer<SessionProvider>(
                       builder: (context, provider, _) {
-                        final sessionCount = showFavoritesOnly
-                            ? provider
-                                .getFilteredSessions(favoritesOnly: true)
-                                .length
-                            : provider.sessions.length;
+                        final sessionCount = provider
+                            .getFilteredSessions(
+                              favoritesOnly: showFavoritesOnly,
+                              searchQuery: searchQuery,
+                            )
+                            .length;
                         return Container(
                           padding:
                               EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -418,6 +489,7 @@ class _HomePageState extends State<HomePage> {
                     final filteredSessions =
                         sessionProvider.getFilteredSessions(
                       favoritesOnly: showFavoritesOnly,
+                      searchQuery: searchQuery,
                     );
 
                     // Sessions are now ordered by creation date from the provider
@@ -467,64 +539,83 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Color(0xFF7400B8).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              showFavoritesOnly ? Icons.bookmark_border : Icons.mic_none,
-              size: 60,
-              color: Color(0xFF7400B8).withOpacity(0.7),
-            ),
-          ),
-          SizedBox(height: 24),
-          Text(
-            showFavoritesOnly
-                ? 'No bookmarked sessions'
-                : 'No sessions available',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            showFavoritesOnly
-                ? 'Bookmark sessions to find them quickly'
-                : 'Start a new session to begin practicing',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-              height: 1.4,
-            ),
-          ),
-          SizedBox(height: 24),
-          if (!showFavoritesOnly)
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(context, '/scenario_sel');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF7400B8),
-                foregroundColor: Colors.white,
-                iconColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+      child: SingleChildScrollView(
+        // Wrap with SingleChildScrollView to handle overflow
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100, // Reduced size for better fit
+                height: 100, // Reduced size for better fit
+                decoration: BoxDecoration(
+                  color: Color(0xFF7400B8).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  searchQuery.isNotEmpty
+                      ? Icons.search_off
+                      : showFavoritesOnly
+                          ? Icons.bookmark_border
+                          : Icons.mic_none,
+                  size: 50, // Slightly smaller icon
+                  color: Color(0xFF7400B8).withOpacity(0.7),
                 ),
               ),
-              icon: Icon(Icons.add),
-              label: Text('Start a Session'),
-            ),
-        ],
+              SizedBox(height: 20), // Reduced spacing
+              Text(
+                searchQuery.isNotEmpty
+                    ? 'No matching sessions'
+                    : (showFavoritesOnly
+                        ? 'No bookmarked sessions'
+                        : 'No sessions available'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18, // Slightly smaller font
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 10), // Reduced spacing
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Text(
+                  searchQuery.isNotEmpty
+                      ? 'Try adjusting your search terms'
+                      : (showFavoritesOnly
+                          ? 'Bookmark sessions to find them quickly'
+                          : 'Start a new session to begin practicing'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14, // Slightly smaller font
+                    color: Colors.grey[600],
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20), // Reduced spacing
+              if (!showFavoritesOnly)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/scenario_sel');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF7400B8),
+                    foregroundColor: Colors.white,
+                    iconColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10), // Smaller padding
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  icon: Icon(Icons.add, size: 18), // Smaller icon
+                  label: Text('Start a Session'),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -533,17 +624,19 @@ class _HomePageState extends State<HomePage> {
     required Map<String, dynamic> session,
     required String navigateTo,
   }) {
-    final String sessionName = session['name'];
+    // Add null safety to all session data fields
+    final String sessionName = session['name'] as String? ?? 'Untitled Session';
     final String sessionType = _formatSessionType(session['type']);
     final String audience = _formatAudience(session['audience']);
-    final bool isFavorite = session['is_favorite'] ?? false;
-    final String topic = session['topic'] ?? 'General Topic';
+    final bool isFavorite = session['is_favorite'] as bool? ?? false;
+    final String topic = session['topic'] as String? ?? 'General Topic';
 
     // Format the creation date
     String createdAt = 'Recently created';
     if (session['created_at'] != null) {
       try {
-        final DateTime dateTime = DateTime.parse(session['created_at']);
+        final DateTime dateTime =
+            DateTime.parse(session['created_at'] as String);
         final DateTime now = DateTime.now();
         final Duration difference = now.difference(dateTime);
 
@@ -580,7 +673,15 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: GestureDetector(
         onTap: () {
-          Navigator.pushNamed(context, navigateTo);
+          // Pass the session name when navigating to the summary page
+          Navigator.pushNamed(
+            context,
+            navigateTo,
+            arguments: {
+              'selectedIndex': 1, // Default to 1 (add/new tab)
+              'sessionName': sessionName, // Pass session name
+            },
+          );
         },
         child: Container(
           decoration: BoxDecoration(
@@ -719,7 +820,15 @@ class _HomePageState extends State<HomePage> {
                         // Practice button
                         OutlinedButton.icon(
                           onPressed: () {
-                            Navigator.pushNamed(context, navigateTo);
+                            // Pass the session name when navigating via the practice button
+                            Navigator.pushNamed(
+                              context,
+                              navigateTo,
+                              arguments: {
+                                'selectedIndex': 1,
+                                'sessionName': sessionName,
+                              },
+                            );
                           },
                           icon: Icon(Icons.play_arrow, size: 18),
                           label: Text('Continue'),

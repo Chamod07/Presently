@@ -13,7 +13,7 @@ class PresentationReport {
 
   PresentationReport({
     required this.context,
-    required this.grammar, 
+    required this.grammar,
     required this.bodyLanguage,
     required this.voice,
   });
@@ -27,6 +27,16 @@ class PresentationReport {
       voice: VoiceAnalysisReport(),
     );
   }
+
+  // Factory constructor to create a report from a complete JSON response
+  factory PresentationReport.fromJson(Map<String, dynamic> json) {
+    return PresentationReport(
+      context: ContextReport.fromJson(json['context'] ?? {}),
+      grammar: GrammarReport.fromJson(json['grammar'] ?? {}),
+      bodyLanguage: BodyLanguageReport.fromJson(json['bodyLanguage'] ?? {}),
+      voice: VoiceAnalysisReport.fromJson(json['voice'] ?? {}),
+    );
+  }
 }
 
 // TODO: Remove deprecated class after full migration
@@ -37,7 +47,11 @@ class Report {
   List<Weakness>? contextWeaknesses;
   List<Weakness>? grammarWeaknesses;
 
-  Report({this.scoreContext, this.scoreGrammar, this.contextWeaknesses, this.grammarWeaknesses});
+  Report(
+      {this.scoreContext,
+      this.scoreGrammar,
+      this.contextWeaknesses,
+      this.grammarWeaknesses});
 }
 
 class ContextReport extends BaseReport {
@@ -102,8 +116,12 @@ class Weakness {
   factory Weakness.fromJson(Map<String, dynamic> json) {
     return Weakness(
       topic: json['topic'] as String?,
-      examples: (json['examples'] as List<dynamic>?)?.map((e) => e as String).toList(),
-      suggestions: (json['suggestions'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      examples: (json['examples'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      suggestions: (json['suggestions'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
     );
   }
 }

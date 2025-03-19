@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/components/screens/splash_screen.dart';
 import 'package:flutter_app/components/settings/about_page.dart';
 import 'package:flutter_app/components/settings/contact_support.dart';
 import 'package:flutter_app/components/settings/faq.dart';
@@ -10,7 +11,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase/supabase_service.dart';
 import '../signin_signup/sign_in.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_app/components/dashboard/navbar.dart'; // Add this import for NavBar
+import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/utils/image_utils.dart';
+import 'package:http/http.dart' as http;
 
 // Custom exception to handle partial success
 class DatabaseUpdateSuccess implements Exception {
@@ -26,39 +29,32 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool darkMode = false; // Dark mode setting to check if dark mode is enabled
-
-  bool notifications =
-      false; //Notification setting to check if notifications are enabled
-
-  final SupabaseService _supabaseService =
-      SupabaseService(); // Create instance of SupabaseService
-
-  String profileImageUrl = ''; // User's profile image URL
-
-  String firstName = ''; // User's first name
-
-  String lastName = ''; // User's last name
-
-  String role =
-      ''; // User's role (Student, Undergraduate, Postgraduate, Young Professional, Other)
+  final SupabaseService _supabaseService = SupabaseService();
+  String profileImageUrl = '';
+  String firstName = '';
+  String lastName = '';
+  String role = '';
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     // Initialize settings
     Settings.init(
-      cacheProvider:
-          SharePreferenceCache(), // Load saved preferences if available
+      cacheProvider: SharePreferenceCache(),
     );
     _fetchUserProfile();
   }
 
   Future<void> _fetchUserProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final userId = _supabaseService.currentUserId;
       if (userId == null) {
-        print('User ID is null');
+        debugPrint('User ID is null');
         return;
       }
       final userDetailResponse = await _supabaseService.client
@@ -67,243 +63,206 @@ class _SettingsPageState extends State<SettingsPage> {
           .eq('userId', userId)
           .single();
 
-      final profileResponse = await _supabaseService.client
-          .from('Profile')
-          .select('avatar_url')
-          .eq('userId', userId)
-          .maybeSingle();
+      if (userDetailResponse != null) {
+        firstName = userDetailResponse['firstName'] ?? '';
+        lastName = userDetailResponse['lastName'] ?? '';
+        role = userDetailResponse['role'] ?? '';
+      }
 
-      setState(() {
-        if (userDetailResponse != null) {
-          firstName = userDetailResponse['firstName'] ?? '';
-          lastName = userDetailResponse['lastName'] ?? '';
-          role = userDetailResponse['role'] ?? '';
-        }
-        if (profileResponse != null) {
-          profileImageUrl = profileResponse['avatar_url'] ?? '';
-        }
-      });
+      // Use the centralized method to get avatar URL
+      final avatarUrl = _supabaseService.getAvatarUrl();
+      if (avatarUrl != null) {
+        profileImageUrl = avatarUrl;
+      }
     } catch (e) {
       print('Error fetching user profile: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF7400B8)),
           onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
-        title: Text(
+        title: const Text(
           'Settings',
-          style: TextStyle(fontSize: 20, fontFamily: 'Roboto'),
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF7400B8),
+              fontFamily: 'Roboto'),
         ),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: ListView(
-          children: [
-            // User Profile Section
-            _buildProfileHeader(),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF7400B8)))
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Improved profile section
+                  _buildImprovedProfileSection(),
 
-            // Account Settings Group
-            SettingsGroup(
-              title: 'Account',
-              //titleTextStyle: TextStyle(
-              //fontFamily: 'Roboto',
-              //fontSize: 20,
-              //),
-              children: [
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('Change Password'),
-                    subtitle: Text('Update your password'),
-                    leading: Icon(Icons.lock_outline),
-                    onTap: () => _showChangePasswordDialog(context),
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('Change Email Address'),
-                    subtitle: Text('Update your email'),
-                    leading: Icon(Icons.email_outlined),
-                    onTap: () => _showChangeEmailDialog(context),
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('Delete Account'),
-                    subtitle: Text('Permanently delete your account'),
-                    leading: Icon(Icons.delete_outline),
-                    onTap: () => _showDeleteAccountConfirmation(context),
-                  ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 20),
 
-            // App Settings Group
-            SettingsGroup(
-              title: 'App Settings',
-              children: [
-                Container(
-                  color: Colors.white,
-                  child: SwitchListTile(
-                    title: Text('Dark Mode'),
-                    secondary: Icon(Icons.dark_mode),
-                    value: darkMode,
-                    onChanged: (value) {
-                      setState(() {
-                        darkMode = value;
-                      });
-                      // TODO: Implement dark mode toggle
-                    },
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: SwitchListTile(
-                    title: Text('Notifications'),
-                    secondary: Icon(Icons.notifications),
-                    value: notifications,
-                    onChanged: (value) {
-                      setState(() {
-                        notifications = value;
-                      });
-                      // TODO: Implement notification toggle
-                    },
-                  ),
-                ),
-              ],
-            ),
+                  // Account Settings
+                  _buildSettingsHeader("Account Settings"),
+                  _buildSettingsCard([
+                    _buildSettingItem(
+                      title: 'Change Name',
+                      icon: Icons.person_outline,
+                      onTap: () => _showChangeNameDialog(context),
+                    ),
+                    _buildSettingItem(
+                      title: 'Change Password',
+                      icon: Icons.lock_outline,
+                      onTap: () => _showChangePasswordDialog(context),
+                    ),
+                    _buildSettingItem(
+                      title: 'Change Email Address',
+                      icon: Icons.email_outlined,
+                      onTap: () => _showChangeEmailDialog(context),
+                    ),
+                  ]),
 
-            // Support Group
-            SettingsGroup(
-              title: 'Support & Info',
-              children: [
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('FAQ'),
-                    subtitle: Text('Frequently asked questions'),
-                    leading: Icon(Icons.question_answer_outlined),
-                    onTap: () {
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => FAQPage()));
-                    },
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('Contact Support'),
-                    subtitle: Text('Get help from our team'),
-                    leading: Icon(Icons.support_agent_outlined),
-                    onTap: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ContactSupportPage())
-                      );
-                    },
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('Terms & Privacy Policy'),
-                    subtitle: Text('Legal information'),
-                    leading: Icon(Icons.policy_outlined),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => TermsPrivacyPage())
-                      );
-                    },
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('Help'),
-                    subtitle: Text('Get support and send feedback'),
-                    leading: Icon(Icons.help_outline),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => HelpPage())
-                      );
-                    },
-                  ),
-                ),
-                Container(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text('About'),
-                    subtitle: Text('Learn more about Presently'),
-                    leading: Icon(Icons.info_outline),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => AboutPage())
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 16),
 
-            // Sign Out Button
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize:
-                      Size(MediaQuery.of(context).size.width * 0.9, 50),
-                  backgroundColor: Color(0xFF7400B8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () async {
-                  try {
-                    // Use the proper SupabaseService instance
-                    await _supabaseService.client.auth.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => SignInPage()),
-                        (route) => false,
-                      );
-                    }
-                  } catch (error) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('Error signing out: ${error.toString()}'),
-                          backgroundColor: Colors.red,
+                  // Support & Help
+                  _buildSettingsHeader("Support & Help"),
+                  _buildSettingsCard([
+                    _buildSettingItem(
+                      title: 'FAQ',
+                      icon: Icons.question_answer_outlined,
+                      onTap: () {
+                        Navigator.push(context,
+                            MaterialPageRoute(builder: (context) => FAQPage()));
+                      },
+                    ),
+                    _buildSettingItem(
+                      title: 'Contact Support',
+                      icon: Icons.support_agent_outlined,
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ContactSupportPage()));
+                      },
+                    ),
+                    _buildSettingItem(
+                      title: 'Help',
+                      icon: Icons.help_outline,
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => HelpPage()));
+                      },
+                    ),
+                  ]),
+
+                  const SizedBox(height: 16),
+
+                  // Legal & Info
+                  _buildSettingsHeader("Legal & Info"),
+                  _buildSettingsCard([
+                    _buildSettingItem(
+                      title: 'Terms & Privacy Policy',
+                      icon: Icons.policy_outlined,
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => TermsPrivacyPage()));
+                      },
+                    ),
+                    _buildSettingItem(
+                      title: 'About Presently',
+                      icon: Icons.info_outline,
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => AboutPage()));
+                      },
+                    ),
+                  ]),
+
+                  const SizedBox(height: 16),
+
+                  // Danger Zone
+                  _buildSettingsHeader("Danger Zone",
+                      textColor: Colors.red[700]),
+                  _buildSettingsCard([
+                    _buildSettingItem(
+                      title: 'Delete Account',
+                      icon: Icons.delete_outline,
+                      iconColor: Colors.red[700],
+                      textColor: Colors.red[700],
+                      onTap: () => _showDeleteAccountConfirmation(context),
+                    ),
+                  ], borderColor: Colors.red[100]),
+
+                  // Sign out button
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7400B8),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    }
-                  }
-                },
-                child: const Text(
-                  'Sign Out',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontFamily: 'Roboto',
+                        elevation: 5,
+                      ),
+                      onPressed: () async {
+                        try {
+                          await _supabaseService.client.auth.signOut();
+                          if (context.mounted) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                  builder: (context) => SplashScreen()),
+                              (route) => false,
+                            );
+                          }
+                        } catch (error) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Error signing out: ${error.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
       bottomNavigationBar: NavBar(
         selectedIndex: ModalRoute.of(context)?.settings.arguments != null
             ? (ModalRoute.of(context)?.settings.arguments
@@ -314,96 +273,277 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+  Widget _buildImprovedProfileSection() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(height: 30),
+          // Profile image with edit button
           Stack(
             alignment: Alignment.bottomRight,
             children: [
-              CircleAvatar(
-                radius: 69,
-                backgroundColor: Colors.grey[300],
-                backgroundImage:
-                    profileImageUrl != null && profileImageUrl.isNotEmpty
-                        ? NetworkImage(profileImageUrl)
-                        : null,
-                child: (profileImageUrl == null || profileImageUrl!.isEmpty)
-                    ? Icon(
-                        Icons.person,
-                        size: 70,
-                        color: Colors.grey[700],
-                      )
-                    : null,
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color.fromARGB(255, 136, 60, 179),
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: profileImageUrl.isNotEmpty
+                        ? ImageUtils.networkImageWithFallback(
+                            url:
+                                profileImageUrl, // Use directly, timestamp is already included
+                            width: 100,
+                            height: 100,
+                          )
+                        : ImageUtils.defaultProfileAvatar(
+                            width: 100,
+                            height: 100,
+                            iconColor: const Color(0xFF7400B8),
+                          ),
+                  ),
+                ),
               ),
               GestureDetector(
                 onTap: _changeProfilePicture,
                 child: Container(
-                  padding: EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
+                    color: const Color(0xFF7400B8),
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Icon(Icons.edit, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
+          // User name
           Text(
             '$firstName $lastName',
-            style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Roboto'),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Roboto',
+              color: Color(0xFF333333),
+            ),
           ),
-          // SizedBox(height: 8),
-          //Text(
-          //'Milan, Italy',
-          //style: TextStyle(
-          //  fontSize: 16, color: Colors.grey, fontFamily: 'Roboto'),
-          //),
-          SizedBox(height: 8),
-          Text(
-            '$role',
-            style: TextStyle(
-                fontSize: 18, color: Colors.grey, fontFamily: 'Roboto'),
+          const SizedBox(height: 8),
+          // User role in a container
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7400B8).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              role.isNotEmpty ? role : 'No role specified',
+              style: const TextStyle(
+                fontSize: 16,
+                fontFamily: 'Roboto',
+                color: Color(0xFF7400B8),
+              ),
+            ),
           ),
+          const SizedBox(height: 10),
+          // Email with icon
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.email,
+                color: Colors.grey,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _supabaseService.client.auth.currentUser?.email ?? '',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontFamily: 'Roboto',
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsHeader(String title, {Color? textColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: textColor ?? const Color(0xFF333333),
+          fontFamily: 'Roboto',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(List<Widget> children, {Color? borderColor}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: borderColor ?? Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? iconColor,
+    Color? textColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: iconColor ?? const Color(0xFF7400B8),
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontFamily: 'Roboto',
+                  color: textColor ?? const Color(0xFF333333),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey[400],
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _changeProfilePicture() async {
     showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context) {
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  leading: Icon(Icons.photo_library),
-                  title: Text('Choose from gallery'),
-                  onTap: () {
-                    _pickImage(ImageSource.gallery);
-                    Navigator.pop(context);
-                  },
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Update Profile Picture',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: Icon(Icons.photo_camera),
-                  title: Text('Take a photo'),
-                  onTap: () {
-                    _pickImage(ImageSource.camera);
-                    Navigator.pop(context);
-                  },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7400B8).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.photo_library,
+                    color: Color(0xFF7400B8),
+                  ),
                 ),
-              ],
-            ),
-          );
-        });
+                title: const Text('Choose from gallery'),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7400B8).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.photo_camera,
+                    color: Color(0xFF7400B8),
+                  ),
+                ),
+                title: const Text('Take a photo'),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -419,55 +559,123 @@ class _SettingsPageState extends State<SettingsPage> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Color(0xFF7400B8),
+            ),
+          );
         },
       );
 
       //upload to supabase storage
       final userId = _supabaseService.currentUserId;
       if (userId == null) {
-        Navigator.of(context).pop(); // close loading indicator
-        _showErrorMessage('User not logged in');
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          _showErrorMessage('User not logged in');
+        }
         return;
       }
 
-      final String fileExt = image.path.split('.').last;
-      final fileName = 'profile_$userId.$fileExt';
+      await _deleteExistingProfileImages(userId);
+
       final file = File(image.path);
+      final String fileExt = image.path.split('.').last;
+      final String fileName = 'avatar_${userId}.$fileExt';
+
+      debugPrint('Uploading new avatar: $fileName');
 
       await _supabaseService.client.storage
           .from('avatars')
           .upload(fileName, file, fileOptions: FileOptions(upsert: true));
 
-      final imageUrl = _supabaseService.client.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
+      // Get the new avatar URL using the centralized method
+      final imageUrl = _supabaseService.getAvatarUrl();
 
-      await _supabaseService.client.from('Profile').upsert({
-        'userId': userId,
-        'avatar_url': imageUrl,
-      });
+      debugPrint('Uploaded image URL: $imageUrl');
 
+      // Clear image cache before setting new image
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      // Update state with new image URL
       setState(() {
-        profileImageUrl = imageUrl;
+        profileImageUrl = imageUrl ?? '';
       });
 
       if (context.mounted) {
         Navigator.of(context).pop(); // close loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Profile picture updated successfully')));
+          SnackBar(
+            content: Text('Profile picture updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
+      debugPrint('Error uploading profile image: $e');
       if (context.mounted) {
-        Navigator.of(context).pop(); // close loading indicator
-        _showErrorMessage('Error updating profile picture: $e');
+        Navigator.of(context).pop();
+        _showErrorMessage('Error updating profile picture: ${e.toString()}');
       }
+    }
+  }
+
+  Future<void> _deleteExistingProfileImages(String userId) async {
+    try {
+      // List all files in the avatars bucket
+      debugPrint('Listing all files in avatars bucket for user $userId');
+      final listResponse =
+          await _supabaseService.client.storage.from('avatars').list();
+
+      debugPrint('Total files in bucket: ${listResponse.length}');
+
+      // Print all file names for debugging
+      for (var file in listResponse) {
+        debugPrint('Found file: ${file.name}');
+      }
+
+      // Filter files that match this user's avatar pattern
+      final userFiles = listResponse.where((file) {
+        final isMatch = file.name.contains('avatar_$userId');
+        if (isMatch) debugPrint('Matching file found: ${file.name}');
+        return isMatch;
+      }).toList();
+
+      if (userFiles.isNotEmpty) {
+        final filesToDelete = userFiles.map((file) => file.name).toList();
+        debugPrint('Found files to delete: ${filesToDelete.join(', ')}');
+
+        // Delete files one by one to identify any specific issues
+        for (var fileName in filesToDelete) {
+          try {
+            debugPrint('Attempting to delete: $fileName');
+            await _supabaseService.client.storage
+                .from('avatars')
+                .remove([fileName]);
+            debugPrint('Successfully deleted: $fileName');
+          } catch (e) {
+            debugPrint('Error deleting file $fileName: $e');
+          }
+        }
+
+        debugPrint('Deletion process completed');
+      } else {
+        debugPrint('No existing avatar files found for user $userId');
+      }
+    } catch (e) {
+      debugPrint('Error during avatar deletion: $e');
+      // Continue with upload even if deletion fails
     }
   }
 
   void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red));
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   void _showChangePasswordDialog(BuildContext context) {
@@ -481,104 +689,168 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Change Password'),
-          content: SingleChildScrollView(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'Change Password',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: currentPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(labelText: 'Current Password'),
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 16),
                 TextField(
                   controller: newPasswordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'New Password',
                     helperText: 'Minimum 8 characters required',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 16),
                 TextField(
                   controller: confirmPasswordController,
                   obscureText: true,
-                  decoration:
-                      InputDecoration(labelText: 'Confirm New Password'),
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7400B8),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              // Validate password input
+                              if (newPasswordController.text.length < 8) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      'Password must be at least 8 characters'),
+                                  backgroundColor: Colors.red,
+                                ));
+                                return;
+                              }
+
+                              if (newPasswordController.text !=
+                                  confirmPasswordController.text) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text('Passwords do not match'),
+                                  backgroundColor: Colors.red,
+                                ));
+                                return;
+                              }
+
+                              setState(() {
+                                isLoading = true;
+                              });
+
+                              try {
+                                await _updatePassword(
+                                    currentPasswordController.text,
+                                    newPasswordController.text);
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content:
+                                      Text('Password updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ));
+                              } catch (e) {
+                                String errorMessage =
+                                    'Failed to update password';
+                                if (e
+                                        .toString()
+                                        .contains('invalid_credentials') ||
+                                    e.toString().contains('Invalid login')) {
+                                  errorMessage =
+                                      'Current password is incorrect';
+                                }
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.red,
+                                ));
+                              } finally {
+                                setState(() {
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Update'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      // Validate password input
-                      if (newPasswordController.text.length < 8) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content:
-                              Text('Password must be at least 8 characters'),
-                          backgroundColor: Colors.red,
-                        ));
-                        return;
-                      }
-
-                      if (newPasswordController.text !=
-                          confirmPasswordController.text) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Passwords do not match'),
-                          backgroundColor: Colors.red,
-                        ));
-                        return;
-                      }
-
-                      setState(() {
-                        isLoading = true;
-                      });
-
-                      try {
-                        await _updatePassword(currentPasswordController.text,
-                            newPasswordController.text);
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Password updated successfully'),
-                          backgroundColor: Colors.green,
-                        ));
-                      } catch (e) {
-                        String errorMessage = 'Failed to update password';
-                        if (e.toString().contains('invalid_credentials') ||
-                            e.toString().contains('Invalid login')) {
-                          errorMessage = 'Current password is incorrect';
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(errorMessage),
-                          backgroundColor: Colors.red,
-                        ));
-                      } finally {
-                        setState(() {
-                          isLoading = false;
-                        });
-                      }
-                    },
-              child: isLoading
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text('Update'),
-            ),
-          ],
         ),
       ),
     );
@@ -592,97 +864,157 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Change Email Address'),
-          content: SingleChildScrollView(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'Change Email Address',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: emailController,
-                  decoration: InputDecoration(labelText: 'New Email Address'),
+                  decoration: InputDecoration(
+                    labelText: 'New Email Address',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
                   keyboardType: TextInputType.emailAddress,
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 16),
                 TextField(
                   controller: passwordController,
                   obscureText: true,
-                  decoration: InputDecoration(labelText: 'Current Password'),
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7400B8),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              // Validate email format
+                              final emailRegex = RegExp(
+                                  r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+                              if (!emailRegex
+                                  .hasMatch(emailController.text.trim())) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      'Please enter a valid email address'),
+                                  backgroundColor: Colors.red,
+                                ));
+                                return;
+                              }
+
+                              if (passwordController.text.isEmpty) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      'Please enter your current password'),
+                                  backgroundColor: Colors.red,
+                                ));
+                                return;
+                              }
+
+                              setState(() {
+                                isLoading = true;
+                              });
+
+                              try {
+                                await _updateEmail(emailController.text.trim(),
+                                    passwordController.text);
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      'Email update initiated. Please check your new email inbox for verification.'),
+                                  backgroundColor: Colors.green,
+                                ));
+                              } catch (e) {
+                                String errorMessage = 'Failed to update email';
+                                if (e
+                                        .toString()
+                                        .contains('invalid_credentials') ||
+                                    e.toString().contains('Invalid login')) {
+                                  errorMessage =
+                                      'Current password is incorrect';
+                                } else if (e
+                                    .toString()
+                                    .contains('already in use')) {
+                                  errorMessage = 'This email is already in use';
+                                }
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.red,
+                                ));
+                              } finally {
+                                setState(() {
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Update'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      // Validate email format
-                      final emailRegex =
-                          RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
-                      if (!emailRegex.hasMatch(emailController.text.trim())) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Please enter a valid email address'),
-                          backgroundColor: Colors.red,
-                        ));
-                        return;
-                      }
-
-                      if (passwordController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Please enter your current password'),
-                          backgroundColor: Colors.red,
-                        ));
-                        return;
-                      }
-
-                      setState(() {
-                        isLoading = true;
-                      });
-
-                      try {
-                        await _updateEmail(emailController.text.trim(),
-                            passwordController.text);
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(
-                              'Email update initiated. Please check your new email inbox for verification.'),
-                          backgroundColor: Colors.green,
-                        ));
-                      } catch (e) {
-                        String errorMessage = 'Failed to update email';
-                        if (e.toString().contains('invalid_credentials') ||
-                            e.toString().contains('Invalid login')) {
-                          errorMessage = 'Current password is incorrect';
-                        } else if (e.toString().contains('already in use')) {
-                          errorMessage = 'This email is already in use';
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(errorMessage),
-                          backgroundColor: Colors.red,
-                        ));
-                      } finally {
-                        setState(() {
-                          isLoading = false;
-                        });
-                      }
-                    },
-              child: isLoading
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text('Update'),
-            ),
-          ],
         ),
       ),
     );
@@ -690,57 +1022,325 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showDeleteAccountConfirmation(BuildContext context) {
     final TextEditingController passwordController = TextEditingController();
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Account'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.',
-              style: TextStyle(color: Colors.red.shade700),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Roboto',
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.',
+                  style: TextStyle(color: Colors.red.shade700),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Enter your password to confirm',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              // Validate password input
+                              if (passwordController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Please enter your password to confirm'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setState(() {
+                                isLoading = true;
+                              });
+
+                              try {
+                                // Call the delete account function from SupabaseService
+                                await _supabaseService
+                                    .deleteUserAccount(passwordController.text);
+
+                                // Close dialog
+                                Navigator.pop(context);
+
+                                // Show success message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Account deleted successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+
+                                // Navigate to sign in page
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                      builder: (context) => SignInPage()),
+                                  (route) => false,
+                                );
+                              } catch (e) {
+                                String errorMessage =
+                                    'Failed to delete account';
+                                if (e
+                                    .toString()
+                                    .contains('Password is incorrect')) {
+                                  errorMessage = 'Password is incorrect';
+                                }
+
+                                // Show error message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMessage),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    isLoading = false;
+                                  });
+                                }
+                              }
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Delete'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration:
-                  InputDecoration(labelText: 'Enter your password to confirm'),
-            ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                // Implementation for account deletion would go here
-                // await _supabaseService.client.auth.admin.deleteUser(uid); // Admin API required
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Account deleted successfully'),
-                  backgroundColor: Colors.red,
-                ));
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => SignInPage()),
-                  (route) => false,
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Error: ${e.toString()}'),
-                    backgroundColor: Colors.red));
-              }
-            },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
+  }
+
+  // Add this new method for the name change dialog
+  void _showChangeNameDialog(BuildContext context) {
+    final TextEditingController firstNameController =
+        TextEditingController(text: firstName);
+    final TextEditingController lastNameController =
+        TextEditingController(text: lastName);
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Change Name',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: firstNameController,
+                  decoration: InputDecoration(
+                    labelText: 'First Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: lastNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Last Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7400B8),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              // Validate name input
+                              final String newFirstName =
+                                  firstNameController.text.trim();
+                              final String newLastName =
+                                  lastNameController.text.trim();
+
+                              if (newFirstName.isEmpty) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text('First name cannot be empty'),
+                                  backgroundColor: Colors.red,
+                                ));
+                                return;
+                              }
+
+                              setState(() {
+                                isLoading = true;
+                              });
+
+                              try {
+                                await _updateName(newFirstName, newLastName);
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text('Name updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ));
+                              } catch (e) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      'Failed to update name: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ));
+                              } finally {
+                                setState(() {
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Update'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add this method to update the name in Supabase
+  Future<void> _updateName(String newFirstName, String newLastName) async {
+    try {
+      final userId = _supabaseService.currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Update the user details in the database
+      await _supabaseService.client.from('UserDetails').update({
+        'firstName': newFirstName,
+        'lastName': newLastName,
+      }).eq('userId', userId);
+
+      // Update the local state
+      setState(() {
+        firstName = newFirstName;
+        lastName = newLastName;
+      });
+    } catch (e) {
+      debugPrint('Error updating name: $e');
+      throw e;
+    }
   }
 
   // Implement account changes with SupabaseService

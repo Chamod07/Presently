@@ -7,12 +7,16 @@ import datetime
 import uuid
 from fastapi import status
 from services.auth_service import get_current_user_id
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
 
 @router.post("/analyze")
-async def analyze_grammar(request: Request, user_id: str = Depends(get_current_user_id)):
+async def analyze_grammar(request: Request):
     """Analyze text for grammatical correctness and store results"""
     try:
         body = await request.json()
@@ -26,15 +30,20 @@ async def analyze_grammar(request: Request, user_id: str = Depends(get_current_u
         try:
             uuid.UUID(report_id, version=4)
         except ValueError:
+            logger.error(f"Invalid reportId format: {report_id}")
             raise HTTPException(status_code=400, detail="Invalid reportId format")
 
-        analysis_results = analyzer.analyze_grammar(transcription)
+        try:
+            analysis_results = analyzer.analyze_grammar(transcription)
+        except Exception as e:
+            logger.error(f"Error during grammar analysis: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+            
 
         user_report = UserReport(
             reportId=report_id,
             reportTopic=topic,
             createdAt=datetime.datetime.now().isoformat(),
-            userId=user_id,  # Use the user_id from auth instead of hardcoded value
             scoreGrammar=float(analysis_results["grammar_score"]),
             subScoresGrammar={
                 "grammaticalAccuracy": analysis_results["analysis"]["grammatical_accuracy"],
@@ -70,7 +79,7 @@ async def analyze_grammar(request: Request, user_id: str = Depends(get_current_u
                 #"updatedAt": datetime.datetime.now().isoformat()
             }
             
-            print(f"\nUpdating grammar fields for report {report_id}: {update_data}")
+            print(f"\nUpdating grammar fields for report {report_id}")
             response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
             print(f"Update result: {response.data}")
             if response.data and "error" in response.data:
