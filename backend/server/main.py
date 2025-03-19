@@ -4,6 +4,13 @@ from dotenv import load_dotenv
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+# Suppress TensorFlow information messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0=all, 1=info, 2=warning, 3=error
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
+
 from controllers.task_assign_controller import router as task_assign_router
 from controllers.context_analysis_controller import router as context_router
 from controllers.grammar_analysis_controller import router as grammar_router
@@ -14,7 +21,6 @@ from controllers.audio_process_controller import router as audio_process_router
 from controllers.main_process_controller import router as main_controller
 from controllers.report_controller import router as report_router
 from routers import auth, upload
-import logging
 
 # Configure logging
 logging.basicConfig(

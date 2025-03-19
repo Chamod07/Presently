@@ -8,35 +8,64 @@ from services.whisper_service import transcribe_audio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def convert_video_to_mp3(report_id: str):
-    try:
-        # Define input and output file paths
-        input_video_path = f"res/video/{report_id}_video.mp4"
-        output_audio_path = f"res/audio/{report_id}_audio.mp3"
+def convert_video_to_mp3(report_id, video_path=None):
+    """
+    Convert video to MP3 format.
+    
+    Args:
+        report_id: The report ID to use for generating output paths
+        video_path: Optional explicit path to the video file. If not provided,
+                   the function will look for a video in a standardized location
+    
+    Returns:
+        Path to the converted MP3 file
+    """
+    # Set up paths
+    output_dir = f"tmp/audio/{report_id}"
+    os.makedirs(output_dir, exist_ok=True)
+    output_audio_path = f"{output_dir}/audio.mp3"
+    
+    # If video_path is provided, use it directly
+    if video_path and os.path.exists(video_path):
+        input_video_path = video_path
+    else:
+        # Use original behavior - locate video based on report_id
+        video_dir = f"tmp/videos/{report_id}"
         
-        #create directories if they don't exist
-        os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
-
-        # Construct the FFmpeg command
-        command = [
-            "ffmpeg",
-            "-i", input_video_path,
+        # Find the first video file in the directory
+        if os.path.exists(video_dir):
+            video_files = [f for f in os.listdir(video_dir) if f.endswith(('.mp4', '.mov', '.avi', '.mkv'))]
+            if video_files:
+                input_video_path = f"{video_dir}/{video_files[0]}"
+            else:
+                raise FileNotFoundError(f"No video files found in {video_dir}")
+        else:
+            raise FileNotFoundError(f"Video directory not found: {video_dir}")
+    
+    # Execute ffmpeg command to convert video to MP3
+    try:
+        ffmpeg_cmd = [
+            "ffmpeg", "-i", input_video_path, 
+            "-vn",  # No video
+            "-ar", "44100",  # Audio sampling rate
+            "-ac", "2",  # Audio channels
+            "-ab", "192k",  # Audio bitrate
+            "-f", "mp3",  # Output format
             output_audio_path
         ]
-
-        # Execute the command
-        subprocess.run(command, capture_output=True, text=True, check=True)
-        logger.info(f"Successfully converted video to MP3. File saved at: {output_audio_path}")
+        
+        # Run the command
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            logging.error(f"FFMPEG error: {result.stderr}")
+            raise Exception(f"Failed to convert video to MP3: {result.stderr}")
+        
         return output_audio_path
-
-    except subprocess.CalledProcessError as e:
-        # Handle FFmpeg errors
-        logger.error(f"FFmpeg error: {e.stderr}")
-        raise HTTPException(status_code=500, detail=f"FFmpeg conversion failed: {e.stderr}")
+        
     except Exception as e:
-        # Handle other potential errors
-        logger.error(f"An error occurred: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"Error converting video to MP3: {str(e)}")
+        raise
 
 def transcribe_audio_to_text(report_id: str):
     try:

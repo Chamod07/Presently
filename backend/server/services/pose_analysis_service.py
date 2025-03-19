@@ -1,7 +1,9 @@
+import os
+# Suppress TensorFlow notification messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
 import mediapipe as mp
 import numpy as np
-import os
 import math
 from datetime import datetime
 from collections import deque
