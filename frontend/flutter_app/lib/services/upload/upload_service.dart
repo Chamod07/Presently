@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase/supabase_service.dart';
+import 'package:http/http.dart' as http;
 
 
 class UploadService {
@@ -285,6 +286,7 @@ class UploadService {
             if (response != null && response.isNotEmpty) {
               debugPrint('Successfully updated UserReport video URL.');
               debugPrint('Updated records: ${response.length}');
+              await callPythonVideoController(videoUrl, reportId); //calling the python video controller
             } else {
               debugPrint('Update query executed but no records were updated in UserReport.');
             }
@@ -335,6 +337,33 @@ class UploadService {
       throw Exception('Failed to upload to Supabase: $e');
     }
   }
+
+  Future<void> callPythonVideoController(String videoUrl, String reportId) async {
+    try{
+      _updateStatus(null, 'processing', 'Calling Python Video Controller...', 0.95);
+
+      final backendUrl = 'http://10.0.2.2:8000'; //TODO: Add the URL of the Python server
+      final url = Uri.parse('$backendUrl/api/process/video/download_video'); //TODO: Add the URL of the Python server
+
+      final response = await http.get(
+        url.replace(queryParameters: {
+          'video_url': videoUrl,
+          'report_id': reportId,
+        }),
+      );
+
+      if(response.statusCode == 200){
+        debugPrint('Python Video Controller called successfully');
+      } else {
+        debugPrint('Error calling Python Video Controller: ${response.statusCode} - ${response.body}');
+      }
+    }
+    catch(e){
+      debugPrint('Error calling Python Video Controller: $e');
+    }
+
+  }
+
 
   // // Handle chunked video uploads
   // Future<void> _uploadInChunks(
