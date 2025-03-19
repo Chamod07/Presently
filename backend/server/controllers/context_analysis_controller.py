@@ -5,6 +5,7 @@ import uuid
 from models.user_report_model import UserReport
 from services import storage_service
 import datetime
+from typing import Dict
 from fastapi import status
 import logging
 
@@ -29,8 +30,16 @@ async def analyze_presentation(request: Request):
             uuid.UUID(report_id, version=4)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid reportId format")
+        
+        session_data = analyzer.retrieve_scenario_data(report_id)
+        if not session_data:
+            session_info = ""
+        else:
+            session_info = f"Session Type: {session_data.get('session_type', 'N/A')}, Goal: {session_data.get('session_goal', 'N/A')}, Audience: {session_data.get('audience', 'N/A')}"
+            topic = session_data.get('topic') or topic
 
-        analysis_results = analyzer.analyze_presentation(transcription, topic)
+        analysis_results = analyzer.analyze_presentation(transcription, topic, session_info)
+
 
         user_report = UserReport(
             reportId=report_id,
@@ -60,8 +69,6 @@ async def analyze_presentation(request: Request):
             if response.data and "error" in response.data:
                 raise HTTPException(status_code=500, detail=response.data["error"])
             return {"message": f"Analysis completed successfully and updated report with reportId {report_id}"}
-        
-
         else:
             # Insert a new report
             response = storage_service.supabase.table("UserReport").insert(data).execute()
@@ -80,7 +87,7 @@ async def get_overall_score(report_id: str = Query(..., title="Report ID"), user
 
         if not response.data:
             raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
-        
+
         if "scoreContext" not in response.data[0] or response.data[0]["scoreContext"] is None:
             raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
 
@@ -98,7 +105,7 @@ async def get_summery_score(report_id: str = Query(..., title="Report ID"), user
 
         if not response.data:
             raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
-        
+
         if "subScoresContext" not in response.data[0] or response.data[0]["subScoresContext"] is None:
             raise HTTPException(status_code=404, detail="No analysis results found for this reportId")
 

@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from typing import Dict, Any
 from pathlib import Path
 import logging
+from fastapi import HTTPException
+from services import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +84,25 @@ class GeminiContextAnalyzer:
         except Exception as e:
             logger.error(f"Error in API response: {str(e)}")
             raise
+
+
+    def retrieve_scenario_data(self, report_id: str) -> Dict[str, Any]:
+        """Retrieves session data from the Supabase 'Sessions' table by report_id."""
+        logger.info(f"Retrieving session data for report_id: {report_id}")
+        try:
+            response = storage_service.supabase.table("Sessions").select("session_type, session_goal, audience, topic").eq("report_id", report_id).execute()
+
+            if response.data:
+                # Assuming report_id is unique, return the first element
+                logger.info(f"Session data found for report_id: {report_id} : {response.data[0]}")
+                return response.data[0]
+            else:
+                logger.warning(f"No session data found for report_id: {report_id}")
+                return {}  # Return empty dict if no data found
+        except Exception as e:
+            logger.error(f"Error retrieving session data: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
 
 def main():
     # Test the analyzer with sample transcription
