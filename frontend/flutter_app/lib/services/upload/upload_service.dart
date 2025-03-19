@@ -69,7 +69,7 @@ class UploadService {
   Future<void> uploadVideo({
     required File videoFile,
     required Map<String, dynamic> metadata,
-    required String sessionId,
+    required String reportId,
   }) async {
     if (!_supabaseService.isInitialized) {
       debugPrint('Error: Supabase is not initialized');
@@ -79,11 +79,10 @@ class UploadService {
 
     // Create a unique upload ID and file path
     final userId = _supabaseService.currentUserId ?? 'anonymous';
-    // final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final folderPath = 'user_${userId}/presentation_${sessionId}';
-    final fileName = '$folderPath/video_${sessionId}.mp4';
+    final folderPath = 'user_${userId}/presentation_${reportId}';
+    final fileName = '$folderPath/video_${reportId}.mp4';
     final metadataFileName = '$folderPath/metadata.json';
-    final uploadId = 'upload_$sessionId';
+    final uploadId = 'upload_$reportId';
 
     // Check if the file needs chunking
     //final needsChunking = await _chunkingService.needsChunking(videoFile);
@@ -263,25 +262,25 @@ class UploadService {
 
       // Get the public URL of the video (or first chunk if chunked)
       final videoUrl = _supabaseService.client.storage.from(bucketName).getPublicUrl(fileName);
-      debugPrint(videoUrl);
-      final sessionId = metadata['session_id'];
+      debugPrint(videoUrl);;
+      final reportId = metadata['reportId'];
 
-      if (sessionId != null) {
+      if (reportId != null) {
         try {
-          debugPrint('Checking if session_id $sessionId exists in UserReport...');
+          debugPrint('Checking if reportId $reportId exists in UserReport...');
 
           // First check if the record with this session_id exists
-          final checkResponse = await Supabase.instance.client.from('UserReport').select('session_id').eq('session_id', sessionId).single();
+          final checkResponse = await Supabase.instance.client.from('UserReport').select('reportId').eq('reportId', reportId).single();
 
           if (checkResponse != null) {
-            debugPrint('Found session_id $sessionId in UserReport, proceeding with update');
+            debugPrint('Found reportId $reportId in UserReport, proceeding with update');
 
             // Get the public URL of the video
             final videoUrl = _supabaseService.client.storage.from(bucketName).getPublicUrl(fileName);
             debugPrint('Generated video URL: $videoUrl');
 
             // Perform the update
-            final response = await Supabase.instance.client.from('UserReport').update({'videoUrl': videoUrl}).eq('session_id', sessionId).select();
+            final response = await Supabase.instance.client.from('UserReport').update({'videoUrl': videoUrl}).eq('reportId', reportId).select();
 
             if (response != null && response.isNotEmpty) {
               debugPrint('Successfully updated UserReport video URL.');
@@ -290,13 +289,13 @@ class UploadService {
               debugPrint('Update query executed but no records were updated in UserReport.');
             }
           } else {
-            debugPrint('Error: No record found with session_id $sessionId in UserReport');
+            debugPrint('Error: No record found with reportId $reportId in UserReport');
           }
         } catch (e) {
           debugPrint('Exception checking/updating UserReport: $e');
         }
       } else {
-        debugPrint('Warning: No sessionId provided in metadata, could not update UserReport');
+        debugPrint('Warning: No reportId provided in metadata, could not update UserReport');
       }
 
       // Create a database record for the upload
