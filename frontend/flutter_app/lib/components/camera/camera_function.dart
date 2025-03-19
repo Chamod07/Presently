@@ -335,13 +335,25 @@ class CameraFunctions {
           return false;
         }
         //fetching report ID from supabase
-        // final response = await SupabaseService().client
-        //   .from('UserReport')
-        //   .select('reportId')
-        //   .eq('userId', userId)
-        //   .single();
+        final response = await SupabaseService().client.from('UserReport').select('reportId').eq('userId', userId).order('createdAt', ascending: false).limit(1).maybeSingle();
 
-        // final reportId = response['reportId'];
+
+        String? reportId;
+        if (response != null) {
+          reportId = response['reportId'];
+        } else {
+          print('No user report found for this user');
+          return false;
+        }
+
+
+        if (reportId == null) {
+          print('Report ID is null, cannot upload video');
+          return false;
+        }
+
+
+        videoMetaData['reportId'] = reportId;
 
         statusSubscription = UploadService().statusStream.listen((status) {
           // Check for completion status with our recording ID in the message
@@ -359,7 +371,7 @@ class CameraFunctions {
         UploadService().uploadVideo(
           videoFile: videoFile,
           metadata: videoMetaData,
-         // reportId: reportId,
+          reportId: reportId,
         );
         print('Video queued for upload: $videoFilePath');
 
