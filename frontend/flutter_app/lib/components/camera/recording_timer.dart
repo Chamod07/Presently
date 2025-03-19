@@ -36,7 +36,7 @@ class RecordingTimer extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: isWarning ? Colors.orange : Colors.red,
+                color: isWarning ? Colors.orange : Colors.black,
                 shape: BoxShape.circle,
               ),
             ),

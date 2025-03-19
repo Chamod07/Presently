@@ -199,7 +199,7 @@ class _CameraViewState extends State<CameraView> {
               ),
             ),
           ),
-          _positionGuideOverlay(),
+
           _recordingTimerWidget(),
           _notificationWidget(),
           _switchLiveCameraToggle(),
@@ -293,165 +293,6 @@ class _CameraViewState extends State<CameraView> {
     ),
   );
 
-  Widget _positionGuideOverlay() => Positioned.fill(
-    child: IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: (_showPositionGuide && !_isRecording) ? 0.7 : 0.0, // Only show when not recording
-        duration: const Duration(milliseconds: 300),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Face position guide
-            Center(
-              child: Container(
-                width: 220,
-                height: 300,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 2),
-                  borderRadius: BorderRadius.circular(150),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 80), // Space for face position
-                    Text(
-                      'Position your face here',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 8.0,
-                            color: Colors.black,
-                            offset: Offset(0, 0),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Quality indicator in top-left
-            Positioned(
-              top: 50,
-              left: 20,
-              child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _cameraFunctions.hasGoodLighting ? Icons.light_mode : Icons.light_mode_outlined,
-                      color: _cameraFunctions.hasGoodLighting ? Colors.green : Colors.orange,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Lighting',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Position indicator in top-right
-            Positioned(
-              top: 50,
-              right: 20,
-              child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _cameraFunctions.isFaceWellPositioned ? Icons.face : Icons.face_outlined,
-                      color: _cameraFunctions.isFaceWellPositioned ? Colors.green : Colors.orange,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Position',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tap to dismiss text at the bottom
-            Positioned(
-              bottom: 160,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'Tap anywhere to hide guide',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 8.0,
-                        color: Colors.black,
-                        offset: Offset(0, 0),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  //the ready to record indicator
-  Widget _readyToRecordIndicator() => Positioned(
-    bottom: 135, // Position it above the shutter button
-    left: 0,
-    right: 0,
-    child: Center(
-      child: AnimatedOpacity(
-        opacity: (!_isRecording && _cameraFunctions.isRecordingQualitySufficient) ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 300),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(
-                Icons.check_circle,
-                color: Colors.greenAccent,
-                size: 16,
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Ready to record',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
 
   Widget _shutterButton() => Positioned(
     bottom: 62, // Position it above the bottom controls
@@ -521,9 +362,6 @@ class _CameraViewState extends State<CameraView> {
               }
             } else {
               // Check conditions before starting recording
-              bool conditionsGood = await _cameraFunctions.checkRecordingConditions();
-
-              if (conditionsGood) {
                 try {
                   // Start actual video recording
                   await _cameraFunctions.controller!.startVideoRecording();
@@ -541,7 +379,7 @@ class _CameraViewState extends State<CameraView> {
                   showNotification("Failed to start recording");
                 }
               }
-            }
+
           },
           child: Container(
             width: 100.0,
