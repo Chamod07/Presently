@@ -1,9 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from services.auth_service import get_current_user_id
 from services import storage_service, pose_analysis_service
-from services.facial_analysis_service import analyze_facial_engagement
-from services.gesture_analysis_service import analyze_hand_gestures
-from services.movement_analysis_service import analyze_presenter_movement
 import os
 import logging
 
@@ -54,25 +51,28 @@ async def get_body_language_weaknesses(
         raise HTTPException(status_code=500, detail=f"Internal server error")
 
 @router.post("/analyze_video")
-async def analyze_video(report_id: str = Query(...), video_path: str = Query(...)):
+async def analyze_video(report_id: str = Query(...), video_path: str = Query(None)):
     """
     Analyze all aspects of body language from video: posture, facial expressions, gestures, and movement.
     
     Parameters:
     - report_id: ID of the report to update
-    - video_path: Path to the downloaded video file
+    - video_path: Optional path to the downloaded video file
     
     Returns:
     - A status message indicating success
     """
     try:
+        # If video_path is not provided, use standard location
+        if not video_path:
+            video_path = f"tmp/{report_id}/video/video.mp4"
+        
         # Check if video file exists
         if not os.path.exists(video_path):
             logger.error(f"Video file not found: {video_path}")
-            raise HTTPException(status_code=404, detail="Video file not found")
+            raise HTTPException(status_code=404, detail=f"Video file not found at: {video_path}")
         
         # Generate comprehensive body language report (includes Supabase update)
-        # This already includes facial analysis internally
         logger.info(f"Starting body language analysis for report: {report_id}")
         report_file = pose_analysis_service.generate_posture_report(video_path, report_id)
         
