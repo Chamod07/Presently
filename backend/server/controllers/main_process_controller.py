@@ -2,12 +2,10 @@ from fastapi import APIRouter, HTTPException, Query
 import os
 from supabase import create_client, Client
 import logging
+import httpx
+from urllib.parse import urlparse, unquote
 
-# Import needed controller functions directly
-from controllers.audio_process_controller import convert_to_mp3, transcribe_audio
-from controllers.body_language_analysis_controller import analyze_video
-from controllers.context_analysis_controller import analyze_context
-from controllers.grammar_analysis_controller import analyze_grammar
+from controllers.audio_process_controller import convert_to_mp3
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -40,14 +38,17 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         logger.info(f"Transcription complete: {len(transcription)} characters")
         
         # 4. Analyze body language
+        from controllers.body_language_analysis_controller import analyze_video
         body_language_result = await analyze_video(report_id=report_id, video_path=local_video_path)
         logger.info("Body language analysis complete")
         
         # 5. Analyze context
+        from controllers.context_analysis_controller import analyze_context
         context_result = await analyze_context(transcription=transcription, report_id=report_id)
         logger.info("Context analysis complete")
         
         # 6. Analyze grammar
+        from controllers.grammar_analysis_controller import analyze_grammar
         grammar_result = await analyze_grammar(transcription=transcription, report_id=report_id)
         logger.info("Grammar analysis complete")
         
@@ -62,31 +63,36 @@ async def process_video(video_url: str, report_id: str = Query(...)):
 async def download_from_supabase(video_url: str, report_id: str) -> str:
     """Download video from Supabase storage to local temp directory"""
     try:
-        # Extract path from URL
-        # The video_url will look like: https://supabase-url.storage.googleapis.com/bucket/user_123/presentation_456/video_456.mp4
-        path_parts = video_url.split('/')
+        # Parse URL and remove query parameters
+        parsed_url = urlparse(video_url)
+        path_parts = parsed_url.path.split('/')
+        
+        # Extract the actual filename without query parameters
+        file_name = os.path.basename(parsed_url.path)
         bucket_name = 'videos'  # Bucket name from camera_function.dart
-        
-        # Find bucket index in path
-        if bucket_name not in path_parts:
-            raise HTTPException(status_code=400, detail=f"Invalid video URL format: bucket '{bucket_name}' not found")
-        
-        # Get file name and directory components
-        file_name = path_parts[-1]  # video_timestamp.mp4
-        storage_path = '/'.join(path_parts[-(len(path_parts)-path_parts.index(bucket_name)-1):-1])  # user_X/presentation_Y
         
         # Create temporary directory
         temp_dir = f"tmp/videos/{report_id}"
         os.makedirs(temp_dir, exist_ok=True)
         local_file_path = f"{temp_dir}/{file_name}"
         
-        # Download file from Supabase
-        with open(local_file_path, 'wb+') as f:
-            res = supabase.storage.from_(bucket_name).download(f"{storage_path}/{file_name}")
-            f.write(res)
-            
-        return local_file_path
+        logger.info(f"Downloading video URL: {video_url}")
+        logger.info(f"Saving to: {local_file_path}")
         
+        # For direct download from signed URL
+        async with httpx.AsyncClient() as client:
+            response = await client.get(video_url)
+            if response.status_code == 200:
+                with open(local_file_path, 'wb') as f:
+                    f.write(response.content)
+                logger.info(f"Video downloaded successfully to {local_file_path}")
+                return local_file_path
+            else:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Failed to download video: HTTP {response.status_code}"
+                )
+                
     except Exception as e:
         logger.error(f"Failed to download video: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to download video from storage: {str(e)}")
