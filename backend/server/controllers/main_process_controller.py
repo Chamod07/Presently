@@ -5,7 +5,8 @@ import logging
 import httpx
 from urllib.parse import urlparse, unquote
 
-from controllers.audio_process_controller import convert_to_mp3
+# Import the correct audio processing services
+from services.audio_processing import convert_video_to_mp3, transcribe_audio_to_text
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -21,6 +22,8 @@ async def process_video(video_url: str, report_id: str = Query(...)):
     """
     Process video and generate complete analysis by coordinating all analysis services.
     """
+    errors = []  # Track errors but continue processing
+    
     try:
         logger.info(f"Starting video processing for report {report_id}")
         
@@ -28,34 +31,73 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         local_video_path = await download_from_supabase(video_url, report_id)
         logger.info(f"Video downloaded to {local_video_path}")
         
-        # 2. Convert to MP3
-        audio_path = await convert_to_mp3(report_id=report_id, video_path=local_video_path)
-        logger.info(f"Converted video to audio: {audio_path}")
+        # 2. Convert to MP3 - direct service call
+        try:
+            audio_path = convert_video_to_mp3(report_id, local_video_path)
+            logger.info(f"Converted video to audio: {audio_path}")
+        except Exception as e:
+            error_msg = f"Audio conversion failed: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            audio_path = None
         
-        # 3. Transcribe
-        transcription_result = await transcribe_audio(report_id=report_id)
-        transcription = transcription_result["transcription"]
-        logger.info(f"Transcription complete: {len(transcription)} characters")
+        # 3. Transcribe - direct service call
+        transcription = ""
+        try:
+            if audio_path:
+                transcription = transcribe_audio_to_text(report_id)
+                logger.info(f"Transcription complete: {len(transcription)} characters")
+        except Exception as e:
+            error_msg = f"Transcription failed: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            logger.warning("Proceeding with empty transcription")
         
         # 4. Analyze body language
-        from controllers.body_language_analysis_controller import analyze_video
-        body_language_result = await analyze_video(report_id=report_id, video_path=local_video_path)
-        logger.info("Body language analysis complete")
+        try:
+            from controllers.body_language_analysis_controller import analyze_video
+            body_language_result = await analyze_video(report_id=report_id, video_path=local_video_path)
+            logger.info("Body language analysis complete")
+        except Exception as e:
+            error_msg = f"Body language analysis failed: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
         
         # 5. Analyze context
-        from controllers.context_analysis_controller import analyze_context
-        context_result = await analyze_context(transcription=transcription, report_id=report_id)
-        logger.info("Context analysis complete")
+        if transcription:
+            try:
+                from controllers.context_analysis_controller import analyze_context
+                context_result = await analyze_context(transcription=transcription, report_id=report_id)
+                logger.info("Context analysis complete")
+            except Exception as e:
+                error_msg = f"Context analysis failed: {str(e)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
         
         # 6. Analyze grammar
-        from controllers.grammar_analysis_controller import analyze_grammar
-        grammar_result = await analyze_grammar(transcription=transcription, report_id=report_id)
-        logger.info("Grammar analysis complete")
+        if transcription:
+            try:
+                from controllers.grammar_analysis_controller import analyze_grammar
+                grammar_result = await analyze_grammar(transcription=transcription, report_id=report_id)
+                logger.info("Grammar analysis complete")
+            except Exception as e:
+                error_msg = f"Grammar analysis failed: {str(e)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
         
-        return {
-            "message": "Video processed and analyzed successfully.",
-            "report_id": report_id
-        }
+        # Return results with any errors that occurred
+        if errors:
+            return {
+                "message": "Video processed with some errors",
+                "report_id": report_id,
+                "errors": errors
+            }
+        else:
+            return {
+                "message": "Video processed and analyzed successfully.",
+                "report_id": report_id
+            }
+        
     except Exception as e:
         logger.error(f"Error processing video: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -65,14 +107,12 @@ async def download_from_supabase(video_url: str, report_id: str) -> str:
     try:
         # Parse URL and remove query parameters
         parsed_url = urlparse(video_url)
-        path_parts = parsed_url.path.split('/')
         
         # Extract the actual filename without query parameters
-        file_name = os.path.basename(parsed_url.path)
-        bucket_name = 'videos'  # Bucket name from camera_function.dart
+        file_name = "video.mp4"  # Standardized file name
         
-        # Create temporary directory
-        temp_dir = f"tmp/videos/{report_id}"
+        # Create standardized temporary directory structure
+        temp_dir = f"tmp/{report_id}/video"
         os.makedirs(temp_dir, exist_ok=True)
         local_file_path = f"{temp_dir}/{file_name}"
         
