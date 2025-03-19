@@ -4,7 +4,7 @@ import 'package:disk_space_plus/disk_space_plus.dart';
 
 class StorageCheck {
   // Required free space in MB
-  static const int requiredFreeSpaceMB = 500;
+  static const int requiredFreeSpaceMB = 200;
 
   // Check if there's enough storage space
   static Future<bool> hasEnoughStorageSpace() async {
