@@ -108,19 +108,54 @@ def _get_tasks(report_id: str):
 
 # to get the user mistake list from the UserReport table
 def get_user_mistakes(report_id: str) -> List[str]:
-    response = supabase.table("UserReport").select("weaknessTopicsContext").eq("reportId", report_id).execute()
+    """
+    Get all user mistakes from four weakness topic columns in UserReport
+    
+    Args:
+        report_id: The ID of the report
+        
+    Returns:
+        List[str]: List of mistake topics
+    """
+    # Select all weakness topic columns
+    response = supabase.table("UserReport").select(
+        "weaknessTopicsContext, weaknessTopicsGrammar, weaknessTopicsBodylan, weaknessTopicsVoice"
+    ).eq("reportId", report_id).execute()
+    
     if not response.data or len(response.data) == 0:
         raise Exception(f"No report found with id: {report_id}")
     
     report = response.data[0]
-    mistakes = report.get("weaknessTopicsContext", [])
-    logging.info(f"Fetched mistakes for report {report_id}: {mistakes}, type: {type(mistakes)}")
     
-    # Ensure we return a list even if mistakes is None
-    if mistakes is None:
-        return []
+    # Initialize an empty list to store all mistake topics
+    all_mistakes = []
+    
+    # Process each weakness topics column
+    columns = [
+        "weaknessTopicsContext", 
+        "weaknessTopicsGrammar", 
+        "weaknessTopicsBodylan", 
+        "weaknessTopicsVoice"
+    ]
+    
+    for column in columns:
+        topics_data = report.get(column, [])
         
-    return mistakes
+        # Skip if data is None
+        if topics_data is None:
+            continue
+            
+        # If the data is a JSON array of objects with "topic" field
+        if isinstance(topics_data, list):
+            for item in topics_data:
+                if isinstance(item, dict) and "topic" in item:
+                    # Extract just the topic name
+                    all_mistakes.append(item["topic"])
+                elif isinstance(item, str):
+                    all_mistakes.append(item)
+    
+    logging.info(f"Fetched mistakes for report {report_id}: {all_mistakes}, type: {type(all_mistakes)}")
+    return all_mistakes
 
 #to fetch the challenges from the Challenges table with their ID and associated mistakes
 def fetch_challenges() -> List[Dict]:
@@ -175,7 +210,7 @@ def insert_task_group_challenges(report_id: str, challenge_ids: List[int]) -> No
 
     logging.info(f"Inserted TaskGroupChallenges for report {report_id} with challenges {challenge_ids}")
 
-def assign_challenges_for_report(report_id: str, threshold: int = 5) -> List[int]:
+def assign_challenges_for_report(report_id: str, threshold: int = 0) -> List[int]:
     
     # Fetch mistakes from the user report.
     mistakes = get_user_mistakes(report_id)

@@ -49,7 +49,7 @@ class _InfoCardState extends State<InfoCard> {
         'This task will help improve your presentation skills.';
     _taskSubtitle = widget.taskSubtitle ?? 'Presentation Skills';
     _points = widget.points ?? 2;
-    _duration = widget.duration ?? '30 sec';
+    _duration = widget.duration ?? '2 min';
 
     // Fetch task details if reportId is provided
     if (widget.reportId != null && widget.reportId!.isNotEmpty) {
@@ -86,7 +86,7 @@ class _InfoCardState extends State<InfoCard> {
         _taskDescription = task.description ?? _taskDescription;
         _points = task.points ?? _points;
         _duration = task.durationSeconds != null
-            ? '${task.durationSeconds} sec'
+            ? '${task.durationSeconds} min'
             : _duration;
         if (task.instructions != null && task.instructions!.isNotEmpty) {
           _instructions = task.instructions!;
