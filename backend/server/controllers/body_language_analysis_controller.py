@@ -53,7 +53,7 @@ async def get_body_language_weaknesses(
 @router.post("/analyze_video")
 async def analyze_video(report_id: str = Query(...), video_path: str = Query(None)):
     """
-    Analyze all aspects of body language from video: posture, facial expressions, gestures, and movement.
+    Analyze body language from video using simplified approach.
     
     Parameters:
     - report_id: ID of the report to update
@@ -63,18 +63,34 @@ async def analyze_video(report_id: str = Query(...), video_path: str = Query(Non
     - A status message indicating success
     """
     try:
+        print("\n" + "-" * 60)
+        print(f"BODY LANGUAGE ANALYSIS: Starting for report {report_id}")
+        print("-" * 60)
+        
         # If video_path is not provided, use standard location
         if not video_path:
             video_path = f"tmp/{report_id}/video/video.mp4"
+            print(f"[1/3] Using standard video path: {video_path}")
+        else:
+            print(f"[1/3] Using provided video path: {video_path}")
         
         # Check if video file exists
         if not os.path.exists(video_path):
+            print(f"✗ Error: Video file not found at: {video_path}")
             logger.error(f"Video file not found: {video_path}")
             raise HTTPException(status_code=404, detail=f"Video file not found at: {video_path}")
         
-        # Generate comprehensive body language report (includes Supabase update)
-        logger.info(f"Starting body language analysis for report: {report_id}")
-        report_file = pose_analysis_service.generate_posture_report(video_path, report_id)
+        # Generate simplified body language report
+        print(f"[2/3] Analyzing body language...")
+        try:
+            report_file = pose_analysis_service.generate_posture_report(video_path, report_id)
+            print(f"[3/3] Saving analysis results...")
+            print(f"✓ BODY LANGUAGE ANALYSIS: Completed for report {report_id}")
+        except Exception as e:
+            print(f"✗ Error analyzing body language: {str(e)}")
+            raise
+            
+        print("-" * 60 + "\n")
         
         return {"status": "success", "message": "Body language analysis complete", "report_file": report_file}
         

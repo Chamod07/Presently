@@ -1,270 +1,77 @@
 import os
 import warnings
-
-# Import our custom logging utilities
+import cv2
+import numpy as np
+import math
+import logging
+from datetime import datetime
+from collections import deque
 from services.logging_utils import suppress_stdout_stderr, init_mediapipe
 
 # Basic warning suppression
 warnings.filterwarnings("ignore")
-
-# Import OpenCV first
-import cv2
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
 
 # Initialize MediaPipe silently
 mp = init_mediapipe()
+mp_pose = mp.solutions.pose
 
-import numpy as np
-import math
-from datetime import datetime
-from collections import deque
-from scipy.signal import savgol_filter
-import logging
-
-# Configure standard logging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Suppress all warnings globally
-warnings.filterwarnings("ignore")
-
-# Maximum logging suppression
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
-os.environ['GLOG_minloglevel'] = '3'
-os.environ['GLOG_stderrthreshold'] = '3'
-os.environ['AUTOGRAPH_VERBOSITY'] = '0'
-os.environ['MEDIAPIPE_DISABLE_CALCULATOR_GRAPH_LOG'] = '1'
-os.environ['MEDIAPIPE_DISABLE_CALCULATOR_LOG'] = '1'
-os.environ['MEDIAPIPE_DISABLE_EXECUTOR_LOG'] = '1'
-
-def calculate_tilt_angle(point1, point2):
-    """Calculate the tilt angle between two points relative to the horizontal axis."""
-    dx = point2[0] - point1[0]
-    dy = point2[1] - point1[1]
-    angle = math.degrees(math.atan2(dy, dx))
-    return abs(angle)
-
-
-def calculate_visibility_score(landmarks, visibility_threshold=0.5):
-    """Calculate visibility score for key body parts."""
-    key_landmarks = [
-        'LEFT_SHOULDER', 'RIGHT_SHOULDER', 
-        'LEFT_HIP', 'RIGHT_HIP',
-        'LEFT_EAR', 'RIGHT_EAR',
-        'NOSE'
-    ]
-    
-    mp_pose = mp.solutions.pose
-    visibility_scores = {}
-    
-    for landmark_name in key_landmarks:
-        landmark_idx = getattr(mp_pose.PoseLandmark, landmark_name)
-        if landmark_idx < len(landmarks):
-            visibility = landmarks[landmark_idx].visibility
-            visibility_scores[landmark_name] = visibility
-    
-    # Determine which body parts are reliably visible
-    upper_body_visible = all(visibility_scores.get(part, 0) > visibility_threshold 
-                           for part in ['LEFT_SHOULDER', 'RIGHT_SHOULDER'])
-    
-    lower_body_visible = all(visibility_scores.get(part, 0) > visibility_threshold 
-                           for part in ['LEFT_HIP', 'RIGHT_HIP'])
-    
-    face_visible = all(visibility_scores.get(part, 0) > visibility_threshold 
-                      for part in ['LEFT_EAR', 'RIGHT_EAR', 'NOSE'])
-    
-    return {
-        'upper_body_visible': upper_body_visible,
-        'lower_body_visible': lower_body_visible,
-        'face_visible': face_visible,
-        'scores': visibility_scores
-    }
-
-
-def calculate_head_position(landmarks, mp_pose):
-    """Calculate head position metrics (tilt, forward/backward lean)."""
-    if len(landmarks) <= mp_pose.PoseLandmark.RIGHT_EAR:
-        return None
-        
-    # Get ear and shoulder landmarks
-    left_ear = np.array([landmarks[mp_pose.PoseLandmark.LEFT_EAR].x, 
-                         landmarks[mp_pose.PoseLandmark.LEFT_EAR].y])
-    right_ear = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_EAR].x, 
-                          landmarks[mp_pose.PoseLandmark.RIGHT_EAR].y])
-    left_shoulder = np.array([landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER].x, 
-                             landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER].y])
-    right_shoulder = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER].x, 
-                              landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER].y])
-    nose = np.array([landmarks[mp_pose.PoseLandmark.NOSE].x, 
-                    landmarks[mp_pose.PoseLandmark.NOSE].y])
-    
-    # Visibility checks
-    left_ear_vis = landmarks[mp_pose.PoseLandmark.LEFT_EAR].visibility > 0.5
-    right_ear_vis = landmarks[mp_pose.PoseLandmark.RIGHT_EAR].visibility > 0.5
-    
-    # Calculate ear midpoint if both ears are visible
-    if left_ear_vis and right_ear_vis:
-        ear_midpoint = (left_ear + right_ear) / 2
-    elif left_ear_vis:
-        ear_midpoint = left_ear
-    elif right_ear_vis:
-        ear_midpoint = right_ear
-    else:
-        return None
-    
-    # Calculate shoulder midpoint
-    shoulder_midpoint = (left_shoulder + right_shoulder) / 2
-    
-    # Head tilt (left-right tilt angle)
-    if left_ear_vis and right_ear_vis:
-        head_tilt = calculate_tilt_angle(left_ear, right_ear)
-    else:
-        head_tilt = None
-    
-    # Forward lean (angle between vertical line from shoulders and line to head)
-    vertical_vector = np.array([0, -1])  # Up direction in image coordinates
-    head_vector = ear_midpoint - shoulder_midpoint
-    head_vector_normalized = head_vector / np.linalg.norm(head_vector)
-    
-    # Calculate forward/backward lean using dot product with vertical vector
-    forward_lean = math.degrees(math.acos(np.clip(np.dot(vertical_vector, head_vector_normalized), -1.0, 1.0)))
-    
-    # For side view or partial visibility
-    nose_to_shoulder_distance = None
-    if landmarks[mp_pose.PoseLandmark.NOSE].visibility > 0.5:
-        # Calculate horizontal distance between nose and shoulder midpoint
-        nose_to_shoulder_distance = abs(nose[0] - shoulder_midpoint[0])
-    
-    return {
-        'head_tilt': head_tilt,
-        'forward_lean': forward_lean,
-        'nose_to_shoulder_distance': nose_to_shoulder_distance
-    }
-
-
-def calculate_spine_alignment(landmarks, mp_pose):
-    """Calculate spine alignment metrics."""
-    # Check if necessary landmarks are available
-    required_landmarks = [
-        mp_pose.PoseLandmark.LEFT_SHOULDER,
-        mp_pose.PoseLandmark.RIGHT_SHOULDER,
-        mp_pose.PoseLandmark.LEFT_HIP,
-        mp_pose.PoseLandmark.RIGHT_HIP
-    ]
-    
-    # Check visibility of required landmarks
-    for landmark_idx in required_landmarks:
-        if landmark_idx >= len(landmarks) or landmarks[landmark_idx].visibility < 0.5:
-            return None
-    
-    # Calculate midpoints
-    shoulder_midpoint = np.array([
-        (landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER].x + landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER].x) / 2,
-        (landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER].y + landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER].y) / 2
-    ])
-    
-    hip_midpoint = np.array([
-        (landmarks[mp_pose.PoseLandmark.LEFT_HIP].x + landmarks[mp_pose.PoseLandmark.RIGHT_HIP].x) / 2,
-        (landmarks[mp_pose.PoseLandmark.LEFT_HIP].y + landmarks[mp_pose.PoseLandmark.RIGHT_HIP].y) / 2
-    ])
-    
-    # Calculate spine vector and vertical vector
-    spine_vector = shoulder_midpoint - hip_midpoint
-    vertical_vector = np.array([0, -1])  # Up direction
-    
-    # Normalize vectors
-    spine_vector_normalized = spine_vector / np.linalg.norm(spine_vector)
-    
-    # Calculate spine angle with respect to vertical
-    spine_angle = math.degrees(math.acos(np.clip(np.dot(vertical_vector, spine_vector_normalized), -1.0, 1.0)))
-    
-    # Calculate lateral lean (left/right tilt of spine)
-    lateral_lean = math.degrees(math.atan2(spine_vector[0], -spine_vector[1]))
-    
-    return {
-        'spine_angle': spine_angle,
-        'lateral_lean': lateral_lean
-    }
-
-
-def classify_posture_issue(metric_name, value, thresholds):
-    """Classify posture issue based on metric value and thresholds."""
-    if metric_name in thresholds:
-        if value > thresholds[metric_name]['severe']:
-            return 'severe'
-        elif value > thresholds[metric_name]['moderate']:
-            return 'moderate'
-        elif value > thresholds[metric_name]['mild']:
-            return 'mild'
-    return 'normal'
-
-
-def analyze_posture(video_path, calibration_seconds=3):
+def analyze_posture(video_path):
     """
-    Analyze posture from video with enhanced accuracy and edge case handling.
+    Simplified posture analysis focusing on core metrics only.
     
     Args:
         video_path: Path to the video file
-        calibration_seconds: Seconds at the start of the video to use for calibration
     """
-    # Initialize MediaPipe Pose with optimal settings for accuracy
-    mp_pose = mp.solutions.pose
-    mp_drawing = mp.solutions.drawing_utils
-
     # Check if the video file exists
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found at path: {video_path}")
 
+    logger.info(f"Starting simplified posture analysis for: {video_path}")
+    
     # Open video
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError("Could not open video file")
+    
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    if total_frames <= 0 or frame_rate <= 0:
-        raise ValueError(f"Invalid video: {total_frames} frames at {frame_rate} FPS")
-    
-    # Calculate calibration frames
-    calibration_frames = int(calibration_seconds * frame_rate)
-    
     # Analysis tracking variables
+    processed_frames = 0
     detected_frames = 0
-    frames_with_issues = 0
-    calibration_data = {
-        'shoulder_tilt': [],
-        'hip_tilt': [],
-        'head_tilt': [],
-        'forward_lean': [],
-        'spine_angle': [],
-        'lateral_lean': []
+    
+    # Core posture metrics - expanded to include more metrics
+    posture_data = {
+        'head_tilt_frames': 0,
+        'forward_lean_frames': 0,
+        'shoulder_imbalance_frames': 0,
+        'slouching_frames': 0,
+        'eye_contact_frames': 0,  # New: track eye contact (looking at camera)
+        'rigid_posture_frames': 0,  # New: track overly stiff posture
+        'excessive_movement_frames': 0,  # New: track excessive movement
+        'hand_position_frames': 0,  # New: track inappropriate hand position
     }
     
-    # For temporal smoothing - critical for accurate analysis
-    history_length = min(30, int(frame_rate))
-    metric_history = {
-        'shoulder_tilt': deque(maxlen=history_length),
-        'hip_tilt': deque(maxlen=history_length),
-        'head_tilt': deque(maxlen=history_length),
-        'forward_lean': deque(maxlen=history_length),
-        'spine_angle': deque(maxlen=history_length),
-        'lateral_lean': deque(maxlen=history_length)
-    }
+    # Track frame sequences for movement analysis
+    position_history = []
     
-    # Track specific posture issues
-    posture_issues = []
-    frame_metrics = []
+    # Skip interval (process 1 frame per second for efficiency)
+    skip_interval = max(1, int(frame_rate))
     
-    # Analysis mode (full body or upper body only)
-    analysis_mode = 'detecting'  # Will be set to 'full_body' or 'upper_body' after calibration
-    visibility_history = []
-    
-    # Process video with optimal settings
+    # Process video with simplified settings
     with mp_pose.Pose(
-        min_detection_confidence=0.6,  # Higher confidence threshold for more reliable detections
-        min_tracking_confidence=0.6,   # Higher tracking confidence for more stable tracking
-        model_complexity=2,            # Maximum complexity for best accuracy
-        smooth_landmarks=True          # Enable landmark smoothing for stability
+        min_detection_confidence=0.5,  # Lower threshold to detect more poses
+        min_tracking_confidence=0.5,
+        model_complexity=1,  # Medium complexity for balance
+        smooth_landmarks=True
     ) as pose:
         frame_count = 0
-        prev_landmarks = None
         
         while cap.isOpened():
             ret, frame = cap.read()
@@ -273,663 +80,587 @@ def analyze_posture(video_path, calibration_seconds=3):
                 
             frame_count += 1
             
-            # Skip frames if video is too long (process 3 frames per second)
-            if frame_rate > 10 and frame_count % max(1, int(frame_rate / 3)) != 0:
+            # Skip frames for efficiency
+            if frame_count % skip_interval != 0:
                 continue
+                
+            processed_frames += 1
             
-            # Analyze video at a dynamic resolution based on input size
+            # Resize large frames for better performance
             h, w = frame.shape[:2]
-            resize_factor = 1.0
+            if w > 640:
+                resize_factor = 640 / w
+                frame = cv2.resize(frame, (640, int(h * resize_factor)))
             
-            # Resize very large frames for better performance without compromising accuracy
-            if w > 1280:
-                resize_factor = 1280 / w
-                new_w, new_h = int(w * resize_factor), int(h * resize_factor)
-                frame = cv2.resize(frame, (new_w, new_h))
-            
-            # Convert frame to RGB for MediaPipe with optimal preprocessing
+            # Convert to RGB and process
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Apply light color correction to improve landmark detection
-            image = cv2.convertScaleAbs(image, alpha=1.05, beta=5)
-            
-            # Ensure image is contiguous for better performance
-            image = np.ascontiguousarray(image)
-            
-            # Process the frame with MediaPipe Pose
             results = pose.process(image)
             
             if results.pose_landmarks:
                 detected_frames += 1
                 landmarks = results.pose_landmarks.landmark
                 
-                # Apply landmark continuity correction - use previous landmarks to stabilize results
-                if prev_landmarks is not None:
-                    for i, (curr, prev) in enumerate(zip(landmarks, prev_landmarks)):
-                        if curr.visibility < 0.5 and prev.visibility > 0.7:
-                            landmarks[i].x = prev.x
-                            landmarks[i].y = prev.y
-                            landmarks[i].z = prev.z
-                            landmarks[i].visibility = prev.visibility * 0.9  # Decay visibility slightly
+                # Store position for movement analysis
+                position = extract_position(landmarks)
+                if position:
+                    position_history.append(position)
                 
-                # Store current landmarks for next frame - FIX: can't use copy() on MediaPipe landmarks
-                prev_landmarks = []
-                for landmark in landmarks:
-                    # Create a new landmark object with the same properties
-                    new_landmark = type('', (), {})()
-                    new_landmark.x = landmark.x
-                    new_landmark.y = landmark.y 
-                    new_landmark.z = landmark.z
-                    new_landmark.visibility = landmark.visibility
-                    prev_landmarks.append(new_landmark)
+                # Simple posture checks
+                # 1. Head tilt check
+                if is_head_tilted(landmarks):
+                    posture_data['head_tilt_frames'] += 1
                 
-                # Check visibility of body parts
-                visibility = calculate_visibility_score(landmarks)
-                visibility_history.append(visibility)
+                # 2. Forward lean check
+                if is_leaning_forward(landmarks):
+                    posture_data['forward_lean_frames'] += 1
                 
-                # Determine analysis mode during calibration
-                if frame_count <= calibration_frames:
-                    if visibility['lower_body_visible']:
-                        analysis_mode = 'full_body'
-                    elif visibility['upper_body_visible']:
-                        analysis_mode = 'upper_body'
+                # 3. Shoulder imbalance check
+                if has_shoulder_imbalance(landmarks):
+                    posture_data['shoulder_imbalance_frames'] += 1
                 
-                # Extract landmarks and calculate metrics
-                frame_data = {'frame': frame_count}
-                
-                # Get shoulder and hip landmarks if visible
-                if visibility['upper_body_visible']:
-                    # Get shoulder coordinates
-                    left_shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER].x,
-                                    landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER].y]
-                    right_shoulder = [landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER].x,
-                                      landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER].y]
+                # 4. Slouching check
+                if is_slouching(landmarks):
+                    posture_data['slouching_frames'] += 1
                     
-                    # Validate shoulder detection with distance checks
-                    shoulder_distance = math.sqrt(
-                        (right_shoulder[0] - left_shoulder[0])**2 + 
-                        (right_shoulder[1] - left_shoulder[1])**2
-                    )
+                # 5. Eye contact check (based on face orientation)
+                if not has_good_eye_contact(landmarks):
+                    posture_data['eye_contact_frames'] += 1
                     
-                    # Only analyze if shoulders are detected with reasonable distance
-                    if 0.05 < shoulder_distance < 0.8:
-                        # Calculate shoulder tilt
-                        shoulder_tilt = calculate_tilt_angle(left_shoulder, right_shoulder)
-                        frame_data['shoulder_tilt'] = shoulder_tilt
-                        metric_history['shoulder_tilt'].append(shoulder_tilt)
+                # 6. Rigid posture check
+                if has_rigid_posture(landmarks):
+                    posture_data['rigid_posture_frames'] += 1
                     
-                    # Get head position with additional validation
-                    head_metrics = calculate_head_position(landmarks, mp_pose)
-                    if head_metrics:
-                        if head_metrics['head_tilt'] is not None:
-                            # Validate head tilt value
-                            if 0 <= head_metrics['head_tilt'] < 60:  # Reasonable range check
-                                frame_data['head_tilt'] = head_metrics['head_tilt']
-                                metric_history['head_tilt'].append(head_metrics['head_tilt'])
-                        
-                        # Validate forward lean angle
-                        if 0 <= head_metrics['forward_lean'] < 90:  # Reasonable range check
-                            frame_data['forward_lean'] = head_metrics['forward_lean']
-                            metric_history['forward_lean'].append(head_metrics['forward_lean'])
-                
-                # Get hip measurements if visible (full body mode)
-                if visibility['lower_body_visible'] or analysis_mode == 'full_body':
-                    try:
-                        left_hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP].x,
-                                   landmarks[mp_pose.PoseLandmark.LEFT_HIP].y]
-                        right_hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP].x,
-                                    landmarks[mp_pose.PoseLandmark.RIGHT_HIP].y]
-                        
-                        # Validate hip detection with distance checks
-                        hip_distance = math.sqrt(
-                            (right_hip[0] - left_hip[0])**2 + 
-                            (right_hip[1] - left_hip[1])**2
-                        )
-                        
-                        # Only analyze if hips are detected with reasonable distance
-                        if 0.05 < hip_distance < 0.5:
-                            # Calculate hip tilt
-                            hip_tilt = calculate_tilt_angle(left_hip, right_hip)
-                            frame_data['hip_tilt'] = hip_tilt
-                            metric_history['hip_tilt'].append(hip_tilt)
-                        
-                        # Calculate spine alignment with additional validation
-                        spine_metrics = calculate_spine_alignment(landmarks, mp_pose)
-                        if spine_metrics:
-                            # Validate spine angles
-                            if 0 <= spine_metrics['spine_angle'] < 60:
-                                frame_data['spine_angle'] = spine_metrics['spine_angle']
-                                metric_history['spine_angle'].append(spine_metrics['spine_angle'])
-                            
-                            if -30 <= spine_metrics['lateral_lean'] <= 30:
-                                frame_data['lateral_lean'] = spine_metrics['lateral_lean']
-                                metric_history['lateral_lean'].append(spine_metrics['lateral_lean'])
-                    except (IndexError, AttributeError):
-                        # Handle case where landmarks might be detected but not accurate
-                        pass
-                
-                # For gesture analysis - COMMENTED OUT FOR TESTING
-                """
-                try:
-                    from services.gesture_analysis_service import analyze_hand_gestures
-                    gesture_data = analyze_hand_gestures(landmarks, frame_count)
-                    if gesture_data:
-                        frame_data.update(gesture_data)
-                        
-                        # Initialize gesture_metrics list if not exists
-                        if 'gesture_metrics' not in locals():
-                            gesture_metrics = []
-                        gesture_metrics.append(gesture_data)
-                except Exception as e:
-                    print(f"Warning: Error in gesture analysis: {e}")
-                """
-                
-                # For movement analysis (requires pose history) - COMMENTED OUT FOR TESTING
-                """
-                if frame_count % 5 == 0:  # Analyze every 5th frame for efficiency
-                    try:
-                        from services.movement_analysis_service import analyze_presenter_movement
-                        if 'pose_history' not in locals():
-                            pose_history = []
-                        
-                        # Add current pose to history
-                        pose_data = {'frame': frame_count, 'hip_center': [0, 0]}
-                        if visibility['lower_body_visible']:
-                            left_hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP].x, 
-                                      landmarks[mp_pose.PoseLandmark.LEFT_HIP].y]
-                            right_hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP].x, 
-                                       landmarks[mp_pose.PoseLandmark.RIGHT_HIP].y]
-                            pose_data['hip_center'] = [(left_hip[0] + right_hip[0])/2, 
-                                                    (left_hip[1] + right_hip[1])/2]
-                        
-                        pose_history.append(pose_data)
-                        
-                        # Process movement after collecting enough frames
-                        if len(pose_history) >= 10:
-                            movement_data = analyze_presenter_movement(
-                                pose_history, frame_count, frame_rate)
-                            if movement_data:
-                                # Store movement data directly without using analysis_results
-                                if 'movement_metrics' not in locals():
-                                    movement_metrics = movement_data
-                    except Exception as e:
-                        print(f"Warning: Error in movement analysis: {e}")
-                """
-
-                # Store frame metrics if we have valid measurements
-                if len(frame_data) > 1:  # More than just the frame number
-                    frame_metrics.append(frame_data)
-                
-                # For calibration phase, collect baseline metrics
-                if frame_count <= calibration_frames:
-                    for key, value in frame_data.items():
-                        if key in calibration_data and key != 'frame':
-                            calibration_data[key].append(value)
-                else:
-                    # After calibration, evaluate posture using adaptive thresholds
-                    frame_issues = []
-                    
-                    # Calculate adaptive thresholds based on calibration data
-                    thresholds = {}
-                    for metric, values in calibration_data.items():
-                        if values:  # If we have calibration data for this metric
-                            # Calculate robust statistics using percentiles instead of mean/std
-                            baseline = np.median(values)
-                            variance = np.percentile(values, 75) - np.percentile(values, 25)
-                            variance = max(variance, 1.0)  # Ensure minimum variance
-                            
-                            thresholds[metric] = {
-                                'mild': baseline + 1.0 * variance,
-                                'moderate': baseline + 1.5 * variance,
-                                'severe': baseline + 2.0 * variance
-                            }
-                    
-                    # Define default thresholds for metrics without calibration data
-                    default_thresholds = {
-                        'shoulder_tilt': {'mild': 5, 'moderate': 10, 'severe': 15},
-                        'hip_tilt': {'mild': 5, 'moderate': 10, 'severe': 15},
-                        'head_tilt': {'mild': 10, 'moderate': 20, 'severe': 30},
-                        'forward_lean': {'mild': 15, 'moderate': 25, 'severe': 35},
-                        'spine_angle': {'mild': 10, 'moderate': 20, 'severe': 30},
-                        'lateral_lean': {'mild': 5, 'moderate': 10, 'severe': 15}
-                    }
-                    
-                    # Apply advanced temporal smoothing to metrics using weighted median filter
-                    smoothed_metrics = {}
-                    for metric, history in metric_history.items():
-                        if len(history) >= 5:  # Need at least 5 points for robust smoothing
-                            recent_values = list(history)[-9:]  # Last 9 values
-                            # Apply weighted median filter with more weight to recent values
-                            weights = [1, 1, 1, 2, 2, 3, 3, 4, 5][-len(recent_values):]
-                            weighted_values = []
-                            for val, weight in zip(recent_values, weights):
-                                weighted_values.extend([val] * weight)
-                            smoothed_metrics[metric] = np.median(weighted_values)
-                    
-                    # Detect posture issues using smoothed metrics and adaptive thresholds
-                    for metric, value in smoothed_metrics.items():
-                        metric_thresholds = thresholds.get(metric, default_thresholds.get(metric, {}))
-                        severity = classify_posture_issue(metric, value, {'dummy': metric_thresholds})
-                        
-                        if severity != 'normal':
-                            issue_description = ''
-                            if metric == 'shoulder_tilt' and value > metric_thresholds['mild']:
-                                issue_description = f"Uneven shoulders ({severity})"
-                            elif metric == 'hip_tilt' and value > metric_thresholds['mild']:
-                                issue_description = f"Uneven hips ({severity})"
-                            elif metric == 'head_tilt' and value > metric_thresholds['mild']:
-                                issue_description = f"Tilted head ({severity})"
-                            elif metric == 'forward_lean' and value > metric_thresholds['mild']:
-                                issue_description = f"Forward head posture ({severity})"
-                            elif metric == 'spine_angle' and value > metric_thresholds['mild']:
-                                issue_description = f"Poor spine alignment ({severity})"
-                            elif metric == 'lateral_lean' and value > metric_thresholds['mild']:
-                                issue_description = f"Lateral lean ({severity})"
-                            
-                            if issue_description:
-                                frame_issues.append(issue_description)
-                    
-                    if frame_issues:
-                        frames_with_issues += 1
-                        for issue in frame_issues:
-                            posture_issues.append(issue)
-
-    # Release video capture
+                # 7. Hand position check
+                if has_poor_hand_position(landmarks):
+                    posture_data['hand_position_frames'] += 1
+    
     cap.release()
     
-    # Process collected data
-    posture_analysis = {}
+    # Process movement data
+    if len(position_history) > 10:
+        excessive_movement = analyze_movement(position_history)
+        posture_data['excessive_movement_frames'] = int(excessive_movement * detected_frames)
     
-    # Calculate detection confidence
-    detection_rate = (detected_frames / frame_count) * 100 if frame_count > 0 else 0
+    # Calculate detection quality
+    detection_rate = (detected_frames / processed_frames) * 100 if processed_frames > 0 else 0
     
-    # Generate comprehensive posture analysis
-    if detected_frames > 10:  # Need at least 10 detected frames for reliable analysis
-        # Determine analysis mode from visibility history
-        if analysis_mode == 'detecting':
-            upper_body_visible_count = sum(1 for v in visibility_history if v['upper_body_visible'])
-            lower_body_visible_count = sum(1 for v in visibility_history if v['lower_body_visible'])
-            
-            if lower_body_visible_count > len(visibility_history) * 0.3:
-                analysis_mode = 'full_body'
-            elif upper_body_visible_count > len(visibility_history) * 0.3:
-                analysis_mode = 'upper_body'
-            else:
-                analysis_mode = 'limited'
-        
-        # Calculate reliable poor posture percentage
-        valid_frames = max(1, detected_frames - calibration_frames)  # Exclude calibration frames
-        poor_posture_percentage = (frames_with_issues / valid_frames) * 100 if valid_frames > 0 else 0
-        
-        # Count occurrences of each posture issue with confidence weighting
-        issue_counts = {}
-        for issue in posture_issues:
-            issue_name = issue.split('(')[0].strip()
-            severity = issue.split('(')[1].split(')')[0] if '(' in issue else 'mild'
-            
-            # Weight by severity
-            severity_weight = {'mild': 1, 'moderate': 2, 'severe': 3}.get(severity, 1)
-            
-            if issue_name in issue_counts:
-                issue_counts[issue_name] += severity_weight
-            else:
-                issue_counts[issue_name] = severity_weight
-        
-        # Sort issues by weighted frequency
-        sorted_issues = sorted(issue_counts.items(), key=lambda x: x[1], reverse=True)
-        
-        # Normalize issue frequencies relative to detection count and severity
-        total_weights = sum(count for _, count in sorted_issues)
-        main_issues = []
-        
-        if total_weights > 0:
-            for issue, count in sorted_issues:
-                # Calculate frequency as percentage of detected frames
-                frequency = (count / total_weights) * poor_posture_percentage
-                
-                # Only include issues with significant frequency (> 5%)
-                if frequency > 5:
-                    main_issues.append({"issue": issue, "frequency": frequency})
-        
-        # Calculate aggregate metrics across the video with outlier removal
-        aggregate_metrics = {}
-        for metric in calibration_data.keys():
-            metric_values = [frame.get(metric) for frame in frame_metrics if metric in frame]
-            if metric_values and len(metric_values) > 5:
-                # Filter outliers
-                q1 = np.percentile(metric_values, 25)
-                q3 = np.percentile(metric_values, 75)
-                iqr = q3 - q1
-                lower_bound = q1 - 1.5 * iqr
-                upper_bound = q3 + 1.5 * iqr
-                filtered_values = [v for v in metric_values if lower_bound <= v <= upper_bound]
-                
-                if filtered_values:
-                    aggregate_metrics[metric] = {
-                        'mean': np.mean(filtered_values),
-                        'median': np.median(filtered_values),
-                        'std': np.std(filtered_values),
-                        'min': min(filtered_values),
-                        'max': max(filtered_values),
-                        'p25': np.percentile(filtered_values, 25),  # 25th percentile
-                        'p75': np.percentile(filtered_values, 75)   # 75th percentile
-                    }
-        
-        posture_analysis = {
+    # Only proceed with analysis if we have enough detected frames
+    if detected_frames < 5 or detection_rate < 20:
+        # Create default issue for poor detection
+        default_issues = [{
+            "topic": "Poor Video Quality",
+            "examples": ["Your video had poor detection quality. Make sure you are clearly visible."],
+            "suggestions": ["Ensure good lighting and that your upper body is clearly visible in the frame."],
+            "severity": "high",
+            "impact": "Critical - Without clear video, we cannot analyze your body language effectively."
+        }]
+        return {
+            'score': 5,  # Default middle score
             'detected_frames': detected_frames,
             'detection_rate': detection_rate,
-            'analysis_mode': analysis_mode,
-            'frames_with_issues': frames_with_issues,
-            'poor_posture_percentage': poor_posture_percentage,
-            'main_issues': main_issues,
-            'aggregate_metrics': aggregate_metrics,
-            'frame_metrics': frame_metrics  # Include frame-by-frame data
-        }
-    else:
-        posture_analysis = {
-            'detected_frames': detected_frames,
-            'detection_rate': detection_rate,
-            'analysis_mode': 'failed',
-            'frames_with_issues': 0,
-            'poor_posture_percentage': 0,
-            'main_issues': [],
-            'aggregate_metrics': {},
-            'error': "Insufficient pose detection. Please ensure face and upper body are clearly visible."
+            'error': "Insufficient pose detection. Please ensure upper body is clearly visible.",
+            'issues': default_issues
         }
     
-    return posture_analysis
+    # Calculate issue percentages
+    issues = []
+    main_issues = []
+    
+    if detected_frames > 0:
+        for issue_name, frames in posture_data.items():
+            percentage = (frames / detected_frames) * 100
+            # Lower threshold to 15% to catch more issues
+            if percentage > 15:
+                issues.append({
+                    'issue': issue_name.replace('_frames', '').replace('_', ' ').title(),
+                    'percentage': percentage
+                })
+    
+    # Sort issues by percentage (highest first)
+    issues.sort(key=lambda x: x['percentage'], reverse=True)
+    
+    # Convert to user-friendly format and add suggestions
+    for issue in issues:
+        friendly_name = issue['issue']
+        percentage = issue['percentage']
+        suggestion, severity, impact = get_detailed_feedback(friendly_name, percentage)
+        
+        # Combine severity and impact with the suggestion for a more complete feedback
+        enhanced_suggestion = f"{suggestion} [{severity.upper()}] {impact}"
+        
+        main_issues.append({
+            "topic": friendly_name,
+            "examples": [f"Observed in {percentage:.1f}% of your presentation"],
+            "suggestions": [enhanced_suggestion]
+        })
+    
+    # If no issues detected, provide generic feedback
+    if not main_issues:
+        main_issues = [{
+            "topic": "Good Posture Maintained",
+            "examples": ["You maintained good posture throughout your presentation."],
+            "suggestions": ["Continue maintaining good posture in future presentations. [POSITIVE] Your good posture contributes to a professional presentation style."]
+        }]
+    
+    # Calculate more nuanced score based on detected issues
+    # Base score is 9, subtract points based on severity and percentage
+    score = calculate_score(issues)
+    
+    # Log the detected issues to help with debugging
+    print(f"Detected {len(main_issues)} posture issues:")
+    for issue in main_issues:
+        print(f"  - {issue['topic']}")
+    
+    return {
+        'score': score,
+        'detected_frames': detected_frames,
+        'detection_rate': detection_rate,
+        'issues': main_issues
+    }
 
+def extract_position(landmarks):
+    """Extract key position data for movement analysis"""
+    try:
+        # Use nose as the central tracking point
+        nose = landmarks[mp_pose.PoseLandmark.NOSE]
+        if nose.visibility < 0.5:
+            return None
+        return {
+            'x': nose.x,
+            'y': nose.y,
+            'visibility': nose.visibility
+        }
+    except:
+        return None
+
+def analyze_movement(position_history):
+    """Analyze movement patterns and return excessive movement ratio (0-1)"""
+    try:
+        # Calculate frame-to-frame movement
+        movements = []
+        for i in range(1, len(position_history)):
+            prev = position_history[i-1]
+            curr = position_history[i]
+            
+            # Calculate Euclidean distance
+            distance = math.sqrt(
+                (curr['x'] - prev['x'])**2 + 
+                (curr['y'] - prev['y'])**2
+            )
+            movements.append(distance)
+        
+        # Calculate statistics
+        avg_movement = np.mean(movements)
+        
+        # Threshold for excessive movement (calibrated for webcam)
+        if avg_movement > 0.03:  # Significant movements
+            return 0.8  # 80% of frames have excessive movement
+        elif avg_movement > 0.015:  # Moderate movements
+            return 0.5  # 50% of frames have excessive movement
+        elif avg_movement > 0.01:  # Slight movements
+            return 0.2  # 20% of frames have excessive movement
+        else:
+            return 0  # No excessive movement
+    except:
+        return 0
+
+def is_head_tilted(landmarks):
+    """Simple check for head tilt."""
+    try:
+        left_ear = landmarks[mp_pose.PoseLandmark.LEFT_EAR]
+        right_ear = landmarks[mp_pose.PoseLandmark.RIGHT_EAR]
+        
+        if left_ear.visibility < 0.5 or right_ear.visibility < 0.5:
+            return False
+            
+        y_diff = abs(left_ear.y - right_ear.y)
+        # Lower threshold to catch more issues
+        return y_diff > 0.02
+    except:
+        return False
+
+def is_leaning_forward(landmarks):
+    """Simple check for forward leaning."""
+    try:
+        nose = landmarks[mp_pose.PoseLandmark.NOSE]
+        left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+        
+        if nose.visibility < 0.5 or left_shoulder.visibility < 0.5 or right_shoulder.visibility < 0.5:
+            return False
+            
+        shoulder_x = (left_shoulder.x + right_shoulder.x) / 2
+        horizontal_diff = abs(nose.x - shoulder_x)
+        # Lower threshold to catch more issues
+        return horizontal_diff > 0.08
+    except:
+        return False
+
+def has_shoulder_imbalance(landmarks):
+    """Simple check for uneven shoulders."""
+    try:
+        left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+        
+        if left_shoulder.visibility < 0.5 or right_shoulder.visibility < 0.5:
+            return False
+            
+        y_diff = abs(left_shoulder.y - right_shoulder.y)
+        # Lower threshold to catch more issues
+        return y_diff > 0.025
+    except:
+        return False
+
+def is_slouching(landmarks):
+    """Simple check for slouching posture."""
+    try:
+        left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+        left_hip = landmarks[mp_pose.PoseLandmark.LEFT_HIP]
+        right_hip = landmarks[mp_pose.PoseLandmark.RIGHT_HIP]
+        
+        # Require good visibility of all landmarks
+        if (left_shoulder.visibility < 0.5 or right_shoulder.visibility < 0.5 or
+            left_hip.visibility < 0.5 or right_hip.visibility < 0.5):
+            return False
+            
+        # Calculate back angle from vertical
+        shoulder_midpoint = [(left_shoulder.x + right_shoulder.x) / 2, (left_shoulder.y + right_shoulder.y) / 2]
+        hip_midpoint = [(left_hip.x + right_hip.x) / 2, (left_hip.y + right_hip.y) / 2]
+        
+        # A straight back should have the shoulders directly above hips
+        # If shoulders are significantly forward of hips, that's slouching
+        x_diff = shoulder_midpoint[0] - hip_midpoint[0]
+        # Lower threshold to catch more issues
+        return x_diff > 0.04
+    except:
+        return False
+
+def has_good_eye_contact(landmarks):
+    """Check if the person is looking at the camera (approximation)"""
+    try:
+        # We use nose and eyes to estimate gaze direction
+        nose = landmarks[mp_pose.PoseLandmark.NOSE]
+        left_eye = landmarks[mp_pose.PoseLandmark.LEFT_EYE]
+        right_eye = landmarks[mp_pose.PoseLandmark.RIGHT_EYE]
+        
+        if (nose.visibility < 0.7 or left_eye.visibility < 0.7 or 
+            right_eye.visibility < 0.7):
+            return True  # Default to true if we can't detect well
+        
+        # Calculate eye midpoint
+        eye_midpoint = [(left_eye.x + right_eye.x) / 2, (left_eye.y + right_eye.y) / 2]
+        
+        # If nose is significantly to the side of eye midpoint, probably not looking at camera
+        x_diff = abs(nose.x - eye_midpoint[0])
+        return x_diff < 0.02  # Small threshold for "looking at camera"
+    except:
+        return True  # Default to true in case of error
+
+def has_rigid_posture(landmarks):
+    """Check for overly stiff/rigid posture"""
+    try:
+        # Calculate overall body alignment - perfectly straight might indicate rigidity
+        left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+        left_hip = landmarks[mp_pose.PoseLandmark.LEFT_HIP]
+        right_hip = landmarks[mp_pose.PoseLandmark.RIGHT_HIP]
+        
+        if (left_shoulder.visibility < 0.5 or right_shoulder.visibility < 0.5 or
+            left_hip.visibility < 0.5 or right_hip.visibility < 0.5):
+            return False
+        
+        # Calculate how perfectly aligned the body is
+        shoulder_midpoint = [(left_shoulder.x + right_shoulder.x) / 2, (left_shoulder.y + right_shoulder.y) / 2]
+        hip_midpoint = [(left_hip.x + right_hip.x) / 2, (left_hip.y + right_hip.y) / 2]
+        
+        # Check vertical alignment - extremely straight posture might be rigid
+        x_diff = abs(shoulder_midpoint[0] - hip_midpoint[0])
+        return x_diff < 0.01  # Very small threshold indicates rigid posture
+    except:
+        return False
+
+def has_poor_hand_position(landmarks):
+    """Check for inappropriate hand positions"""
+    try:
+        # Get wrist and hip landmarks
+        left_wrist = landmarks[mp_pose.PoseLandmark.LEFT_WRIST]
+        right_wrist = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST]
+        left_hip = landmarks[mp_pose.PoseLandmark.LEFT_HIP]
+        right_hip = landmarks[mp_pose.PoseLandmark.RIGHT_HIP]
+        
+        if (left_wrist.visibility < 0.5 or right_wrist.visibility < 0.5):
+            return False
+            
+        # Check if hands are behind back or in pockets (close to hips)
+        left_hand_near_hip = False
+        right_hand_near_hip = False
+        
+        if left_hip.visibility > 0.5:
+            left_distance = math.sqrt(
+                (left_wrist.x - left_hip.x)**2 + 
+                (left_wrist.y - left_hip.y)**2
+            )
+            left_hand_near_hip = left_distance < 0.15
+            
+        if right_hip.visibility > 0.5:
+            right_distance = math.sqrt(
+                (right_wrist.x - right_hip.x)**2 + 
+                (right_wrist.y - right_hip.y)**2
+            )
+            right_hand_near_hip = right_distance < 0.15
+        
+        return left_hand_near_hip or right_hand_near_hip
+    except:
+        return False
+
+def get_detailed_feedback(issue_name, percentage):
+    """Return detailed feedback for each issue type, including severity and impact."""
+    feedback = {
+        "Head Tilt": {
+            "mild": {
+                "suggestion": "Try to keep your head level during presentations. Practice in front of a mirror to develop awareness of your head position.",
+                "impact": "Slight head tilt can be distracting to some audience members."
+            },
+            "moderate": {
+                "suggestion": "Your head tilt is noticeable. Practice keeping your head level by doing alignment exercises and filming yourself to check your posture.",
+                "impact": "A consistently tilted head can make you appear less confident and may distract from your message."
+            },
+            "severe": {
+                "suggestion": "Your significant head tilt needs correction. Consider posture exercises focusing on neck alignment, and practice presenting while maintaining a level head position.",
+                "impact": "A pronounced head tilt can undermine credibility and distract from your content."
+            }
+        },
+        "Forward Lean": {
+            "mild": {
+                "suggestion": "Be mindful of how far forward you lean. A slight backward adjustment would improve your posture.",
+                "impact": "Occasional forward leaning has minimal impact on your presentation."
+            },
+            "moderate": {
+                "suggestion": "Practice standing straighter with your head aligned with your shoulders. Film yourself presenting to increase awareness of this habit.",
+                "impact": "Consistent forward leaning can make you appear anxious or too aggressive."
+            },
+            "severe": {
+                "suggestion": "Work on core strength exercises and practice proper alignment. Stand with your back against a wall when rehearsing to develop muscle memory for proper posture.",
+                "impact": "Excessive forward leaning can significantly reduce your perceived confidence and authority."
+            }
+        },
+        "Shoulder Imbalance": {
+            "mild": {
+                "suggestion": "Be mindful of keeping your shoulders level. Simple shoulder rolls before presenting can help with alignment.",
+                "impact": "Slight shoulder imbalance is barely noticeable to most audience members."
+            },
+            "moderate": {
+                "suggestion": "Practice exercises that strengthen your upper back and shoulders. Check your posture in a mirror while rehearsing presentations.",
+                "impact": "Uneven shoulders can make you appear tense or uncomfortable."
+            },
+            "severe": {
+                "suggestion": "Consider posture-correcting exercises focusing on shoulder alignment. Film yourself presenting from different angles to increase awareness.",
+                "impact": "Very uneven shoulders can distract the audience and may signal nervousness or discomfort."
+            }
+        },
+        "Slouching": {
+            "mild": {
+                "suggestion": "Try to stand a bit taller when presenting. Simple posture checks before presenting can help.",
+                "impact": "Occasional slouching slightly diminishes your commanding presence."
+            },
+            "moderate": {
+                "suggestion": "Practice standing tall with your shoulders back and spine straight. Core-strengthening exercises can help maintain better posture.",
+                "impact": "Regular slouching makes you appear less confident and less authoritative."
+            },
+            "severe": {
+                "suggestion": "Work on strengthening your core and back muscles. Practice presentations standing against a wall to develop awareness of proper alignment.",
+                "impact": "Consistent slouching substantially undermines your credibility and presence."
+            }
+        },
+        "Eye Contact": {
+            "mild": {
+                "suggestion": "Try to look more directly at the camera or audience. Place a visual reminder near the camera if presenting virtually.",
+                "impact": "Occasional lack of eye contact slightly reduces engagement."
+            },
+            "moderate": {
+                "suggestion": "Practice maintaining eye contact by placing notes higher up or using visual cues at eye level. Record yourself to check your eye contact patterns.",
+                "impact": "Inconsistent eye contact makes it harder to connect with your audience."
+            },
+            "severe": {
+                "suggestion": "Deliberately practice maintaining eye contact in conversations. When presenting, divide the audience into sections and make eye contact with each section systematically.",
+                "impact": "Poor eye contact significantly reduces audience engagement and perceived sincerity."
+            }
+        },
+        "Rigid Posture": {
+            "mild": {
+                "suggestion": "Try to incorporate slight natural movements in your posture. Gentle weight shifts can help you appear more relaxed.",
+                "impact": "Slightly rigid posture can make you appear a bit formal or nervous."
+            },
+            "moderate": {
+                "suggestion": "Practice deliberately incorporating natural movement into your presentations. Breathing exercises before presenting can help reduce tension.",
+                "impact": "Consistent rigidity makes you appear uncomfortable and reduces your expressiveness."
+            },
+            "severe": {
+                "suggestion": "Work on relaxation techniques before presenting. Practice moving naturally while speaking, and consider movement exercises to reduce physical tension.",
+                "impact": "Extreme rigidity makes you appear highly uncomfortable and significantly limits your ability to engage the audience."
+            }
+        },
+        "Excessive Movement": {
+            "mild": {
+                "suggestion": "Try to be more deliberate with your movements. Anchoring yourself in a comfortable stance can help reduce unnecessary movement.",
+                "impact": "Occasional excessive movement is slightly distracting."
+            },
+            "moderate": {
+                "suggestion": "Practice staying more grounded during presentations. Use deliberate movements to emphasize points rather than continuous motion.",
+                "impact": "Frequent unnecessary movement distracts from your message and can signal nervousness."
+            },
+            "severe": {
+                "suggestion": "Work on staying in one place with feet approximately shoulder-width apart. Practice presenting while standing on a small mat or defined area to limit movement.",
+                "impact": "Continuous movement seriously distracts the audience and undermines your appearance of confidence."
+            }
+        },
+        "Hand Position": {
+            "mild": {
+                "suggestion": "Try to keep your hands visible and use them for natural gestures. Avoid keeping them in pockets or behind your back for extended periods.",
+                "impact": "Occasionally hidden hands slightly reduce your expressiveness."
+            },
+            "moderate": {
+                "suggestion": "Practice deliberate hand gestures that emphasize your points. Keep hands in the 'gesture box' area between your shoulders and waist.",
+                "impact": "Frequently hidden or inactive hands significantly reduce your ability to emphasize points and convey confidence."
+            },
+            "severe": {
+                "suggestion": "Work on incorporating purposeful hand gestures into your presentations. Record yourself presenting and analyze how you use your hands to communicate.",
+                "impact": "Consistently poor hand positioning severely limits your nonverbal communication and can make you appear uncomfortable or unprepared."
+            }
+        }
+    }
+    
+    # Determine severity based on percentage
+    severity = "mild"
+    if percentage > 50:
+        severity = "severe"
+    elif percentage > 30:
+        severity = "moderate"
+    
+    # Get feedback for the specific issue and severity
+    issue_feedback = feedback.get(issue_name, {}).get(severity, {})
+    
+    suggestion = issue_feedback.get("suggestion", 
+        "Work on maintaining good posture throughout your presentation.")
+    
+    impact = issue_feedback.get("impact", 
+        "This aspect of body language affects how your audience perceives you.")
+    
+    return suggestion, severity, impact
+
+def calculate_score(issues):
+    """Calculate a more nuanced score based on issues and their severity"""
+    # Start with a base score
+    score = 9.0
+    
+    # Define severity weights for score calculation
+    severity_weights = {
+        'Head Tilt': 0.8,
+        'Forward Lean': 1.0,
+        'Shoulder Imbalance': 0.7,
+        'Slouching': 1.2,
+        'Eye Contact': 1.5,
+        'Rigid Posture': 0.6,
+        'Excessive Movement': 1.0,
+        'Hand Position': 0.9
+    }
+    
+    # Calculate weighted deductions
+    for issue in issues:
+        issue_name = issue['issue']
+        percentage = issue['percentage']
+        
+        # Deduct points based on severity
+        weight = severity_weights.get(issue_name, 1.0)
+        
+        # Calculate deduction: 
+        # - Mild issues (15-30%): small deduction
+        # - Moderate issues (30-50%): medium deduction
+        # - Severe issues (>50%): large deduction
+        if percentage > 50:
+            deduction = weight * 1.5
+        elif percentage > 30:
+            deduction = weight * 1.0
+        else:
+            deduction = weight * 0.5
+            
+        score -= deduction
+    
+    # Ensure score is between 3 and 10
+    return max(3, min(10, round(score)))
 
 def generate_posture_report(video_path, report_id):
     """
-    Generate a detailed posture analysis report with enhanced accuracy.
+    Generate a simplified posture analysis report.
     
     Args:
         video_path: Path to the video file
         report_id: ID for the report
     """
-    if not os.path.exists(video_path):
-        raise FileNotFoundError(f"Video file not found at path: {video_path}")
-
-    # Analyze posture with enhanced system
-    analysis_results = analyze_posture(video_path)
-
-    # Add facial expression and eye contact analysis - COMMENTED OUT FOR TESTING
-    """
     try:
-        from services.facial_analysis_service import analyze_facial_engagement
-        facial_results = analyze_facial_engagement(video_path)
-        analysis_results["facial_analysis"] = facial_results
+        if not os.path.exists(video_path):
+            raise FileNotFoundError(f"Video file not found at path: {video_path}")
+
+        # Create required directories
+        report_dir = f"tmp/{report_id}/reports"
+        os.makedirs(report_dir, exist_ok=True)
+        
+        # Run simplified analysis
+        analysis_results = analyze_posture(video_path)
+        
+        # Save text report
+        report_filename = f"{report_dir}/body_analysis.txt"
+        with open(report_filename, 'w') as f:
+            f.write("Body Language Analysis Report\n")
+            f.write("===========================\n\n")
+            f.write(f"Video: {video_path}\n")
+            f.write(f"Detection rate: {analysis_results['detection_rate']:.1f}%\n")
+            f.write(f"Overall score: {analysis_results['score']}/10\n\n")
+            
+            if 'error' in analysis_results:
+                f.write(f"Note: {analysis_results['error']}\n\n")
+                
+            f.write("Key findings:\n")
+            if analysis_results['issues']:
+                for idx, issue in enumerate(analysis_results['issues'], 1):
+                    f.write(f"{idx}. {issue['topic']}\n")
+                    f.write(f"   Example: {issue['examples'][0]}\n")
+                    f.write(f"   Suggestion: {issue['suggestions'][0]}\n\n")
+            else:
+                f.write("No significant posture issues detected.\n")
+        
+        # Update database with simplified results
+        try:
+            from services import storage_service
+            
+            update_data = {
+                "scoreBodyLanguage": analysis_results['score'],
+                "weaknessTopicsBodylan": analysis_results['issues']
+            }
+            
+            # Debug logging to verify what's being sent to Supabase
+            print(f"Updating Supabase with:")
+            print(f"  Score: {update_data['scoreBodyLanguage']}")
+            print(f"  Issues: {len(update_data['weaknessTopicsBodylan'])} items")
+            
+            # Execute the update
+            response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+            
+            # Log the response
+            if response.data:
+                print(f"Database update successful, updated {len(response.data)} records")
+            else:
+                print(f"Database update failed: {response.error}")
+                
+            logger.info(f"Database updated with body language score: {analysis_results['score']}")
+        except Exception as e:
+            logger.error(f"Failed to update database: {e}")
+            print(f"Failed to update database: {e}")
+        
+        logger.info(f"Body language analysis completed for report {report_id}")
+        return report_filename
+    
     except Exception as e:
-        print(f"Warning: Facial analysis failed: {str(e)}")
-        analysis_results["facial_analysis"] = {"error": str(e)}
-    """
-    
-    # Comment out facial analysis but add empty placeholder to prevent errors
-    analysis_results["facial_analysis"] = {"error": "Facial analysis disabled for testing"}
-
-    # Generate timestamp for report
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # Use standardized directory structure and ensure directory exists
-    report_dir = f"tmp/{report_id}/reports"
-    os.makedirs(report_dir, exist_ok=True)
-    report_filename = f"{report_dir}/body_analysis.txt"
-
-    # Calculate body language score (1-10 scale)
-    posture_score = 0
-    facial_score = 0
-    
-    if analysis_results['detected_frames'] > 0:
-        # Base score starts at 100 and gets reduced for poor posture
-        base_score = max(0, min(100, 100 - analysis_results['poor_posture_percentage']))
-        
-        # Further adjust based on severity and variety of issues
-        issue_penalty = min(30, len(analysis_results['main_issues']) * 5)
-        base_score = max(0, base_score - issue_penalty)
-        
-        # Convert from 0-100 scale to 1-10 scale (posture component)
-        posture_score = max(1, min(10, round(base_score / 10)))
-    
-    # Calculate facial engagement component (if available) - SIMPLIFIED FOR TESTING
-    """
-    if "facial_analysis" in analysis_results and "error" not in analysis_results["facial_analysis"]:
-        facial_data = analysis_results["facial_analysis"]
-        engagement_score = facial_data.get("engagement_metrics", {}).get("average", 0)
-        eye_contact_score = facial_data.get("eye_contact_ratio", 0)
-        
-        # Weight engagement and eye contact equally
-        facial_base_score = (engagement_score + eye_contact_score) / 2
-        
-        # Convert to 1-10 scale
-        facial_score = max(1, min(10, round(facial_base_score / 10)))
-    """
-    
-    # For testing, use posture score only
-    final_score = posture_score
-    
-    # Prepare issues for database in the required format
-    weakness_topics = []
-    
-    # Add posture issues
-    for issue in analysis_results['main_issues']:
-        issue_name = issue['issue']
-        frequency = issue['frequency']
-        
-        # Skip if less than 10% frequency
-        if frequency < 10:
-            continue
-            
-        # Create topic object with required properties
-        topic_obj = {
-            "topic": issue_name,
-            "examples": [],  # Will be populated with specific examples
-            "suggestions": []  # Will be populated with appropriate suggestions
-        }
-        
-        # Add specific examples based on issue type
-        if "Uneven shoulders" in issue_name:
-            topic_obj["examples"] = [
-                "Shoulders not level during presentation",
-                f"Right/left shoulder higher for {frequency:.1f}% of presentation"
-            ]
-            topic_obj["suggestions"] = [
-                "Practice shoulder alignment exercises to improve posture. Be mindful of keeping shoulders level during presentations. Consider ergonomic adjustments to your workspace to promote better shoulder alignment."
-            ]
-        elif "Uneven hips" in issue_name:
-            topic_obj["examples"] = [
-                "Shifting weight to one side",
-                f"Uneven hip alignment for {frequency:.1f}% of presentation"
-            ]
-            topic_obj["suggestions"] = [
-                "Practice standing with weight evenly distributed on both feet. Consider exercises that strengthen core and hip stabilizers for better balance. Be mindful of keeping your hips level while standing during presentations."
-            ]
-        elif "Tilted head" in issue_name:
-            topic_obj["examples"] = [
-                "Head tilted to one side",
-                f"Head not level for {frequency:.1f}% of presentation"
-            ]
-            topic_obj["suggestions"] = [
-                "Practice maintaining a neutral head position in front of a mirror. Be conscious of keeping your eyes level when speaking. Regular neck stretching and strengthening exercises can help improve head alignment during presentations."
-            ]
-        elif "Forward head" in issue_name:
-            topic_obj["examples"] = [
-                "Chin jutting forward",
-                f"Forward head posture for {frequency:.1f}% of presentation"
-            ]
-            topic_obj["suggestions"] = [
-                "Practice chin tucks to improve neck alignment. Strengthen upper back muscles to support proper head position. Be mindful of keeping your ears aligned with your shoulders during presentations."
-            ]
-        elif "Poor spine" in issue_name:
-            topic_obj["examples"] = [
-                "Slouching during presentation",
-                f"Spine not properly aligned for {frequency:.1f}% of presentation"
-            ]
-            topic_obj["suggestions"] = [
-                "Practice standing tall with shoulders back and spine in neutral alignment. Strengthen core muscles to support better posture. Take regular breaks during long presentations to reset your posture and reduce fatigue."
-            ]
-        elif "Lateral lean" in issue_name:
-            topic_obj["examples"] = [
-                "Leaning to one side",
-                f"Body tilted laterally for {frequency:.1f}% of presentation"
-            ]
-            topic_obj["suggestions"] = [
-                "Practice standing in front of a mirror to observe and correct your alignment. Strengthen core muscles for better stability and balance. Be conscious of distributing your weight evenly across both feet while presenting."
-            ]
-        
-        weakness_topics.append(topic_obj)
-    
-    # Add facial expression and eye contact issues
-    if "facial_analysis" in analysis_results and "facial_issues" in analysis_results["facial_analysis"]:
-        for issue in analysis_results["facial_analysis"]["facial_issues"]:
-            topic_obj = {
-                "topic": issue["issue"],
-                "examples": [],
-                "suggestions": issue["suggestions"]
-            }
-            
-            # Add specific examples based on issue type
-            if "Low facial engagement" in issue["issue"]:
-                topic_obj["examples"] = [
-                    "Limited variation in facial expressions",
-                    "Minimal emotional display during presentation"
-                ]
-            elif "Insufficient eye contact" in issue["issue"]:
-                topic_obj["examples"] = [
-                    "Looking away from camera/audience frequently",
-                    "Eyes focused downward or to the side"
-                ]
-            elif "Overly serious" in issue["issue"]:
-                topic_obj["examples"] = [
-                    "Consistently serious facial expression",
-                    "Few or no smiles during presentation"
-                ]
-            
-            weakness_topics.append(topic_obj)
-    
-    # Add hand gesture feedback - COMMENTED OUT FOR TESTING
-    """
-    if 'gesture_metrics' in analysis_results and analysis_results['gesture_metrics']:
-        gesture_data = analysis_results['gesture_metrics']
-        
-        # Check for limited gesture space
-        if gesture_data['avg_extension'] < 0.15:  # Small gesture space
-            topic_obj = {
-                "topic": "Limited Gesture Space",
-                "examples": [
-                    "Hands kept close to body",
-                    "Small, constrained hand movements"
-                ],
-                "suggestions": [
-                    "Try to expand your gestures to appear more confident and engaging. Practice using more of the space around you with purposeful hand movements that emphasize key points. Avoid keeping your hands too close to your body, which can signal nervousness or hesitation."
-                ]
-            }
-            weakness_topics.append(topic_obj)
-            
-        # Check for overactive gestures
-        if gesture_data['movement_frequency'] > 0.8:  # Very frequent movements
-            topic_obj = {
-                "topic": "Excessive Hand Movements",
-                "examples": [
-                    "Constant hand gestures throughout presentation",
-                    "Distracting frequent movements"
-                ],
-                "suggestions": [
-                    "Consider using more deliberate, purposeful gestures. While hand movements help engage your audience, too many can become distracting. Focus on using gestures to emphasize important points rather than moving constantly. Practice pausing with hands in a neutral, resting position."
-                ]
-            }
-            weakness_topics.append(topic_obj)
-    """
-    
-    # Add movement pattern feedback - COMMENTED OUT FOR TESTING
-    """
-    if 'movement_metrics' in analysis_results and analysis_results['movement_metrics']:
-        movement_data = analysis_results['movement_metrics']
-        
-        if movement_data['movement_pattern'] == 'pacing':
-            topic_obj = {
-                "topic": "Repetitive Pacing",
-                "examples": [
-                    "Moving back and forth in predictable pattern",
-                    "Rhythmic pacing across presentation area"
-                ],
-                "suggestions": [
-                    "Try to vary your movement patterns to appear more natural and deliberate. Pacing can signal nervousness to your audience. Instead, move with purpose – stand still when making important points, and move deliberately to transition between topics or engage different sections of your audience."
-                ]
-            }
-            weakness_topics.append(topic_obj)
-    """
-    
-    # Save data to Supabase
-    try:
-        from services import storage_service
-        
-        # Update only body language fields
-        update_data = {
-            "scoreBodyLanguage": final_score,  # Now on a 1-10 scale
-            "weaknessTopicsBodylan": weakness_topics
-        }
-        
-        storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
-    except Exception as e:
-        print(f"Warning: Failed to update database: {e}")
-
-    # Write detailed report to file
-    with open(report_filename, 'w') as report_file:
-        report_file.write("Body Language and Facial Engagement Analysis Report\n")
-        report_file.write("===============================================\n\n")
-        report_file.write(f"Video Analyzed: {video_path}\n")
-        report_file.write(f"Analysis Timestamp: {timestamp}\n\n")
-        
-        # Posture section
-        report_file.write("POSTURE ANALYSIS\n")
-        report_file.write("---------------\n")
-        report_file.write(f"Analysis Mode: {analysis_results['analysis_mode']}\n")
-        report_file.write(f"Frames with Pose Detected: {analysis_results['detected_frames']} ")
-        report_file.write(f"({analysis_results['detection_rate']:.1f}% of video)\n")
-        report_file.write(f"Poor Posture Percentage: {analysis_results['poor_posture_percentage']:.2f}%\n")
-        report_file.write(f"Posture Score Component: {posture_score}/10\n\n")
-        
-        report_file.write("Main Posture Issues Detected:\n")
-        if analysis_results['main_issues']:
-            for idx, issue in enumerate(analysis_results['main_issues'], 1):
-                report_file.write(f"{idx}. {issue['issue']} - Present in {issue['frequency']:.1f}% of frames\n")
-        else:
-            report_file.write("No significant posture issues detected.\n")
-        
-        # Facial expression section
-        if "facial_analysis" in analysis_results and "error" not in analysis_results["facial_analysis"]:
-            facial_data = analysis_results["facial_analysis"]
-            
-            report_file.write("\nFACIAL EXPRESSION & EYE CONTACT ANALYSIS\n")
-            report_file.write("-----------------------------------\n")
-            report_file.write(f"Face Detection Rate: {facial_data['detection_rate']:.1f}%\n")
-            report_file.write(f"Average Engagement Level: {facial_data['engagement_metrics']['average']:.1f}%\n")
-            report_file.write(f"Eye Contact Quality: {facial_data['eye_contact_ratio']:.1f}%\n")
-            report_file.write(f"Dominant Expression: {facial_data['dominant_expression'].title()}\n")
-            report_file.write(f"Facial Score Component: {facial_score}/10\n\n")
-            
-            report_file.write("Expression Distribution:\n")
-            for expr, percentage in facial_data['expression_distribution'].items():
-                if percentage > 0:
-                    report_file.write(f"- {expr.title()}: {percentage:.1f}%\n")
-            
-            if facial_data["facial_issues"]:
-                report_file.write("\nFacial Engagement Issues:\n")
-                for idx, issue in enumerate(facial_data["facial_issues"], 1):
-                    report_file.write(f"{idx}. {issue['issue']}\n")
-                    report_file.write(f"   Suggestion: {issue['suggestions'][0]}\n")
-        
-        # Combined score
-        report_file.write(f"\nOVERALL BODY LANGUAGE SCORE: {final_score}/10\n")
-        
-        # Recommendations
-        report_file.write("\nRecommendations:\n")
-        for issue in weakness_topics:
-            report_file.write(f"  * {issue['topic']}: {issue['suggestions'][0]}\n")
-            
-        if analysis_results['analysis_mode'] == 'upper_body':
-            report_file.write("\nNote: Posture analysis performed on upper body only as lower body was not visible in the video.\n")
-
-    print(f"Comprehensive body language analysis report saved as {report_filename}")
-    return report_filename
+        logger.error(f"Error generating posture report: {e}")
+        raise
