@@ -195,6 +195,19 @@ class GeminiContextAnalyzer:
                         logger.warning("Weaknesses missing from result, setting to empty list")
                         result['weaknesses'] = []
                     
+                    # Clean weaknesses to ensure they only have topic, examples, suggestions
+                    cleaned_weaknesses = []
+                    for weakness in result['weaknesses']:
+                        cleaned_weakness = {
+                            "topic": weakness.get("topic", "Unspecified issue"),
+                            "examples": weakness.get("examples", []),
+                            "suggestions": weakness.get("suggestions", [])
+                        }
+                        cleaned_weaknesses.append(cleaned_weakness)
+                    
+                    # Replace with cleaned weaknesses
+                    result['weaknesses'] = cleaned_weaknesses
+                    
                     # Log the results
                     print(f"✅ Context analysis complete: Score={result['score']}/10, Found {len(result['weaknesses'])} issues")
                     return result
