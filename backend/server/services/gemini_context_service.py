@@ -5,6 +5,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from typing import Dict, Any
 from pathlib import Path
+import re
 
 # Configure standard logging
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +32,7 @@ class GeminiContextAnalyzer:
             
             # Choose the most suitable model based on availability
             self.model_name = self._get_best_model(available_models)
-            logger.info(f"Selected model for use: {self.model_name}")
+            # logger.info(f"Selected model for use: {self.model_name}")
             
         except Exception as e:
             logger.error(f"❌ Failed to initialize Gemini API: {str(e)}")
@@ -174,48 +175,81 @@ class GeminiContextAnalyzer:
                 return {"score": 0, "weaknesses": []}
             
             # Log the raw response for debugging
-            logger.info(f"Raw Gemini response: {response.text[:500]}...")
+            raw_response = response.text
             
-            # Parse the JSON content from the response
-            try:
-                # Try to parse the response text directly
-                result = json.loads(response.text)
-                logger.info(f"Successfully parsed JSON response: score={result.get('score', 'N/A')}")
+            # Extract JSON from the response
+            clean_json = self._extract_json_from_response(raw_response)
                 
-                # Validate and enforce correct structure
-                if 'score' not in result:
-                    logger.warning("Score missing from result, setting to 0")
-                    result['score'] = 0
-                
-                if 'weaknesses' not in result:
-                    logger.warning("Weaknesses missing from result, setting to empty list")
-                    result['weaknesses'] = []
-                
-                return result
-            except Exception as e:
-                logger.error(f"Failed to parse JSON from response: {str(e)}")
-                print(f"⚠️ Error parsing Gemini response as JSON")
-            
-            # Attempt to extract JSON from the response if it contains other text
-            try:
-                # Look for JSON-like patterns in the response
-                text = response.text
-                if "{" in text and "}" in text:
-                    start = text.find("{")
-                    end = text.rfind("}") + 1
-                    json_str = text[start:end]
-                    result = json.loads(json_str)
-                    logger.info("Successfully extracted and parsed JSON from response")
+            if clean_json:
+                try:
+                    # Parse the extracted JSON
+                    result = json.loads(clean_json)
+                    logger.info(f"Successfully parsed JSON response: score={result.get('score', 'N/A')}")
+                    
+                    # Validate and enforce correct structure
+                    if 'score' not in result:
+                        logger.warning("Score missing from result, setting to 0")
+                        result['score'] = 0
+                    
+                    if 'weaknesses' not in result:
+                        logger.warning("Weaknesses missing from result, setting to empty list")
+                        result['weaknesses'] = []
+                    
+                    # Log the results
+                    print(f"✅ Context analysis complete: Score={result['score']}/10, Found {len(result['weaknesses'])} issues")
                     return result
-                else:
-                    logger.error("No JSON-like pattern found in response")
-                    return {"score": 0, "weaknesses": []}
-            except Exception as ex:
-                logger.error(f"Failed to extract JSON from response: {str(ex)}")
-                return {"score": 0, "weaknesses": []}
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse extracted JSON: {str(e)}")
+                    print(f"⚠️ Error parsing JSON after extraction: {str(e)}")
+            
+            # If all extraction methods fail, return default
+            logger.error("Could not extract valid JSON from response")
+            return {"score": 0, "weaknesses": []}
                 
         except Exception as e:
             logger.error(f"Error in context analysis: {str(e)}")
             print(f"❌ Error during context analysis: {str(e)}")
             # Return default values instead of failing
             return {"score": 0, "weaknesses": []}
+    
+    def _extract_json_from_response(self, text):
+        """Extract JSON from a response that might contain markdown or other text"""
+        # Try several extraction methods
+        
+        # 1. First, check if the text is already valid JSON
+        try:
+            json.loads(text)
+            return text  # It's already valid JSON
+        except json.JSONDecodeError:
+            pass  # Not valid JSON, try other methods
+        
+        # 2. Check for markdown code blocks (```json ... ```)
+        code_block_pattern = r'```(?:json)?\s*([\s\S]*?)```'
+        code_matches = re.findall(code_block_pattern, text)
+        if code_matches:
+            # Use the first code block that contains valid JSON
+            for match in code_matches:
+                try:
+                    json.loads(match.strip())
+                    logger.info("Successfully extracted JSON from code block")
+                    return match.strip()
+                except json.JSONDecodeError:
+                    continue
+        
+        # 3. Try to find JSON-like pattern between curly braces
+        if "{" in text and "}" in text:
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            json_candidate = text[start:end]
+            
+            # Verify it's valid JSON
+            try:
+                json.loads(json_candidate)
+                logger.info("Successfully extracted JSON from curly braces")
+                return json_candidate
+            except json.JSONDecodeError:
+                pass
+        
+        # 4. None of the extraction methods worked
+        return None
