@@ -99,8 +99,8 @@ def transcribe_audio_to_text(report_id: str):
         if not os.path.exists(audio_file_path):
             raise FileNotFoundError(f"Audio file not found at {audio_file_path}")
         
-        # Transcribe the audio
-        transcription, _ = transcribe_audio(audio_file_path)
+        # Transcribe the audio - now passing the report_id
+        transcription, _ = transcribe_audio(audio_file_path, report_id)
         
         if not transcription:
             raise HTTPException(status_code=404, detail="Transcription failed or returned empty.")
@@ -119,5 +119,5 @@ def transcribe_audio_to_text(report_id: str):
         
     except Exception as e:
         # Handle other potential errors
-        logger.error(f"An error occurred during transcription: {str(e)}")
+        logger.error(f"An error occurred during transcription for report {report_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

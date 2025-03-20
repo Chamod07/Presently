@@ -8,7 +8,7 @@ from urllib.parse import urlparse, unquote
 # Import the correct audio processing services
 from services.audio_processing import convert_video_to_mp3, transcribe_audio_to_text
 
-# Set up logging
+# Set up standard logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -25,18 +25,26 @@ async def process_video(video_url: str, report_id: str = Query(...)):
     errors = []  # Track errors but continue processing
     
     try:
+        # Better step logging with visual separators
+        print("\n" + "=" * 60)
+        print(f"STARTING PROCESS: Video analysis for report {report_id}")
+        print("=" * 60)
+        
         logger.info(f"Starting video processing for report {report_id}")
         
         # 1. Download video from Supabase storage
+        print("\n[STEP 1/6] Downloading video from URL...")
         local_video_path = await download_from_supabase(video_url, report_id)
-        logger.info(f"Video downloaded to {local_video_path}")
+        print(f"✓ Video downloaded to {local_video_path}")
         
         # 2. Convert to MP3 - direct service call
         try:
+            print("\n[STEP 2/6] Converting video to audio...")
             audio_path = convert_video_to_mp3(report_id, local_video_path)
-            logger.info(f"Converted video to audio: {audio_path}")
+            print(f"✓ Converted video to audio: {audio_path}")
         except Exception as e:
             error_msg = f"Audio conversion failed: {str(e)}"
+            print(f"✗ Audio conversion error: {str(e)}")
             logger.error(error_msg)
             errors.append(error_msg)
             audio_path = None
@@ -45,47 +53,69 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         transcription = ""
         try:
             if audio_path:
+                print("\n[STEP 3/6] Transcribing audio...")
                 transcription = transcribe_audio_to_text(report_id)
-                logger.info(f"Transcription complete: {len(transcription)} characters")
+                print(f"✓ Transcription complete: {len(transcription)} characters")
         except Exception as e:
             error_msg = f"Transcription failed: {str(e)}"
+            print(f"✗ Transcription error: {str(e)}")
             logger.error(error_msg)
             errors.append(error_msg)
-            logger.warning("Proceeding with empty transcription")
+            print("! Warning: Proceeding with empty transcription")
         
         # 4. Analyze body language
         try:
+            print("\n[STEP 4/6] Analyzing body language...")
             from controllers.body_language_analysis_controller import analyze_video
             body_language_result = await analyze_video(report_id=report_id, video_path=local_video_path)
-            logger.info("Body language analysis complete")
+            print(f"✓ Body language analysis complete")
         except Exception as e:
             error_msg = f"Body language analysis failed: {str(e)}"
+            print(f"✗ Body language analysis error: {str(e)}")
             logger.error(error_msg)
             errors.append(error_msg)
         
         # 5. Analyze context
         if transcription:
+            print("\n[STEP 5/6] Analyzing context...")
             try:
                 from controllers.context_analysis_controller import analyze_context
                 context_result = await analyze_context(transcription=transcription, report_id=report_id)
-                logger.info("Context analysis complete")
+                print(f"✓ Context analysis complete")
             except Exception as e:
                 error_msg = f"Context analysis failed: {str(e)}"
+                print(f"✗ Context analysis error: {str(e)}")
                 logger.error(error_msg)
                 errors.append(error_msg)
+        else:
+            print("\n! Warning: Skipping context analysis - no transcription available")
         
         # 6. Analyze grammar
         if transcription:
+            print("\n[STEP 6/6] Analyzing grammar...")
             try:
                 from controllers.grammar_analysis_controller import analyze_grammar
-                grammar_result = await analyze_grammar(transcription=transcription, report_id=report_id)
-                logger.info("Grammar analysis complete")
+                # Update to use the parameter name the grammar controller expects
+                grammar_result = await analyze_grammar(text=transcription, report_id=report_id)
+                print(f"✓ Grammar analysis complete")
             except Exception as e:
                 error_msg = f"Grammar analysis failed: {str(e)}"
+                print(f"✗ Grammar analysis error: {str(e)}")
                 logger.error(error_msg)
                 errors.append(error_msg)
+        else:
+            print("\n! Warning: Skipping grammar analysis - no transcription available")
         
         # Return results with any errors that occurred
+        print("\n" + "=" * 60)
+        if errors:
+            print(f"PROCESS COMPLETED WITH {len(errors)} ERRORS:")
+            for i, error in enumerate(errors, 1):
+                print(f"  Error {i}: {error}")
+        else:
+            print("PROCESS COMPLETED SUCCESSFULLY!")
+        print("=" * 60 + "\n")
+        
         if errors:
             return {
                 "message": "Video processed with some errors",
@@ -99,6 +129,7 @@ async def process_video(video_url: str, report_id: str = Query(...)):
             }
         
     except Exception as e:
+        print(f"\n✗ CRITICAL ERROR: {str(e)}")
         logger.error(f"Error processing video: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
