@@ -8,7 +8,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../supabase/supabase_service.dart';
 
-
 class UploadService {
   // Singleton pattern
   static final UploadService _instance = UploadService._internal();
@@ -255,7 +254,9 @@ class UploadService {
       _updateStatus(uploadId, 'processing', 'Creating database record...', 0.9);
 
       // Get the public URL of the video (or first chunk if chunked)
-       final videoUrl = await _supabaseService.client.storage.from(bucketName).createSignedUrl(fileName, 604800);
+      final videoUrl = await _supabaseService.client.storage
+          .from(bucketName)
+          .createSignedUrl(fileName, 604800);
       // debugPrint(videoUrl);
       final reportId = metadata['reportId'];
 
@@ -264,34 +265,48 @@ class UploadService {
           debugPrint('Checking if reportId $reportId exists in UserReport...');
 
           // First check if the record with this reportId exists
-          final checkResponse = await Supabase.instance.client.from('UserReport').select('reportId').eq('reportId', reportId).single();
+          final checkResponse = await Supabase.instance.client
+              .from('UserReport')
+              .select('reportId')
+              .eq('reportId', reportId)
+              .single();
 
           if (checkResponse != null) {
-            debugPrint('Found reportId $reportId in UserReport, proceeding with update');
+            debugPrint(
+                'Found reportId $reportId in UserReport, proceeding with update');
 
             // Get the signed URL of the video
-            final videoUrl = await _supabaseService.client.storage.from(bucketName).createSignedUrl(fileName, 604800);
+            final videoUrl = await _supabaseService.client.storage
+                .from(bucketName)
+                .createSignedUrl(fileName, 604800);
             debugPrint('Generated video URL: $videoUrl');
             debugPrint('Report ID: $reportId');
 
             // Perform the update
-            final response = await Supabase.instance.client.from('UserReport').update({'videoUrl': videoUrl.toString()}).eq('reportId', reportId).select();
+            final response = await Supabase.instance.client
+                .from('UserReport')
+                .update({'videoUrl': videoUrl.toString()})
+                .eq('reportId', reportId)
+                .select();
 
             if (response != null && response.isNotEmpty) {
               debugPrint('Successfully updated UserReport video URL.');
               debugPrint('Updated records: ${response.length}');
               // await callPythonVideoController(videoUrl, reportId); //calling the python video controller
             } else {
-              debugPrint('Update query executed but no records were updated in UserReport.');
+              debugPrint(
+                  'Update query executed but no records were updated in UserReport.');
             }
           } else {
-            debugPrint('Error: No record found with reportId $reportId in UserReport');
+            debugPrint(
+                'Error: No record found with reportId $reportId in UserReport');
           }
         } catch (e) {
           debugPrint('Exception checking/updating UserReport: $e');
         }
       } else {
-        debugPrint('Warning: No reportId provided in metadata, could not update UserReport');
+        debugPrint(
+            'Warning: No reportId provided in metadata, could not update UserReport');
       }
 
       // After successful upload, trigger the backend analysis
@@ -348,12 +363,16 @@ class UploadService {
     }
   }
 
-  Future<void> callPythonVideoController(String videoUrl, String reportId) async {
-    try{
-      _updateStatus(null, 'processing', 'Calling Python Video Controller...', 0.95);
+  Future<void> callPythonVideoController(
+      String videoUrl, String reportId) async {
+    try {
+      _updateStatus(
+          null, 'processing', 'Calling Python Video Controller...', 0.95);
 
-      final backendUrl = 'http://10.0.2.2:8000'; //TODO: Add the URL of the Python server
-      final url = Uri.parse('$backendUrl/api/process/video/download_video'); //TODO: Add the URL of the Python server
+      final backendUrl =
+          'http://10.0.2.2:8000';
+      final url = Uri.parse(
+          '$backendUrl/api/process/video/download_video');
 
       final response = await http.get(
         url.replace(queryParameters: {
@@ -362,18 +381,16 @@ class UploadService {
         }),
       );
 
-      if(response.statusCode == 200){
+      if (response.statusCode == 200) {
         debugPrint('Python Video Controller called successfully');
       } else {
-        debugPrint('Error calling Python Video Controller: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            'Error calling Python Video Controller: ${response.statusCode} - ${response.body}');
       }
-    }
-    catch(e){
+    } catch (e) {
       debugPrint('Error calling Python Video Controller: $e');
     }
-
   }
-
 
   // // Handle chunked video uploads
   // Future<void> _uploadInChunks(
