@@ -1,19 +1,41 @@
+import os
+import warnings
+
+# Import our custom logging utilities
+from services.logging_utils import suppress_stdout_stderr, init_mediapipe
+
+# Basic warning suppression
+warnings.filterwarnings("ignore")
+
+# Set minimal environment variables for logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+
+# Import OpenCV first
 import cv2
-import mediapipe as mp
+
+# Initialize MediaPipe silently
+mp = init_mediapipe()
+
 import numpy as np
 import math
 from collections import deque
+import logging
+
+# Configure standard logging
+logging.basicConfig(level=logging.INFO)
 
 class FacialAnalyzer:
     def __init__(self):
-        # Initialize MediaPipe Face Mesh
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            static_image_mode=False,
-            max_num_faces=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
-        )
+        # Initialize MediaPipe Face Mesh silently
+        with suppress_stdout_stderr():
+            self.mp_face_mesh = mp.solutions.face_mesh
+            self.face_mesh = self.mp_face_mesh.FaceMesh(
+                static_image_mode=False,
+                max_num_faces=1,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5
+            )
         
         # Key facial landmarks indices
         # Eyes
@@ -40,8 +62,9 @@ class FacialAnalyzer:
         # Convert to RGB for MediaPipe
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Process image with MediaPipe Face Mesh
-        results = self.face_mesh.process(image_rgb)
+        # Process image with MediaPipe Face Mesh (with output suppression)
+        with suppress_stdout_stderr():
+            results = self.face_mesh.process(image_rgb)
         
         # Default return if no face detected
         face_data = {

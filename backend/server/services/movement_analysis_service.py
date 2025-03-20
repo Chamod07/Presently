@@ -5,7 +5,7 @@ def analyze_presenter_movement(pose_history, frame_count, frame_rate):
     """Analyze presenter's movement patterns and use of space."""
     if len(pose_history) < 2:
         return None
-        
+    
     # Calculate movement metrics
     position_changes = []
     for i in range(1, len(pose_history)):
@@ -42,9 +42,11 @@ def analyze_presenter_movement(pose_history, frame_count, frame_rate):
         if np.max(autocorr[1:]) > 0.7 * autocorr[0]:
             movement_pattern = "pacing"
     
-    return {
+    movement_data = {
         'avg_movement': avg_movement,
         'movement_intensity': movement_intensity,
         'movement_pattern': movement_pattern,
         'frame': frame_count
     }
+    
+    return movement_data
