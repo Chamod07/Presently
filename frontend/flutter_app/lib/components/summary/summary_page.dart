@@ -6,7 +6,6 @@ import 'package:flutter_app/providers/report_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 
-
 import '../../models/report.dart';
 
 class SummaryPage extends StatefulWidget {
@@ -823,8 +822,12 @@ abstract class BaseSummary extends StatelessWidget {
                   _buildWeaknessCards(context, provider),
                   SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ] else
-                  SliverFillRemaining(
-                    child: _buildNoWeaknessState(),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height -
+                          300, // Ensure adequate space
+                      child: _buildNoWeaknessState(),
+                    ),
                   ),
               ],
             ),
@@ -1721,57 +1724,60 @@ abstract class BaseSummary extends StatelessWidget {
 
   Widget _buildNoWeaknessState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.green.shade200.withOpacity(0.5),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
+      child: SingleChildScrollView(
+        // Add SingleChildScrollView to handle overflow
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.shade200.withOpacity(0.5),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  size: 64,
+                  color: Colors.green.shade600,
+                ),
               ),
-              child: Icon(
-                Icons.check_circle,
-                size: 64,
-                color: Colors.green.shade600,
+              SizedBox(height: 32),
+              Text(
+                "Great Job!",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF212529),
+                ),
               ),
-            ),
-            SizedBox(height: 32),
-            Text(
-              "Great Job!",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF212529),
+              SizedBox(height: 12),
+              Text(
+                "No areas for improvement were found.",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6C757D),
+                ),
               ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              "No areas for improvement were found.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6C757D),
+              SizedBox(height: 8),
+              Text(
+                "Keep up the excellent work!",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6C757D),
+                  fontStyle: FontStyle.italic,
+                ),
               ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "Keep up the excellent work!",
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6C757D),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
