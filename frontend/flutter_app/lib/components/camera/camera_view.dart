@@ -6,6 +6,7 @@ import 'package:flutter_app/services/recording/constraints_manager.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import './camera_function.dart';
 import 'recording_timer.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -44,6 +45,7 @@ class _CameraViewState extends State<CameraView> {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
 
     // Initialize the camera functions
     _cameraFunctions = CameraFunctions(
@@ -135,6 +137,7 @@ class _CameraViewState extends State<CameraView> {
     _constraintsManager.dispose();
     _stopLiveFeed();
     super.dispose();
+    WakelockPlus.disable();
   }
 
   void showNotification(String message) {
