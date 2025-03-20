@@ -20,7 +20,6 @@ class GeminiContextAnalyzer:
         
         if not api_key:
             logger.error("GEMINI_API_KEY not found in environment variables")
-            print("ERROR: GEMINI_API_KEY is missing. Please set this in your .env file.")
             raise ValueError("Missing GEMINI_API_KEY environment variable")
       
         # Configure the Gemini API
@@ -32,11 +31,9 @@ class GeminiContextAnalyzer:
             
             # Choose the most suitable model based on availability
             self.model_name = self._get_best_model(available_models)
-            # logger.info(f"Selected model for use: {self.model_name}")
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Gemini API: {str(e)}")
-            print(f"ERROR: Failed to connect to Gemini API: {str(e)}")
+            logger.error(f"Failed to initialize Gemini API: {str(e)}")
             raise
     
     def _get_available_models(self):
@@ -89,7 +86,7 @@ class GeminiContextAnalyzer:
             report_id: The report ID to query
             
         Returns:
-            A dictionary containing session data (type, goal, audience, topic)
+            A dictionary containing session data or None if no data found
         """
         try:
             from services import storage_service
@@ -103,50 +100,47 @@ class GeminiContextAnalyzer:
                 
             if not response.data or len(response.data) == 0:
                 logging.error(f"No UserReport found for report ID: {report_id}")
-                return {
-                    "session_type": "general",
-                    "session_goal": "informative presentation",
-                    "audience": "general audience",
-                    "session_topic": "general topic"
-                }
+                return None
             
             # Get the session_id from the response
             session_id = response.data[0].get("session_id")
             
             if not session_id:
                 logging.error(f"Session ID is null for report ID: {report_id}")
-                return {
-                    "session_type": "general",
-                    "session_goal": "informative presentation",
-                    "audience": "general audience",
-                    "session_topic": "general topic"
-                }
+                return None
             
-            # Step 2: Query session table with the session_id
-            session_response = storage_service.supabase.table("session") \
-                .select("session_type, session_goal, audience, session_topic") \
-                .eq("id", session_id) \
+            # Step 2: Query Sessions table with the session_id
+            session_response = storage_service.supabase.table("Sessions") \
+                .select("*") \
+                .eq("session_id", session_id) \
                 .execute()
                 
             if not session_response.data or len(session_response.data) == 0:
                 logging.error(f"No session data found for session ID: {session_id}")
-                return {
-                    "session_type": "general",
-                    "session_goal": "informative presentation",
-                    "audience": "general audience",
-                    "session_topic": "general topic"
-                }
+                return None
+             
+            # Extract session data from response, handling potential field name differences
+            session_data = session_response.data[0]
+            
+            # Map the session data, accounting for different possible field names
+            result = {
+                "session_type": session_data.get("session_type", session_data.get("type")),
+                "session_goal": session_data.get("session_goal", session_data.get("goal")),
+                "audience": session_data.get("audience"),
+                "session_topic": session_data.get("session_topic", session_data.get("topic"))
+            }
+            
+            # Remove any None values from the result
+            result = {k: v for k, v in result.items() if v is not None}
+            
+            if not result:
+                logger.warning("Retrieved session data has no usable fields")
+                return None
                 
-            return session_response.data[0]
+            return result
         except Exception as e:
             logging.error(f"Error fetching session data: {e}")
-            # Return default values if there's an error
-            return {
-                "session_type": "general",
-                "session_goal": "informative presentation",
-                "audience": "general audience",
-                "session_topic": "general topic"
-            }
+            return None
 
     def analyze_presentation(self, transcription, report_id, session_data):
         """
@@ -155,8 +149,7 @@ class GeminiContextAnalyzer:
         Args:
             transcription: Text transcription of the presentation
             report_id: ID of the report
-            session_data: Dictionary containing presentation context data
-            topic: Topic of the presentation (optional, will use session_data if available)
+            session_data: Dictionary containing presentation context data ( session_type, session_goal, audience, session_topic)
             
         Returns:
             Dictionary containing score and weaknesses
@@ -166,40 +159,58 @@ class GeminiContextAnalyzer:
             if not session_data:
                 session_data = self.get_session_data(report_id)
             
-            presentation_topic = session_data.get("session_topic")
+            # If still no session data, use minimal data structure to avoid errors
+            if not session_data:
+                logger.warning("No session data available for context analysis")
+                session_data = {}
             
-            # Format the prompt for better context-aware analysis
+            presentation_topic = session_data.get("session_topic", "unknown")
+            
+            # Updated prompt structure to match the requested format
             prompt = f"""
-            As an AI presentation coach, analyze the following presentation transcription .
+            You are an expert presentation analyzer specializing in content and structure.
+            Analyze the following presentation transcript focusing on a {presentation_topic}.
             
             PRESENTATION CONTEXT:
-            - Type: {session_data.get('session_type')}
-            - Goal: {session_data.get('session_goal')}
-            - Target Audience: {session_data.get('audience')}
-            - Topic: {presentation_topic}
+            - Type: {session_data.get('session_type', 'unknown')}
+            - Goal: {session_data.get('session_goal', 'unknown')}
+            - Target Audience: {session_data.get('audience', 'unknown')}
             
-            TRANSCRIPTION:
+            Evaluate the presentation based on these criteria :
+            1. Content relevance and accuracy
+            2. Organization and flow
+            3. Clarity of main points
+            4. Depth of analysis
+            5. Supporting evidence and examples
+            6. Introduction and conclusion effectiveness
+            
+            Provide a score from 1 to 10 (where 10 is perfect) based on all criteria.
+            
+            For each weakness you identify, include:
+            1. The specific topic or issue
+            2. Example passages from the text demonstrating the issue
+            3. Specific suggestions for improvement
+            
+            Format your response as a valid JSON object with these fields:
+            Format your response as a valid JSON object with these fields:
+            {{
+              "score": <score from 1-10>,
+              "weaknesses": [
+                {{
+                  "topic": "<issue description>",
+                  "examples": ["<example from text>", ...],
+                  "suggestions": ["<suggestion for improvement>", ...]
+                }},
+                ...
+              ]
+            }}
+            Important: Return ONLY the JSON object, with no other text before or after.
+            TRANSCRIPT TO ANALYZE:
             {transcription}
-            
-            Evaluate this presentation for a target audience of {session_data.get('audience')} 
-            with the main goal to {session_data.get('session_goal')}.
-            
-            Provide an analysis in JSON format with these components:
-            1. An overall content score from 1-10 
-            2. A list of 3-5 weakness topics with specific examples from the transcription
-            
-            For each weakness topic include:
-            - topic: A short title of the issue
-            - description: What the problem is
-            - impact: Why it's important to fix
-            - suggestion: How to improve
-            
-            Return ONLY a JSON object with keys "score" and "weaknesses".
             """
             
             # Log the text length
             logger.info(f"Analyzing content for {len(transcription)} characters of text on topic: {presentation_topic}")
-            print(f"📝 Content analysis: Processing text of length {len(transcription)} for topic '{presentation_topic}'...")
             
             # Truncate text if too long (Gemini has a token limit)
             max_chars = 60000  # Safe limit for Gemini API
@@ -212,7 +223,6 @@ class GeminiContextAnalyzer:
             
             # Generate content
             logger.info(f"Making API call to Gemini using model: {self.model_name}...")
-            print(f"🔄 Sending request to Gemini API (model: {self.model_name})...")
             
             # Use safety settings to ensure we get a response
             generation_config = {
@@ -246,7 +256,7 @@ class GeminiContextAnalyzer:
             # Extract JSON from the response
             clean_json = self._extract_json_from_response(raw_response)
                 
-            if clean_json:
+            if (clean_json):
                 try:
                     # Parse the extracted JSON
                     result = json.loads(clean_json)
@@ -261,26 +271,10 @@ class GeminiContextAnalyzer:
                         logger.warning("Weaknesses missing from result, setting to empty list")
                         result['weaknesses'] = []
                     
-                    # Clean weaknesses to ensure they only have topic, examples, suggestions
-                    cleaned_weaknesses = []
-                    for weakness in result['weaknesses']:
-                        cleaned_weakness = {
-                            "topic": weakness.get("topic", "Unspecified issue"),
-                            "examples": weakness.get("examples", []),
-                            "suggestions": weakness.get("suggestions", [])
-                        }
-                        cleaned_weaknesses.append(cleaned_weakness)
-                    
-                    # Replace with cleaned weaknesses
-                    result['weaknesses'] = cleaned_weaknesses
-                    
-                    # Log the results
-                    print(f"✅ Context analysis complete: Score={result['score']}/10, Found {len(result['weaknesses'])} issues")
                     return result
                     
                 except json.JSONDecodeError as e:
                     logger.error(f"Failed to parse extracted JSON: {str(e)}")
-                    print(f"⚠️ Error parsing JSON after extraction: {str(e)}")
             
             # If all extraction methods fail, return default
             logger.error("Could not extract valid JSON from response")
@@ -288,7 +282,6 @@ class GeminiContextAnalyzer:
                 
         except Exception as e:
             logger.error(f"Error in context analysis: {str(e)}")
-            print(f"❌ Error during context analysis: {str(e)}")
             # Return default values instead of failing
             return {"score": 0, "weaknesses": []}
     
