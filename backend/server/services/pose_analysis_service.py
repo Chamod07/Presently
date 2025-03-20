@@ -47,15 +47,16 @@ def analyze_posture(video_path):
     detected_frames = 0
     
     # Core posture metrics - expanded to include more metrics
+    # In the pose_analysis_service.py, we now handle multiple aspects of body language analysis:
     posture_data = {
         'head_tilt_frames': 0,
         'forward_lean_frames': 0,
         'shoulder_imbalance_frames': 0,
         'slouching_frames': 0,
-        'eye_contact_frames': 0,  # New: track eye contact (looking at camera)
-        'rigid_posture_frames': 0,  # New: track overly stiff posture
-        'excessive_movement_frames': 0,  # New: track excessive movement
-        'hand_position_frames': 0,  # New: track inappropriate hand position
+        'eye_contact_frames': 0,  # Facial element
+        'rigid_posture_frames': 0,  # Overall body positioning
+        'excessive_movement_frames': 0,  # Movement element
+        'hand_position_frames': 0,  # Gesture element
     }
     
     # Track frame sequences for movement analysis
@@ -185,13 +186,11 @@ def analyze_posture(video_path):
         percentage = issue['percentage']
         suggestion, severity, impact = get_detailed_feedback(friendly_name, percentage)
         
-        # Combine severity and impact with the suggestion for a more complete feedback
-        enhanced_suggestion = f"{suggestion} [{severity.upper()}] {impact}"
-        
+        # Add suggestion and impact as separate items in the suggestions array
         main_issues.append({
             "topic": friendly_name,
             "examples": [f"Observed in {percentage:.1f}% of your presentation"],
-            "suggestions": [enhanced_suggestion]
+            "suggestions": [suggestion, f"{impact}"]
         })
     
     # If no issues detected, provide generic feedback
@@ -199,7 +198,8 @@ def analyze_posture(video_path):
         main_issues = [{
             "topic": "Good Posture Maintained",
             "examples": ["You maintained good posture throughout your presentation."],
-            "suggestions": ["Continue maintaining good posture in future presentations. [POSITIVE] Your good posture contributes to a professional presentation style."]
+            "suggestions": ["Continue maintaining good posture in future presentations.", 
+                           "Your good posture contributes to a professional presentation style."]
         }]
     
     # Calculate more nuanced score based on detected issues
