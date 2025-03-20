@@ -80,21 +80,126 @@ class GeminiContextAnalyzer:
             logger.error("No suitable models available")
             raise ValueError("No text generation models available in your Gemini API account")
 
-    def analyze_presentation(self, transcription, topic="general presentation"):
+    def get_session_data(self, report_id):
         """
-        Analyze the context, structure and content of a presentation transcript.
+        Retrieve session data for a presentation by first getting the session_id 
+        from the UserReport table and then retrieving data from the session table
         
         Args:
-            transcription: The transcription text to analyze
-            topic: Optional topic of the presentation
+            report_id: The report ID to query
             
         Returns:
-            Dict with content analysis results including score and weaknesses
+            A dictionary containing session data (type, goal, audience, topic)
         """
         try:
+            from services import storage_service
+            import logging
+            
+            # Step 1: Query UserReport table to get session_id using report_id
+            response = storage_service.supabase.table("UserReport") \
+                .select("session_id") \
+                .eq("reportId", report_id) \
+                .execute()
+                
+            if not response.data or len(response.data) == 0:
+                logging.error(f"No UserReport found for report ID: {report_id}")
+                return {
+                    "session_type": "general",
+                    "session_goal": "informative presentation",
+                    "audience": "general audience",
+                    "session_topic": "general topic"
+                }
+            
+            # Get the session_id from the response
+            session_id = response.data[0].get("session_id")
+            
+            if not session_id:
+                logging.error(f"Session ID is null for report ID: {report_id}")
+                return {
+                    "session_type": "general",
+                    "session_goal": "informative presentation",
+                    "audience": "general audience",
+                    "session_topic": "general topic"
+                }
+            
+            # Step 2: Query session table with the session_id
+            session_response = storage_service.supabase.table("session") \
+                .select("session_type, session_goal, audience, session_topic") \
+                .eq("id", session_id) \
+                .execute()
+                
+            if not session_response.data or len(session_response.data) == 0:
+                logging.error(f"No session data found for session ID: {session_id}")
+                return {
+                    "session_type": "general",
+                    "session_goal": "informative presentation",
+                    "audience": "general audience",
+                    "session_topic": "general topic"
+                }
+                
+            return session_response.data[0]
+        except Exception as e:
+            logging.error(f"Error fetching session data: {e}")
+            # Return default values if there's an error
+            return {
+                "session_type": "general",
+                "session_goal": "informative presentation",
+                "audience": "general audience",
+                "session_topic": "general topic"
+            }
+
+    def analyze_presentation(self, transcription, report_id, session_data):
+        """
+        Analyze a presentation's content and context using Gemini AI.
+        
+        Args:
+            transcription: Text transcription of the presentation
+            report_id: ID of the report
+            session_data: Dictionary containing presentation context data
+            topic: Topic of the presentation (optional, will use session_data if available)
+            
+        Returns:
+            Dictionary containing score and weaknesses
+        """
+        try:
+            # Use session_data if provided, otherwise get it
+            if not session_data:
+                session_data = self.get_session_data(report_id)
+            
+            presentation_topic = session_data.get("session_topic")
+            
+            # Format the prompt for better context-aware analysis
+            prompt = f"""
+            As an AI presentation coach, analyze the following presentation transcription .
+            
+            PRESENTATION CONTEXT:
+            - Type: {session_data.get('session_type')}
+            - Goal: {session_data.get('session_goal')}
+            - Target Audience: {session_data.get('audience')}
+            - Topic: {presentation_topic}
+            
+            TRANSCRIPTION:
+            {transcription}
+            
+            Evaluate this presentation for a target audience of {session_data.get('audience')} 
+            with the main goal to {session_data.get('session_goal')}.
+            
+            Provide an analysis in JSON format with these components:
+            1. An overall content score from 1-10 
+            2. A list of 3-5 weakness topics with specific examples from the transcription
+            
+            For each weakness topic include:
+            - topic: A short title of the issue
+            - description: What the problem is
+            - impact: Why it's important to fix
+            - suggestion: How to improve
+            
+            Return ONLY a JSON object with keys "score" and "weaknesses".
+            """
+            
             # Log the text length
-            logger.info(f"Analyzing content for {len(transcription)} characters of text on topic: {topic}")
-            print(f"📝 Content analysis: Processing text of length {len(transcription)} for topic '{topic}'...")
+            logger.info(f"Analyzing content for {len(transcription)} characters of text on topic: {presentation_topic}")
+            print(f"📝 Content analysis: Processing text of length {len(transcription)} for topic '{presentation_topic}'...")
             
             # Truncate text if too long (Gemini has a token limit)
             max_chars = 60000  # Safe limit for Gemini API
@@ -104,45 +209,6 @@ class GeminiContextAnalyzer:
             
             # Create the model with the previously selected model name
             model = genai.GenerativeModel(self.model_name)
-            
-            # Prepare the prompt for context analysis
-            prompt = f"""
-            You are an expert presentation analyzer specializing in content and structure.
-            Analyze the following presentation transcript focusing on a {topic}.
-
-            Evaluate the presentation based on these criteria:
-            1. Content relevance and accuracy
-            2. Organization and flow
-            3. Clarity of main points
-            4. Depth of analysis
-            5. Supporting evidence and examples
-            6. Introduction and conclusion effectiveness
-
-            Provide a score from 1 to 10 (where 10 is perfect) based on all criteria.
-
-            For each weakness you identify, include:
-            1. The specific topic or issue
-            2. Example passages from the text demonstrating the issue
-            3. Specific suggestions for improvement
-
-            Format your response as a valid JSON object with these fields:
-            {{
-              "score": <score from 1-10>,
-              "weaknesses": [
-                {{
-                  "topic": "<issue description>",
-                  "examples": ["<example from text>", ...],
-                  "suggestions": ["<suggestion for improvement>", ...]
-                }},
-                ...
-              ]
-            }}
-
-            Important: Return ONLY the JSON object, with no other text before or after.
-
-            TRANSCRIPT TO ANALYZE:
-            {transcription}
-            """
             
             # Generate content
             logger.info(f"Making API call to Gemini using model: {self.model_name}...")

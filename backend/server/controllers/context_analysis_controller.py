@@ -14,14 +14,13 @@ router = APIRouter()
 analyzer = GeminiContextAnalyzer()
 
 @router.post("/analyze")
-async def analyze_context(transcription: str, report_id: str, topic: str = "general presentation"):
+async def analyze_context(transcription: str, report_id: str):
     """
     Analyze the context and content of a presentation transcription.
     
     Args:
         transcription: The text transcription of the presentation
         report_id: The ID of the report to update
-        topic: Optional topic of the presentation (defaults to "general presentation")
         
     Returns:
         A message indicating successful analysis
@@ -39,11 +38,33 @@ async def analyze_context(transcription: str, report_id: str, topic: str = "gene
             print("✗ Error: Transcription is too short or empty")
             raise HTTPException(status_code=400, detail="Transcription is too short or empty")
         
+        # Get session data for better context analysis
+        try:
+            session_data = analyzer.get_session_data(report_id)
+        except Exception as e:
+            print(f"! Warning: Error retrieving session data: {str(e)}")
+            logger.warning(f"Session data retrieval error: {str(e)}")
+            session_data = {
+                'session_topic': 'General presentation',
+                'session_type': 'Unknown',
+                'session_goal': 'Information delivery',
+                'audience': 'General audience'
+            }
+        
+        # Use the session topic from the session data
+        topic = session_data.get('session_topic', 'unknown')
+        
         print(f"[1/3] Processing {len(transcription)} characters of text for topic '{topic}'...")
+        print(f"      Session context: Type={session_data.get('session_type', 'Unknown')}, Goal={session_data.get('session_goal', 'Unknown')}")
+        print(f"                       Audience={session_data.get('audience', 'Unknown')}, Topic={session_data.get('session_topic', 'Unknown')}")
             
-        # Call the Gemini service to analyze context
+        # Call the Gemini service to analyze context with session data
         print(f"[2/3] Running context analysis with AI...")
-        context_results = analyzer.analyze_presentation(transcription, topic)
+        context_results = analyzer.analyze_presentation(
+            transcription=transcription, 
+            report_id=report_id,
+            session_data=session_data
+        )
         
         # Format the results for storage
         score = context_results.get("score", 0)
