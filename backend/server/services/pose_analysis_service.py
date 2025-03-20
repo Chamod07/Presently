@@ -1,14 +1,40 @@
 import os
-# Suppress TensorFlow notification messages
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import warnings
+
+# Import our custom logging utilities
+from services.logging_utils import suppress_stdout_stderr, init_mediapipe
+
+# Basic warning suppression
+warnings.filterwarnings("ignore")
+
+# Import OpenCV first
 import cv2
-import mediapipe as mp
+
+# Initialize MediaPipe silently
+mp = init_mediapipe()
+
 import numpy as np
 import math
 from datetime import datetime
 from collections import deque
 from scipy.signal import savgol_filter
+import logging
 
+# Configure standard logging
+logging.basicConfig(level=logging.INFO)
+
+# Suppress all warnings globally
+warnings.filterwarnings("ignore")
+
+# Maximum logging suppression
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+os.environ['GLOG_minloglevel'] = '3'
+os.environ['GLOG_stderrthreshold'] = '3'
+os.environ['AUTOGRAPH_VERBOSITY'] = '0'
+os.environ['MEDIAPIPE_DISABLE_CALCULATOR_GRAPH_LOG'] = '1'
+os.environ['MEDIAPIPE_DISABLE_CALCULATOR_LOG'] = '1'
+os.environ['MEDIAPIPE_DISABLE_EXECUTOR_LOG'] = '1'
 
 def calculate_tilt_angle(point1, point2):
     """Calculate the tilt angle between two points relative to the horizontal axis."""
@@ -286,8 +312,16 @@ def analyze_posture(video_path, calibration_seconds=3):
                             landmarks[i].z = prev.z
                             landmarks[i].visibility = prev.visibility * 0.9  # Decay visibility slightly
                 
-                # Store current landmarks for next frame
-                prev_landmarks = landmarks.copy()
+                # Store current landmarks for next frame - FIX: can't use copy() on MediaPipe landmarks
+                prev_landmarks = []
+                for landmark in landmarks:
+                    # Create a new landmark object with the same properties
+                    new_landmark = type('', (), {})()
+                    new_landmark.x = landmark.x
+                    new_landmark.y = landmark.y 
+                    new_landmark.z = landmark.z
+                    new_landmark.visibility = landmark.visibility
+                    prev_landmarks.append(new_landmark)
                 
                 # Check visibility of body parts
                 visibility = calculate_visibility_score(landmarks)
@@ -374,21 +408,24 @@ def analyze_posture(video_path, calibration_seconds=3):
                         # Handle case where landmarks might be detected but not accurate
                         pass
                 
-                # For gesture analysis
+                # For gesture analysis - COMMENTED OUT FOR TESTING
+                """
                 try:
                     from services.gesture_analysis_service import analyze_hand_gestures
                     gesture_data = analyze_hand_gestures(landmarks, frame_count)
                     if gesture_data:
                         frame_data.update(gesture_data)
                         
-                        # Store in history for analysis
-                        if 'gesture_metrics' not in analysis_results:
-                            analysis_results['gesture_metrics'] = []
-                        analysis_results['gesture_metrics'].append(gesture_data)
+                        # Initialize gesture_metrics list if not exists
+                        if 'gesture_metrics' not in locals():
+                            gesture_metrics = []
+                        gesture_metrics.append(gesture_data)
                 except Exception as e:
                     print(f"Warning: Error in gesture analysis: {e}")
+                """
                 
-                # For movement analysis (requires pose history)
+                # For movement analysis (requires pose history) - COMMENTED OUT FOR TESTING
+                """
                 if frame_count % 5 == 0:  # Analyze every 5th frame for efficiency
                     try:
                         from services.movement_analysis_service import analyze_presenter_movement
@@ -412,10 +449,12 @@ def analyze_posture(video_path, calibration_seconds=3):
                             movement_data = analyze_presenter_movement(
                                 pose_history, frame_count, frame_rate)
                             if movement_data:
-                                if 'movement_metrics' not in analysis_results:
-                                    analysis_results['movement_metrics'] = movement_data
+                                # Store movement data directly without using analysis_results
+                                if 'movement_metrics' not in locals():
+                                    movement_metrics = movement_data
                     except Exception as e:
                         print(f"Warning: Error in movement analysis: {e}")
+                """
 
                 # Store frame metrics if we have valid measurements
                 if len(frame_data) > 1:  # More than just the frame number
@@ -615,7 +654,8 @@ def generate_posture_report(video_path, report_id):
     # Analyze posture with enhanced system
     analysis_results = analyze_posture(video_path)
 
-    # Add facial expression and eye contact analysis
+    # Add facial expression and eye contact analysis - COMMENTED OUT FOR TESTING
+    """
     try:
         from services.facial_analysis_service import analyze_facial_engagement
         facial_results = analyze_facial_engagement(video_path)
@@ -623,10 +663,18 @@ def generate_posture_report(video_path, report_id):
     except Exception as e:
         print(f"Warning: Facial analysis failed: {str(e)}")
         analysis_results["facial_analysis"] = {"error": str(e)}
+    """
+    
+    # Comment out facial analysis but add empty placeholder to prevent errors
+    analysis_results["facial_analysis"] = {"error": "Facial analysis disabled for testing"}
 
     # Generate timestamp for report
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_filename = f"res/report/{report_id}_body.txt"
+    
+    # Use standardized directory structure and ensure directory exists
+    report_dir = f"tmp/{report_id}/reports"
+    os.makedirs(report_dir, exist_ok=True)
+    report_filename = f"{report_dir}/body_analysis.txt"
 
     # Calculate body language score (1-10 scale)
     posture_score = 0
@@ -643,7 +691,8 @@ def generate_posture_report(video_path, report_id):
         # Convert from 0-100 scale to 1-10 scale (posture component)
         posture_score = max(1, min(10, round(base_score / 10)))
     
-    # Calculate facial engagement component (if available)
+    # Calculate facial engagement component (if available) - SIMPLIFIED FOR TESTING
+    """
     if "facial_analysis" in analysis_results and "error" not in analysis_results["facial_analysis"]:
         facial_data = analysis_results["facial_analysis"]
         engagement_score = facial_data.get("engagement_metrics", {}).get("average", 0)
@@ -654,11 +703,11 @@ def generate_posture_report(video_path, report_id):
         
         # Convert to 1-10 scale
         facial_score = max(1, min(10, round(facial_base_score / 10)))
+    """
     
-    # Final body language score: 70% posture, 30% facial expression
-    final_score = posture_score * 0.7 + facial_score * 0.3 if facial_score > 0 else posture_score
-    final_score = max(1, min(10, round(final_score)))
-
+    # For testing, use posture score only
+    final_score = posture_score
+    
     # Prepare issues for database in the required format
     weakness_topics = []
     
@@ -758,7 +807,8 @@ def generate_posture_report(video_path, report_id):
             
             weakness_topics.append(topic_obj)
     
-    # Add hand gesture feedback
+    # Add hand gesture feedback - COMMENTED OUT FOR TESTING
+    """
     if 'gesture_metrics' in analysis_results and analysis_results['gesture_metrics']:
         gesture_data = analysis_results['gesture_metrics']
         
@@ -789,8 +839,10 @@ def generate_posture_report(video_path, report_id):
                 ]
             }
             weakness_topics.append(topic_obj)
+    """
     
-    # Add movement pattern feedback
+    # Add movement pattern feedback - COMMENTED OUT FOR TESTING
+    """
     if 'movement_metrics' in analysis_results and analysis_results['movement_metrics']:
         movement_data = analysis_results['movement_metrics']
         
@@ -806,6 +858,7 @@ def generate_posture_report(video_path, report_id):
                 ]
             }
             weakness_topics.append(topic_obj)
+    """
     
     # Save data to Supabase
     try:
