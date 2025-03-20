@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../supabase/supabase_service.dart';
-import 'package:http/http.dart' as http;
+
 
 class UploadService {
   // Singleton pattern
@@ -255,7 +255,7 @@ class UploadService {
       _updateStatus(uploadId, 'processing', 'Creating database record...', 0.9);
 
       // Get the public URL of the video (or first chunk if chunked)
-      // final videoUrl = _supabaseService.client.storage.from(bucketName).getPublicUrl(fileName);
+       final videoUrl = await _supabaseService.client.storage.from(bucketName).createSignedUrl(fileName, 604800);
       // debugPrint(videoUrl);
       final reportId = metadata['reportId'];
 
@@ -272,6 +272,7 @@ class UploadService {
             // Get the signed URL of the video
             final videoUrl = await _supabaseService.client.storage.from(bucketName).createSignedUrl(fileName, 604800);
             debugPrint('Generated video URL: $videoUrl');
+            debugPrint('Report ID: $reportId');
 
             // Perform the update
             final response = await Supabase.instance.client.from('UserReport').update({'videoUrl': videoUrl.toString()}).eq('reportId', reportId).select();
