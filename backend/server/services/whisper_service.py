@@ -45,14 +45,20 @@ except:
 # Predefined lists for speech analysis
 FILLER_WORDS = {
     "uh", "um", "er", "ah", "like", "you know", "hmm", "so", "basically", 
-    "actually", "literally", "sort of", "kind of", "i mean", "right", "okay"
+    "actually", "literally", "sort of", "kind of", "i mean", "right", "okay",
+    "well", "just", "really", "very", "umm", "uhh", "mm", "anyway", "anyways",
+    "obviously", "essentially", "totally", "honestly", "frankly", "clearly"
 }
 
 HESITATION_PATTERNS = [
-    r'\b(\w+)\s+\1\b',                  # Repeated words
-    r'\b(um|uh|er|ah)+\b',              # Filler sounds
-    r'(?<!\w)(\.\.\.|…)(?!\w)',         # Ellipses
-    r'\b(so|well)\b(?=\s+\w+)',         # Starting sentences with "so" or "well"
+    r'\b(\w+)\s+\1\b',                      # Repeated words
+    r'\b(um|uh|er|ah|hmm|uhh|umm)+\b',      # Filler sounds
+    r'(?<!\w)(\.\.\.|…)(?!\w)',             # Ellipses
+    r'\b(so|well|anyway|like|just)\b(?=\s+)', # Sentence starters that indicate hesitation
+    r'\b(\w+)-(um|uh|er|ah)-(\w+)\b',       # Mid-word hesitations
+    r'\b(\w+),\s+(\w+)\b',                  # Comma-separated false starts
+    r'\b(i|we|they|so)-(I mean|like)\b',    # Self-corrections
+    r'\b(let me|how do I|wait)\b',          # Thinking phrases
 ]
 
 def transcribe_audio(audio_path, report_id=None):
@@ -77,12 +83,21 @@ def transcribe_audio(audio_path, report_id=None):
         # Load model (this uses torch.load under the hood)
         model = whisper.load_model("base")
         
-        # Transcribe audio
-        result = model.transcribe(audio_path) # This also returns segmented data with timestamps
+        # Try to get more verbatim transcription with different decoder options
+        result = model.transcribe(
+            audio_path,
+            fp16=False,  # Disable FP16 for better accuracy
+            verbose=False,  # Reduce logging noise
+            condition_on_previous_text=False,  # Don't try to make text consistent
+            without_timestamps=False  # Keep timestamps for segment analysis
+        )
         
         # Extract text and segments
         transcription = result["text"]
         segments = result["segments"]
+        
+        # Add post-processing to potentially reintroduce filler markers
+        transcription = _enhance_transcription_with_fillers(transcription, segments)
         
         logger.info(f"Transcription complete{report_info}: {len(transcription)} characters")
         
@@ -92,6 +107,20 @@ def transcribe_audio(audio_path, report_id=None):
         error_msg = f"Transcription error{' for report '+report_id if report_id else ''}: {str(e)}"
         logger.error(error_msg)
         raise
+
+def _enhance_transcription_with_fillers(transcription, segments):
+    """
+    Enhance the transcription by analyzing audio patterns in segments
+    that might indicate filler words or hesitations that were cleaned up.
+    """
+    # This is a placeholder for potential enhancement
+    # In a more advanced implementation, you could analyze:
+    # - Segments with unusually short durations amid longer segments (potential fillers)
+    # - Unusually slow speaking rate segments (hesitations)
+    # - Segments with lower confidence scores (potential fillers/unclear speech)
+    
+    # For now, we'll just return the original transcription
+    return transcription
 
 def analyze_speech(segments, transcription):
     """
@@ -124,11 +153,21 @@ def analyze_speech(segments, transcription):
     # Calculate pauses and rhythm
     pause_stats = analyze_pauses(segments)
     
+    # Add time-based analysis to supplement text-based analysis
+    timing_metrics = analyze_segment_timing(segments)
+    
+    # More aggressively look for patterns that might indicate issues
+    potential_filler_count = count_potential_fillers(segments, transcription)
+    filler_count = max(filler_count, potential_filler_count)
+    
+    # Add more comprehensive speech rhythm analysis
+    rhythm_score = analyze_speech_rhythm(segments)
+    
     # Generate feedback
     issues = []
     
-    # Issue: Speech rate
-    if speech_rate > 180:
+    # Issue: Speech rate - Adjust thresholds to be more sensitive
+    if speech_rate > 170:  # Was 180
         issues.append({
             "topic": "Speaking Too Fast",
             "examples": [f"Your speaking rate is {speech_rate} words per minute, which is faster than the ideal range."],
@@ -138,7 +177,7 @@ def analyze_speech(segments, transcription):
                 "Mark your notes with reminders to slow down"
             ]
         })
-    elif speech_rate < 120:
+    elif speech_rate < 130:  # Was 120
         issues.append({
             "topic": "Speaking Too Slowly",
             "examples": [f"Your speaking rate is {speech_rate} words per minute, which is slower than the ideal range."],
@@ -149,10 +188,10 @@ def analyze_speech(segments, transcription):
             ]
         })
         
-    # Issue: Filler words
-    if filler_count > 5:
+    # Issue: Filler words - Lower threshold to catch more instances
+    if filler_count > 3:  # Was 5
         filler_rate = filler_count / (len(transcription.split()) / 100)  # Fillers per 100 words
-        if filler_rate > 3:
+        if filler_rate > 2:  # Was 3
             examples = [f"You used filler words {filler_count} times in your presentation."]
             
             # Add top 3 filler words as examples
@@ -171,8 +210,8 @@ def analyze_speech(segments, transcription):
                 ]
             })
     
-    # Issue: Hesitations
-    if hesitation_count > 5:
+    # Issue: Hesitations - Lower threshold
+    if hesitation_count > 3:  # Was 5
         issues.append({
             "topic": "Speech Hesitations",
             "examples": [f"You showed {hesitation_count} instances of speech hesitation."],
@@ -183,8 +222,8 @@ def analyze_speech(segments, transcription):
             ]
         })
     
-    # Issue: Speech clarity
-    if clarity_score < 7:
+    # Issue: Speech clarity - Increase sensitivity
+    if clarity_score < 8:  # Was 7
         issues.append({
             "topic": "Speech Clarity",
             "examples": ["Your speech lacks clarity in several sections."],
@@ -195,8 +234,8 @@ def analyze_speech(segments, transcription):
             ]
         })
     
-    # Issue: Speech variety/monotony
-    if variety_score < 6:
+    # Issue: Speech variety/monotony - Increase sensitivity
+    if variety_score < 7:  # Was 6
         issues.append({
             "topic": "Monotonous Delivery",
             "examples": ["Your speech shows limited vocal variety and expression."],
@@ -207,8 +246,8 @@ def analyze_speech(segments, transcription):
             ]
         })
     
-    # Issue: Sentence structure
-    if sentence_stats["avg_length"] > 25:
+    # Issue: Sentence structure - Adjust thresholds
+    if sentence_stats["avg_length"] > 23:  # Was 25
         issues.append({
             "topic": "Overly Complex Sentences",
             "examples": [f"Your sentences average {sentence_stats['avg_length']:.1f} words in length, which can be difficult to follow."],
@@ -218,7 +257,7 @@ def analyze_speech(segments, transcription):
                 "Use bullet points for complex information"
             ]
         })
-    elif sentence_stats["variety"] < 0.4:
+    elif sentence_stats["variety"] < 0.5:  # Was 0.4 - higher threshold means more likely to trigger
         issues.append({
             "topic": "Repetitive Sentence Structure",
             "examples": ["Your presentation uses similar sentence patterns throughout."],
@@ -229,8 +268,8 @@ def analyze_speech(segments, transcription):
             ]
         })
     
-    # Issue: Pauses
-    if pause_stats["count"] < 3 and len(segments) > 10:
+    # Issue: Pauses - Adjust thresholds
+    if pause_stats["count"] < 4 and len(segments) > 8:  # Was < 3 and > 10
         issues.append({
             "topic": "Insufficient Pausing",
             "examples": ["You rarely pause during your presentation, making it difficult for listeners to process information."],
@@ -240,7 +279,7 @@ def analyze_speech(segments, transcription):
                 "Practice the 'pause and breathe' technique"
             ]
         })
-    elif pause_stats["consistency"] < 0.5:
+    elif pause_stats["consistency"] < 0.6:  # Was 0.5
         issues.append({
             "topic": "Inconsistent Rhythm",
             "examples": ["Your pausing pattern is inconsistent, creating an uneven presentation flow."],
@@ -248,6 +287,18 @@ def analyze_speech(segments, transcription):
                 "Structure your pauses more deliberately", 
                 "Practice with a metronome to develop rhythm awareness", 
                 "Use slide transitions as natural pause points"
+            ]
+        })
+    
+    # Issue: Speech rhythm - New analysis
+    if rhythm_score < 5:
+        issues.append({
+            "topic": "Uneven Speech Rhythm",
+            "examples": ["Your speech has an uneven rhythm with inconsistent pacing."],
+            "suggestions": [
+                "Practice speaking with a metronome to develop consistent pacing",
+                "Record yourself and listen for sections where you speed up or slow down unexpectedly",
+                "Mark your script with pacing guidelines"
             ]
         })
     
@@ -475,6 +526,65 @@ def analyze_pauses(segments):
         "avg_duration": avg_duration,
         "consistency": consistency
     }
+
+def analyze_segment_timing(segments):
+    """Analyze the timing patterns of speech segments to identify rhythm issues"""
+    if not segments or len(segments) < 3:
+        return {"rhythm_score": 5, "speed_variation": 0}
+        
+    # Calculate speaking rate for each segment
+    segment_rates = []
+    for segment in segments:
+        duration = segment['end'] - segment['start']
+        word_count = len(segment['text'].split())
+        
+        if duration > 0 and word_count > 0:
+            # Words per second for this segment
+            rate = word_count / duration
+            segment_rates.append(rate)
+    
+    if not segment_rates:
+        return {"rhythm_score": 5, "speed_variation": 0}
+        
+    # Calculate variation in speaking rate
+    avg_rate = sum(segment_rates) / len(segment_rates)
+    variation = sum(abs(rate - avg_rate) for rate in segment_rates) / len(segment_rates)
+    
+    # Normalize to a 0-1 scale where 0 is very inconsistent and 1 is very consistent
+    variation_normalized = min(1, variation / (avg_rate * 0.5))
+    
+    # Convert to a 1-10 scale where 10 is very consistent
+    rhythm_score = 10 - (variation_normalized * 9)
+    
+    return {
+        "rhythm_score": max(1, min(10, round(rhythm_score))),
+        "speed_variation": variation_normalized
+    }
+
+def count_potential_fillers(segments, transcription):
+    """Look for potential filler words based on segment timing and confidence"""
+    count = 0
+    
+    # Look for short segments surrounded by longer segments - potential fillers
+    if len(segments) >= 3:
+        for i in range(1, len(segments) - 1):
+            prev_duration = segments[i-1]['end'] - segments[i-1]['start']
+            curr_duration = segments[i]['end'] - segments[i]['start']
+            next_duration = segments[i+1]['end'] - segments[i+1]['start']
+            
+            # If current segment is much shorter than surrounding segments
+            if curr_duration < 0.5 and (prev_duration > 2*curr_duration or next_duration > 2*curr_duration):
+                # Check the text - single word or very short phrase might be a filler
+                words = segments[i]['text'].strip().split()
+                if len(words) <= 2:
+                    count += 1
+    
+    return count
+
+def analyze_speech_rhythm(segments):
+    """Analyze the rhythm and pacing of speech"""
+    timing_metrics = analyze_segment_timing(segments)
+    return timing_metrics["rhythm_score"]
 
 def main(report_id=None):
     """

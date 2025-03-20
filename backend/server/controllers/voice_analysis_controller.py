@@ -76,7 +76,7 @@ async def analyze_voice(report_id: str = Query(...)):
             
         # Get transcription from file if exists, otherwise run transcription
         transcription_path = f"tmp/{report_id}/transcription/transcription.txt"
-        if os.path.exists(transcription_path):
+        if (os.path.exists(transcription_path)):
             print(f"[1/3] Using existing transcription from: {transcription_path}")
             with open(transcription_path, 'r', encoding='utf-8') as f:
                 transcription = f.read()
@@ -126,7 +126,14 @@ async def analyze_voice(report_id: str = Query(...)):
             "weaknessTopicsVoice": analysis_results['issues']
         }
         
-        storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+        # Capture and handle the response instead of letting it print to console
+        response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+        
+        # Log the response data properly instead of printing "OK"
+        if response.data:
+            print(f"✓ Database updated successfully: {len(response.data)} records modified")
+        else:
+            print(f"! Database update returned no data")
         
         print(f"✓ VOICE ANALYSIS: Completed for report {report_id}")
         print("-" * 60 + "\n")
