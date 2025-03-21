@@ -126,16 +126,36 @@ class _MyAppState extends State<MyApp> {
           '/reset_password': (context) => ResetPasswordPage(),
         },
         onGenerateRoute: (settings) {
-          // Custom transitions for specific routes
-          if (settings.name == '/sign_in' || settings.name == '/sign_up') {
-            return PageTransition(
-              type: PageTransitionType.fade,
-              duration: Duration(milliseconds: 300),
-              child: _buildRouteWidget(settings),
-              settings: settings,
-            );
+          // Make sure ALL routes have transitions, not just sign_in and sign_up
+          Widget page;
+          switch (settings.name) {
+            case '/sign_in':
+              page = SignInPage();
+              break;
+            case '/sign_up':
+              page = SignUpPage();
+              break;
+            case '/account_setup':
+              page = CombinedAccountSetup();
+              break;
+            case '/account_setup_greeting':
+              page = AccountSetupGreeting();
+              break;
+            case '/home':
+              page = HomePage();
+              break;
+            // Add cases for other routes as needed
+            default:
+              // Use the route defined in routes map
+              return null;
           }
-          return null; // Use default route generation
+
+          return PageTransition(
+            type: PageTransitionType.fade,
+            duration: Duration(milliseconds: 300),
+            child: page,
+            settings: settings,
+          );
         },
       ),
     );
