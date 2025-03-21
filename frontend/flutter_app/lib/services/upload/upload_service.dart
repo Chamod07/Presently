@@ -31,6 +31,12 @@ class UploadService {
   final _statusController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get statusStream => _statusController.stream;
 
+  // Map to track processing status of reports and their processing start times
+  final Map<String, DateTime> _processingStartTimes = {};
+
+  // Map to track API call success status
+  final Map<String, bool> _apiCallSuccess = {};
+
   // For tracking pending uploads across app restarts
   Future<void> savePendingUploads() async {
     final prefs = await SharedPreferences.getInstance();
@@ -311,28 +317,69 @@ class UploadService {
 
       // After successful upload, trigger the backend analysis
       try {
-        // Get reportId from metadata or generate if not available
-        final reportId = metadata['reportId'] ??
-            'report_${DateTime.now().millisecondsSinceEpoch}';
+        // Get reportId from metadata
+        final reportId = metadata['reportId'];
+        if (reportId == null) {
+          debugPrint(
+              'Warning: No reportId found in metadata, skipping backend call');
+          return;
+        }
 
-        // Call the backend processing API
-        final response = await http.post(
-          Uri.parse('http://10.0.2.2:8000/api/process'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        debugPrint('Attempting to call backend API for report: $reportId');
+        debugPrint('Video URL: $videoUrl');
+
+        // Create HTTP client that follows redirects
+        final client = http.Client();
+
+        try {
+          // Use the correct endpoint with trailing slash
+          final apiUrl = Uri.parse('http://10.0.2.2:8000/api/process/');
+
+          // Add parameters as query parameters, not in body
+          final urlWithParams = apiUrl.replace(queryParameters: {
             'video_url': videoUrl,
             'report_id': reportId,
-          }),
-        );
+          });
 
-        if (response.statusCode == 200) {
-          _updateStatus(
-              uploadId, 'analyzing', 'Video analysis started...', 0.95);
-        } else {
-          print("Warning: Failed to trigger analysis: ${response.statusCode}");
+          debugPrint('Calling API with URL: ${urlWithParams.toString()}');
+
+          final response = await client
+              .post(urlWithParams)
+              .timeout(const Duration(seconds: 30));
+
+          _apiCallSuccess[reportId] = response.statusCode == 200;
+          _processingStartTimes[reportId] = DateTime.now();
+
+          debugPrint('Backend API response status: ${response.statusCode}');
+          debugPrint('Backend API response body: ${response.body}');
+
+          if (response.statusCode == 200) {
+            _updateStatus(
+                uploadId, 'analyzing', 'Video analysis started...', 0.95);
+            debugPrint('Analysis successfully started for report $reportId');
+          } else {
+            debugPrint(
+                'Failed to trigger analysis: ${response.statusCode} - ${response.body}');
+            _updateStatus(uploadId, 'warning',
+                'Upload complete but analysis may be delayed', 0.95);
+          }
+        } catch (e) {
+          debugPrint("Error calling API: $e");
+          _apiCallSuccess[reportId] = false;
+          _processingStartTimes[reportId] = DateTime.now();
+          _updateStatus(uploadId, 'warning',
+              'Upload complete but analysis may be delayed', 0.95);
+        } finally {
+          client.close();
         }
       } catch (e) {
-        print("Warning: Could not trigger analysis: $e");
+        debugPrint("Error in backend processing: $e");
+        if (metadata['reportId'] != null) {
+          _apiCallSuccess[metadata['reportId']] = false;
+          _processingStartTimes[metadata['reportId']] = DateTime.now();
+        }
+        _updateStatus(uploadId, 'warning',
+            'Upload complete but analysis may be delayed', 0.95);
       }
 
       // Clean up the original local video file after successful upload
@@ -363,161 +410,45 @@ class UploadService {
     }
   }
 
-  Future<void> callPythonVideoController(
-      String videoUrl, String reportId) async {
+  // Add this method to check processing status
+  Future<bool> checkProcessingStatus(String reportId) async {
     try {
-      _updateStatus(
-          null, 'processing', 'Calling Python Video Controller...', 0.95);
+      debugPrint('Checking processing status for report: $reportId');
 
-      final backendUrl =
-          'http://10.0.2.2:8000';
-      final url = Uri.parse(
-          '$backendUrl/api/process/video/download_video');
+      // Get the API call success status
+      final apiSuccess = _apiCallSuccess[reportId] ?? false;
+      debugPrint('API call success: $apiSuccess');
 
-      final response = await http.get(
-        url.replace(queryParameters: {
-          'video_url': videoUrl,
-          'report_id': reportId,
-        }),
-      );
+      // Get when processing started
+      final startTime = _processingStartTimes[reportId];
+      if (startTime == null) {
+        debugPrint('No processing start time recorded');
+        return false;
+      }
 
-      if (response.statusCode == 200) {
-        debugPrint('Python Video Controller called successfully');
+      final elapsed = DateTime.now().difference(startTime);
+      debugPrint(
+          'Time elapsed since processing started: ${elapsed.inSeconds} seconds');
+
+      // Simple time-based approach with different times based on API status
+      if (apiSuccess) {
+        // Successful API call - minimum wait time for UX
+        return elapsed.inSeconds >= 5;
       } else {
-        debugPrint(
-            'Error calling Python Video Controller: ${response.statusCode} - ${response.body}');
+        // Failed API call - show error after shorter wait
+        return elapsed.inSeconds >= 3;
       }
     } catch (e) {
-      debugPrint('Error calling Python Video Controller: $e');
+      debugPrint('Error checking processing status: $e');
+
+      // Fallback - consider complete after brief delay
+      final startTime = _processingStartTimes[reportId];
+      if (startTime != null) {
+        return DateTime.now().difference(startTime).inSeconds > 8;
+      }
+      return false;
     }
   }
-
-  // // Handle chunked video uploads
-  // Future<void> _uploadInChunks(
-  //     String uploadId,
-  //     File videoFile,
-  //     String fileName,
-  //     String metadataFileName,
-  //     Map<String, dynamic> metadata,
-  //     ) async {
-  //   try {
-  //     _updateStatus(uploadId, 'chunking', 'File exceeds 50MB. Preparing video chunks...', 0.1);
-  //
-  //     // Extract user ID and base filename from the original path
-  //     final pathParts = fileName.split('/');
-  //     final userFolder = pathParts[0]; // e.g., "user_123456"
-  //     final baseFileName = path.basenameWithoutExtension(pathParts[1]); // e.g., "presentation_1234567890"
-  //
-  //     // Create chunks folder path
-  //     final chunksFolder = '$userFolder/chunks/$baseFileName';
-  //
-  //     // Create a working directory for chunking
-  //     final tempDir = await Directory.systemTemp.createTemp('video_chunks');
-  //     try {
-  //       // Get video duration using the chunking service
-  //       final durationInSeconds = await _chunkingService.getVideoDuration(videoFile.path);
-  //       final fileSize = await videoFile.length();
-  //
-  //       // Calculate number of chunks and segment duration
-  //       final estimatedChunks = (fileSize / _chunkingService.maxFileSize).ceil();
-  //       final chunkDuration = durationInSeconds / estimatedChunks;
-  //
-  //       _updateStatus(uploadId, 'chunking', 'Splitting video into $estimatedChunks chunks...', 0.15);
-  //
-  //       // Create segment list for chunking using the chunking service
-  //       final chunks = await _chunkingService.createVideoChunks(
-  //         uploadId: uploadId,
-  //         videoFile: videoFile,
-  //         outputDir: tempDir.path,
-  //         numChunks: estimatedChunks,
-  //         chunkDuration: chunkDuration,
-  //         statusCallback: _updateStatus,
-  //       );
-  //
-  //       // Enhanced metadata with chunking information
-  //       final enhancedMetadata = Map<String, dynamic>.from(metadata);
-  //       enhancedMetadata['chunked'] = true;
-  //       enhancedMetadata['totalChunks'] = chunks.length;
-  //       enhancedMetadata['originalFileName'] = fileName;
-  //
-  //       // Upload each chunk with progress updates
-  //       double progressIncrement = 0.7 / chunks.length;
-  //       double currentProgress = 0.2;
-  //
-  //       for (int i = 0; i < chunks.length; i++) {
-  //         final chunkIndex = i + 1; // 1-based indexing for readability
-  //         final chunkFileName = '$chunksFolder/chunk_${chunkIndex.toString().padLeft(3, '0')}.mp4';
-  //
-  //         _updateStatus(uploadId, 'uploading', 'Uploading chunk $chunkIndex of ${chunks.length}...', currentProgress);
-  //
-  //         await _supabaseService.client
-  //             .storage
-  //             .from(bucketName)
-  //             .upload(
-  //           chunkFileName,
-  //           chunks[i],
-  //           fileOptions: FileOptions(
-  //             cacheControl: '3600',
-  //             upsert: true,
-  //           ),
-  //         );
-  //
-  //         currentProgress += progressIncrement;
-  //       }
-  //
-  //       // Upload metadata with chunk information
-  //       _updateStatus(uploadId, 'uploading', 'Uploading metadata...', 0.9);
-  //
-  //       final metadataJson = jsonEncode(enhancedMetadata);
-  //       final metadataBytes = utf8.encode(metadataJson);
-  //
-  //       await _supabaseService.client
-  //           .storage
-  //           .from(bucketName)
-  //           .uploadBinary(
-  //         metadataFileName,
-  //         metadataBytes,
-  //         fileOptions: FileOptions(
-  //           contentType: 'application/json',
-  //           upsert: true,
-  //         ),
-  //       );
-  //
-  //       // Upload a manifest file that points to all chunks
-  //       final manifestData = {
-  //         'originalFileName': fileName,
-  //         'chunks': List.generate(chunks.length,
-  //                 (i) => '$chunksFolder/chunk_${(i + 1).toString().padLeft(3, '0')}.mp4'),
-  //         'totalChunks': chunks.length,
-  //         'createdAt': DateTime.now().toIso8601String(),
-  //       };
-  //
-  //       final manifestJson = jsonEncode(manifestData);
-  //       final manifestBytes = utf8.encode(manifestJson);
-  //       final manifestFileName = '$chunksFolder/manifest.json';
-  //
-  //       await _supabaseService.client
-  //           .storage
-  //           .from(bucketName)
-  //           .uploadBinary(
-  //         manifestFileName,
-  //         manifestBytes,
-  //         fileOptions: FileOptions(
-  //           contentType: 'application/json',
-  //           upsert: true,
-  //         ),
-  //       );
-  //
-  //     } finally {
-  //       // Clean up temp directory regardless of success/failure
-  //       await tempDir.delete(recursive: true);
-  //     }
-  //
-  //   } catch (e) {
-  //     debugPrint('Chunked upload error: $e');
-  //     throw Exception('Failed during chunked upload: $e');
-  //   }
-  // }
 
   // Call this when the app is shutting down
   void dispose() {
