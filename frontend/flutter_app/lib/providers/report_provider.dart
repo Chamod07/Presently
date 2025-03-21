@@ -168,7 +168,7 @@ class ReportProvider with ChangeNotifier {
         return;
       }
 
-      // If we don't have a report ID but have a session ID, fetch the report ID
+      // fetch report ID from session ID if available
       if (sessionId != null && sessionId!.isNotEmpty) {
         debugPrint("Fetching report ID for session: $sessionId");
         final fetchedReportId = await fetchReportIdFromSupabase();
@@ -180,12 +180,12 @@ class ReportProvider with ChangeNotifier {
           return;
         }
 
-        // Now we should have a report ID, fetch the report data
+        // fetch the report data from report ID
         await fetchReportData();
         return;
       }
 
-      // If we have neither report ID nor session ID
+      // If there is neither report ID nor session ID
       _errorMessage = 'No report ID or session ID available';
       _loading = false;
       notifyListeners();

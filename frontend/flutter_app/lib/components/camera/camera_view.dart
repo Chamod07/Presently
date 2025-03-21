@@ -9,6 +9,8 @@ import 'recording_timer.dart';
 import 'processing_overlay.dart'; // Add import for ProcessingOverlay
 import 'package:flutter_app/services/upload/upload_service.dart'; // Add import for UploadService
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../scenario_selection/session_provider.dart';
+import 'package:provider/provider.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -524,6 +526,8 @@ class _CameraViewState extends State<CameraView> {
                   });
                   _constraintsManager.stopMonitoring();
                   try {
+
+                    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
                     // Show processing notification
                     showNotification("Processing video...");
 
@@ -580,6 +584,9 @@ class _CameraViewState extends State<CameraView> {
                                           _cameraFunctions.videoFilePath,
                                       'metadata':
                                           _cameraFunctions.videoMetaData,
+                                      'sessionId': sessionProvider.sessionId,
+                                      'sessionName': sessionProvider.selectedName,
+                                      'reportId': _cameraFunctions.videoMetaData['reportId'],
                                     });
 
                                 // Clean up the local file

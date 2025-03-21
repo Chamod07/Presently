@@ -8,6 +8,7 @@ class SessionProvider with ChangeNotifier {
   String? _selectedName;
   String? _selectedAudience;
   String? _selectedTopic;
+  String? _sessionId;
   List<Map<String, dynamic>> _sessions = [];
 
   // Add a compatibility check when accessing sessions
@@ -47,6 +48,7 @@ class SessionProvider with ChangeNotifier {
   String? get selectedName => _selectedName;
   String? get selectedAudience => _selectedAudience;
   String? get selectedTopic => _selectedTopic;
+  String? get sessionId => _sessionId;
 
   // Reset all sessions data and clear any cached information
   void resetSessionsData() {
@@ -98,12 +100,13 @@ class SessionProvider with ChangeNotifier {
   //save session in supabase
   Future<Map<String, dynamic>> saveToSupabase() async {
     final userId = _supabaseService.currentUserId;
-    if (userId == null)
+    if (userId == null){
       return {
         "error": "User not logged in",
         'sessionId': null,
-        'reportId': null
+        'reportId': null,
       };
+    }
 
     final timestamp = DateTime.now().toIso8601String();
 
@@ -123,6 +126,7 @@ class SessionProvider with ChangeNotifier {
       String? sessionId;
       if (response != null && response.isNotEmpty) {
         sessionId = response[0]['session_id'];
+        _sessionId = sessionId; //Store the session ID for future reference
       }
 
       // Check for an existing report for this session
