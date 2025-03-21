@@ -58,7 +58,7 @@ class _SignUpPageState extends State<SignUpPage> {
     }
 
     // Add email format validation
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    final emailRegex = RegExp(r'^[a-z0-9.-]+@([a-z0-9-]+\.)+[a-z]{2,4}$');
     if (!emailRegex.hasMatch(_emailController.text.trim())) {
       setState(() {
         emailError = true;
@@ -221,12 +221,19 @@ class _SignUpPageState extends State<SignUpPage> {
           _isLoading = false;
           final errorMsg = e.message.toLowerCase();
 
-          // More specific error messages based on the error type
-          if (errorMsg.contains('email') &&
-              (errorMsg.contains('taken') ||
-                  errorMsg.contains('already registered'))) {
+          // Handle existing user case
+          if (errorMsg.contains('user already registered') ||
+              errorMsg.contains('already exists') ||
+              errorMsg.contains('already in use') ||
+              errorMsg.contains('taken')) {
+            debugPrint('Detected existing user case, showing dialog');
             emailError = true;
-            errorText = 'This email is already in use. Please sign in instead';
+            errorText = 'This email is already registered';
+
+            // We'll use Future.delayed to ensure setState has completed
+            Future.delayed(Duration.zero, () {
+              _showExistingUserDialog();
+            });
           } else if (errorMsg.contains('password') &&
               (errorMsg.contains('should contain') ||
                   errorMsg.contains('at least one character') ||
@@ -264,6 +271,47 @@ class _SignUpPageState extends State<SignUpPage> {
         });
       }
     }
+  }
+
+  void _showExistingUserDialog() {
+    debugPrint('Showing existing user dialog');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Account Already Exists'),
+          content: const Text(
+              'An account with this email already exists. Would you like to sign in instead?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                debugPrint('Cancel button pressed');
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                debugPrint('Sign In button pressed');
+                Navigator.of(dialogContext).pop();
+
+                // Use Navigator.of(context) not dialogContext for this navigation
+                Navigator.of(context).pushReplacementNamed('/sign_in',
+                    arguments: {'email': _emailController.text.trim()});
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7400B8),
+              ),
+              child: const Text(
+                'Sign In',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Add signUpWithGoogle method after signUpWithEmail
