@@ -4,7 +4,6 @@ import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/summary/graph_display.dart';
 import 'package:flutter_app/providers/report_provider.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
 
 import '../../models/report.dart';
 
@@ -48,6 +47,7 @@ class _SummaryPageState extends State<SummaryPage>
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(
       length: _pageData.length,
       vsync: this,
@@ -78,6 +78,8 @@ class _SummaryPageState extends State<SummaryPage>
     final int selectedIndex =
         args?['selectedIndex'] ?? 1; // Default to 1 (add/new tab)
     final String? initialSessionName = args?['sessionName'];
+    final String? reportId = args?['reportId'];
+    final String? sessionId = args?['sessionId']; // Extract session ID
 
     // Provide the ReportProvider at this level
     return ChangeNotifierProvider(
@@ -87,6 +89,21 @@ class _SummaryPageState extends State<SummaryPage>
         if (initialSessionName != null && initialSessionName.isNotEmpty) {
           provider.setSessionName(initialSessionName);
         }
+
+        // Set session ID if provided
+        if (sessionId != null && sessionId.isNotEmpty) {
+          provider.setSessionId(sessionId);
+        }
+
+        // If report ID is available, set it and load data
+        if (reportId != null && reportId.isNotEmpty) {
+          provider.setReportId(reportId);
+          provider.loadReportData();
+        } else if (sessionId != null && sessionId.isNotEmpty) {
+          // If no report ID but session ID is available, try loading with session ID
+          provider.loadReportData();
+        }
+
         return provider;
       },
       child: _SummaryPageContent(
@@ -135,8 +152,8 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
   @override
   void initState() {
     super.initState();
-
     // Initialize controller with proper vsync
+    WidgetsBinding.instance.addPostFrameCallback((_) {});
     _tabAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 300),
@@ -166,14 +183,35 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
       // Enhanced app bar with gradient and dynamic title
       appBar: AppBar(
         title: Consumer<ReportProvider>(
-          builder: (context, provider, _) => Text(
-            provider.sessionName, // Use dynamic session name from provider
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontSize: 20,
-              letterSpacing: 0.3,
-            ),
+          builder: (context, provider, _) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  provider
+                      .sessionName, // Use dynamic session name from provider
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 20,
+                    letterSpacing: 0.3,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (provider.loading)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
         centerTitle: true,
@@ -527,61 +565,64 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
 
   Widget _buildLoadingState() {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+      ),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Clean, modern circular progress indicator
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 15,
-                    spreadRadius: 0,
-                    offset: Offset(0, 5),
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    duration: Duration(seconds: 2),
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    builder: (context, value, _) {
+                      return CircularProgressIndicator(
+                        value: value,
+                        color: Color(0xFF7400B8),
+                        backgroundColor: Color(0xFFE9ECEF),
+                        strokeWidth: 8,
+                      );
+                    },
+                    onEnd: () {
+                      setState(() {
+                        // Restart the animation when it completes
+                      });
+                    },
+                  ),
+                  Icon(
+                    Icons.analytics_rounded,
+                    size: 40,
+                    color: Color(0xFF7400B8),
                   ),
                 ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7400B8)),
-                ),
-              ),
             ),
-
-            SizedBox(height: 32),
-
-            // Simple, clean title
+            SizedBox(height: 40),
             Text(
-              "Preparing Your Analysis",
+              "Analyzing your performance...",
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
+                color: Color(0xFF212529),
                 letterSpacing: 0.3,
               ),
             ),
-
-            SizedBox(height: 12),
-
-            // Subtitle with subtle color
-            Container(
-              margin: EdgeInsets.symmetric(horizontal: 40),
+            SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                "We're analyzing your presentation to provide personalized insights",
+                "We're preparing personalized insights to help improve your presentation skills",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 15,
-                  color: Color(0xFF757575),
-                  height: 1.4,
+                  fontSize: 16,
+                  color: Color(0xFF6C757D),
+                  height: 1.5,
                 ),
               ),
             ),
@@ -595,62 +636,70 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
     return Container(
       color: Colors.white,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Error icon with subtle shadow
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.red.withOpacity(0.1),
-                    blurRadius: 15,
-                    spreadRadius: 0,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.error_outline,
-                size: 40,
-                color: Colors.red[700],
-              ),
-            ),
-
-            SizedBox(height: 24),
-
-            // Simple error title
-            Text(
-              "Unable to Load Data",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
-              ),
-            ),
-
-            SizedBox(height: 12),
-
-            // Modern retry button
-            ElevatedButton(
-              onPressed: () {
-                reportProvider.fetchReportData();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF7400B8),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.shade100,
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.error_outline_rounded,
+                  size: 60,
+                  color: Colors.red.shade400,
                 ),
               ),
-              child: Text("Try Again"),
-            ),
-          ],
+              SizedBox(height: 40),
+              Text(
+                "Something Went Wrong",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF212529),
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                reportProvider.errorMessage,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6C757D),
+                  height: 1.5,
+                ),
+              ),
+              SizedBox(height: 40),
+              ElevatedButton.icon(
+                onPressed: () {
+                  reportProvider.fetchReportData();
+                },
+                icon: Icon(Icons.refresh_rounded),
+                label: Text("Try Again"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF7400B8),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 4,
+                  shadowColor: Color(0xFF7400B8).withOpacity(0.4),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -706,18 +755,6 @@ abstract class BaseSummary extends StatelessWidget {
       return "You show potential but need more practice. Focus on the improvement areas highlighted below.";
     } else {
       return "This area requires significant work. Follow the suggestions to build stronger skills.";
-    }
-  }
-
-  String _getScoreMessage(double score) {
-    if (score >= 8) {
-      return "Excellent! You've mastered this aspect.";
-    } else if (score >= 6) {
-      return "Good performance with room for improvement.";
-    } else if (score >= 4) {
-      return "You're on the right track, but needs work.";
-    } else {
-      return "This area needs significant improvement.";
     }
   }
 
@@ -987,54 +1024,6 @@ abstract class BaseSummary extends StatelessWidget {
   }
 
   // Simplified score message for side-by-side layout
-  Widget _buildEnhancedScoreMessage(double score, Color scoreColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scoreColor.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header with reduced padding
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: scoreColor.withOpacity(0.1),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(11),
-                topRight: Radius.circular(11),
-              ),
-            ),
-            child: Text(
-              _getScoreTitle(score),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: scoreColor,
-              ),
-            ),
-          ),
-
-          // Concise message
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              _getDetailedScoreMessage(score),
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // More compact performance insights
   Widget _buildPerformanceInsights(double score) {

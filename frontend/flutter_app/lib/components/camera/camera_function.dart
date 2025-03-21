@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import '../../services/upload/upload_service.dart';
 import '../../services/supabase/supabase_service.dart';
+import '../../providers/report_provider.dart';
 
 class CameraFunctions {
   // Camera variables
@@ -47,6 +48,9 @@ class CameraFunctions {
   // State update callback
   final Function setState;
 
+  //instanciating report provider
+  final ReportProvider? reportProvider;
+
   CameraFunctions({
     required this.onImage,
     required this.setState,
@@ -54,6 +58,7 @@ class CameraFunctions {
     this.onDetectorViewModeChanged,
     this.onCameraLensDirectionChanged,
     this.initialCameraLensDirection = CameraLensDirection.front,
+    this.reportProvider
   });
 
   Future<void> initialize() async {

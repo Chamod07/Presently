@@ -96,14 +96,20 @@ class SessionProvider with ChangeNotifier {
   }
 
   //save session in supabase
-  Future<String?> saveToSupabase() async {
+  Future<Map<String, dynamic>> saveToSupabase() async {
     final userId = _supabaseService.currentUserId;
-    if (userId == null) return "User not logged in";
+    if (userId == null)
+      return {
+        "error": "User not logged in",
+        'sessionId': null,
+        'reportId': null
+      };
 
     final timestamp = DateTime.now().toIso8601String();
 
     try {
-      await _supabaseService.client.from('Sessions').insert({
+      // Insert the session and get the session ID
+      final response = await _supabaseService.client.from('Sessions').insert({
         'session_name': _selectedName,
         'session_type': _selectedPresentationType,
         'session_goal': _selectedPresentationGoal,
@@ -112,7 +118,29 @@ class SessionProvider with ChangeNotifier {
         'user_id': userId,
         'is_favorite': false,
         'created_at': timestamp,
-      });
+      }).select();
+
+      String? sessionId;
+      if (response != null && response.isNotEmpty) {
+        sessionId = response[0]['session_id'];
+      }
+
+      // Check for an existing report for this session
+      String? reportId;
+      if (sessionId != null) {
+        final reportResponse = await _supabaseService.client
+            .from("UserReport")
+            .select("reportId")
+            .eq("userId", userId)
+            .eq("session_id", sessionId)
+            .order('createdAt', ascending: false)
+            .limit(1)
+            .maybeSingle();
+
+        if (reportResponse != null && reportResponse['reportId'] != null) {
+          reportId = reportResponse['reportId'];
+        }
+      }
 
       // Add the session to local list after successful save
       addSession(_selectedName!,
@@ -121,9 +149,13 @@ class SessionProvider with ChangeNotifier {
           audience: _selectedAudience,
           topic: _selectedTopic);
 
-      return null; // Success, no error
+      return {"error": null, "sessionId": sessionId, "reportId": reportId};
     } catch (e) {
-      return 'Error saving session: $e';
+      return {
+        "error": 'Error saving session: $e',
+        "sessionId": null,
+        "reportId": null
+      };
     }
   }
 
@@ -157,13 +189,25 @@ class SessionProvider with ChangeNotifier {
     if (userId == null) return;
 
     try {
-      final response = await _supabaseService.client
+      // Get sessions data from Supabase
+      final sessionsResponse = await _supabaseService.client
           .from('Sessions')
           .select()
           .eq('user_id', userId);
 
-      List<dynamic> data = response as List<dynamic>;
-      for (var session in data) {
+      // For each session, also get the most recent report ID if available
+      for (var session in sessionsResponse as List<dynamic>) {
+        // Get the most recent report ID for this session
+        final reportResponse = await _supabaseService.client
+            .from("UserReport")
+            .select("reportId")
+            .eq("userId", userId)
+            .eq("session_id", session['session_id'])
+            .order('createdAt', ascending: false)
+            .limit(1)
+            .maybeSingle();
+
+        // Add session with report ID to local sessions list
         _sessions.add({
           'name': session['session_name'],
           'type': session['session_type'],
@@ -173,6 +217,9 @@ class SessionProvider with ChangeNotifier {
           'is_favorite': session['is_favorite'] ?? false,
           'created_at':
               session['created_at'] ?? DateTime.now().toIso8601String(),
+          'sessionId': session['session_id'],
+          'reportId':
+              reportResponse != null ? reportResponse['reportId'] : null,
         });
       }
 
@@ -180,6 +227,63 @@ class SessionProvider with ChangeNotifier {
     } catch (e) {
       print('Error loading sessions: $e');
     }
+  }
+
+  // Helper method to get report ID by session name
+  Future<String?> getReportIdBySessionName(String sessionName) async {
+    final index =
+        _sessions.indexWhere((session) => session['name'] == sessionName);
+    if (index != -1 && _sessions[index]['reportId'] != null) {
+      return _sessions[index]['reportId'];
+    }
+
+    // If not found in local cache, try fetching from Supabase
+    final userId = _supabaseService.currentUserId;
+    if (userId == null) return null;
+
+    try {
+      final sessionResponse = await _supabaseService.client
+          .from('Sessions')
+          .select('session_id')
+          .eq('user_id', userId)
+          .eq('session_name', sessionName)
+          .maybeSingle();
+
+      if (sessionResponse != null && sessionResponse['session_id'] != null) {
+        return await getReportIdForSession(sessionResponse['session_id']);
+      }
+    } catch (e) {
+      print('Error fetching session ID for session name $sessionName: $e');
+    }
+
+    return null;
+  }
+
+  // Method to fetch report ID for a specific session ID
+  Future<String?> getReportIdForSession(String? sessionId) async {
+    if (sessionId == null) return null;
+
+    final userId = _supabaseService.currentUserId;
+    if (userId == null) return null;
+
+    try {
+      final response = await _supabaseService.client
+          .from("UserReport")
+          .select("reportId")
+          .eq("userId", userId)
+          .eq("session_id", sessionId)
+          .order('createdAt', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null && response['reportId'] != null) {
+        return response['reportId'];
+      }
+    } catch (e) {
+      print('Error fetching report ID for session $sessionId: $e');
+    }
+
+    return null;
   }
 
   Future<void> renameSession(String oldName, String newName) async {

@@ -3,9 +3,14 @@ import 'package:flutter_app/models/report.dart';
 import 'package:flutter_app/services/http_service.dart';
 import 'package:flutter_app/config/config.dart';
 import 'dart:convert';
+import '../services/supabase/supabase_service.dart';
 
 class ReportProvider with ChangeNotifier {
-  final String reportId = '5819c616-57cb-43b7-8f9e-1516a10667cf';
+  // initialize supabase service
+  final SupabaseService _supabaseService = SupabaseService();
+  String? userId;
+  String? _reportId;
+  String? _sessionId;
 
   // New report structure
   PresentationReport _report = PresentationReport.empty();
@@ -21,16 +26,26 @@ class ReportProvider with ChangeNotifier {
   bool get loading => _loading;
   String get errorMessage => _errorMessage;
   String get sessionName => _sessionName;
+  String? get reportId => _reportId;
+  String? get sessionId => _sessionId;
 
   final HttpService _httpService = HttpService();
 
   // Update to fetch session name from the report data
+
   Future<void> fetchReportData() async {
+    if (reportId == null || reportId!.isEmpty) {
+      _errorMessage = 'No report ID available';
+      notifyListeners();
+      return;
+    }
+
     _loading = true;
     _errorMessage = '';
     notifyListeners();
 
     try {
+      debugPrint('Fetching complete report data for report ID: $reportId');
       // Make API call to get full report
       final response =
           await _httpService.get('${Config.apiUrl}/report?report_id=$reportId');
@@ -69,8 +84,163 @@ class ReportProvider with ChangeNotifier {
 
   // Method to set session name (useful when passing from navigation)
   void setSessionName(String name) {
+    debugPrint('Setting session name: $name');
     if (name.isNotEmpty && name != _sessionName) {
       _sessionName = name;
+      notifyListeners();
+    } else {
+      debugPrint('Session name is empty or same as current name $name');
+    }
+  }
+
+  // Method to set report id (useful when passing from navigation)
+  void setReportId(String repid) {
+    debugPrint('Setting report ID: $repid');
+    if (repid.isNotEmpty && repid != reportId) {
+      _reportId = repid;
+      notifyListeners();
+    }
+  }
+
+  // Method to set session id (useful when passing from navigation)
+  void setSessionId(String sesid) {
+    debugPrint('Setting session ID: $sesid');
+    if (sesid.isNotEmpty && sesid != sessionId) {
+      _sessionId = sesid;
+      notifyListeners();
+    }
+  }
+
+  // Method to fetch report ID from UserReport table in Supabase
+  Future<String?> fetchReportIdFromSupabase({String? sessionId}) async {
+    if (sessionId == null && _sessionId == null) {
+      debugPrint('No session ID provided, cannot fetch report ID');
+      return null;
+    }
+
+    final String targetSessionId = sessionId ?? _sessionId!;
+    final userId = await _supabaseService.currentUserId;
+
+    if (userId == null) {
+      debugPrint('No user ID available, cannot fetch report ID');
+      return null;
+    }
+
+    try {
+      debugPrint('Fetching report ID for session: $targetSessionId');
+      final response = await _supabaseService.client
+          .from("UserReport")
+          .select("reportId")
+          .eq("userId", userId)
+          .eq("session_id", targetSessionId)
+          .order('createdAt', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null && response['reportId'] != null) {
+        final String fetchedReportId = response['reportId'];
+        debugPrint('Successfully fetched report ID: $fetchedReportId');
+
+        // Update the stored report ID
+        setReportId(fetchedReportId);
+        return fetchedReportId;
+      } else {
+        debugPrint('No report found for session $targetSessionId');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error fetching report ID: $e');
+      return null;
+    }
+  }
+
+  // Enhanced method to load report data that handles both direct report ID and session ID
+  Future<void> loadReportData() async {
+    _loading = true;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      // If we already have a report ID, use it directly
+      if (reportId != null && reportId!.isNotEmpty) {
+        debugPrint("Using existing report ID: $reportId");
+        await fetchReportData();
+        return;
+      }
+
+      // If we don't have a report ID but have a session ID, fetch the report ID
+      if (sessionId != null && sessionId!.isNotEmpty) {
+        debugPrint("Fetching report ID for session: $sessionId");
+        final fetchedReportId = await fetchReportIdFromSupabase();
+
+        if (fetchedReportId == null) {
+          _errorMessage = 'No report found for this session';
+          _loading = false;
+          notifyListeners();
+          return;
+        }
+
+        // Now we should have a report ID, fetch the report data
+        await fetchReportData();
+        return;
+      }
+
+      // If we have neither report ID nor session ID
+      _errorMessage = 'No report ID or session ID available';
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Failed to load report: $e';
+      debugPrint('Error in loadReportData: $e');
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Method to set both session ID and report ID at once
+  void setSessionAndReportIds({String? sessionId, String? reportId}) {
+    if (sessionId != null && sessionId.isNotEmpty) {
+      setSessionId(sessionId);
+    }
+
+    if (reportId != null && reportId.isNotEmpty) {
+      setReportId(reportId);
+    }
+  }
+
+  // Method to load data by session name - useful when navigating from other screens
+  Future<void> loadReportDataBySessionName(String sessionName) async {
+    setSessionName(sessionName);
+
+    // First try to fetch session ID from the session name
+    final userId = await _supabaseService.currentUserId;
+    if (userId == null) {
+      _errorMessage = 'User not logged in';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      // Get session ID from session name
+      final sessionResponse = await _supabaseService.client
+          .from('Sessions')
+          .select('session_id')
+          .eq('user_id', userId)
+          .eq('session_name', sessionName)
+          .maybeSingle();
+
+      if (sessionResponse != null && sessionResponse['session_id'] != null) {
+        final String sessionId = sessionResponse['session_id'];
+        setSessionId(sessionId);
+
+        // Now load the report with the session ID
+        await loadReportData();
+      } else {
+        _errorMessage = 'No session found with name: $sessionName';
+        notifyListeners();
+      }
+    } catch (e) {
+      _errorMessage = 'Error finding session: $e';
       notifyListeners();
     }
   }
