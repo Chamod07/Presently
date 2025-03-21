@@ -72,43 +72,69 @@ class _SignInPageState extends State<SignInPage> {
       _isLoading = true;
     });
 
-      try {
-        // Use the client from the service
-        final AuthResponse res = 
-            await _supabaseService.client.auth.signInWithPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-        
-        if (res.session != null) {
-          if (mounted) {
-            Navigator.pushReplacementNamed(context, '/home');
-          }
-        } else {
-          throw 'Invalid credentials';
+    try {
+      // Use the client from the service
+      final AuthResponse res =
+          await _supabaseService.client.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (res.session != null) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
         }
+      } else {
+        throw 'Invalid credentials';
+      }
     } on AuthException catch (e) {
       if (mounted) {
         setState(() {
-          if (e.message.toLowerCase().contains('invalid login credentials')) {
-            errorText = 'Invalid email or password';
+          _isLoading = false;
+          // More detailed error handling based on the error message
+          final errorMsg = e.message.toLowerCase();
+
+          if (errorMsg.contains('invalid login credentials')) {
+            // Check if we can determine which field is incorrect
             emailError = true;
             passwordError = true;
+            errorText = 'The email or password you entered is incorrect';
+          } else if (errorMsg.contains('email') &&
+              (errorMsg.contains('not found') ||
+                  errorMsg.contains('not exist'))) {
+            emailError = true;
+            errorText = 'No account found with this email address';
+          } else if (errorMsg.contains('password') &&
+              errorMsg.contains('incorrect')) {
+            passwordError = true;
+            errorText = 'Incorrect password. Please try again';
+          } else if (errorMsg.contains('password') &&
+              (errorMsg.contains('should contain') ||
+                  errorMsg.contains('at least one character'))) {
+            // Handle complex password requirements with a user-friendly message
+            passwordError = true;
+            errorText =
+                'Password must be at least 8 characters long and include lowercase, uppercase, numbers, and special characters';
+          } else if (errorMsg.contains('too many requests') ||
+              errorMsg.contains('rate limit')) {
+            errorText = 'Too many login attempts. Please try again later';
           } else {
-            errorText = e.message;
+            errorText = 'Sign in failed. Please try again later';
           }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorText = 'An unexpected error occurred: ${e.toString()}';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
           _isLoading = false;
+          // More specific network or unexpected error messages
+          if (e.toString().contains('network') ||
+              e.toString().contains('connection')) {
+            errorText =
+                'Network error. Please check your internet connection and try again';
+          } else {
+            errorText = 'Something went wrong. Please try again later';
+          }
         });
       }
     }
@@ -150,11 +176,11 @@ class _SignInPageState extends State<SignInPage> {
           idToken: idToken,
           accessToken: accessToken,
         );
-if (response.session != null && mounted) {
-  Navigator.pushReplacementNamed(context, '/home');
-}
-}
-} on AuthException catch (e) {
+        if (response.session != null && mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } on AuthException catch (e) {
       if (mounted) {
         setState(() {
           errorText = e.message;
@@ -203,11 +229,35 @@ if (response.session != null && mounted) {
               ),
               const SizedBox(height: 10),
               if (errorText != null)
-                Text(
-                  errorText!,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Roboto',
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE), // Light red background
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: const Color(0xFFEF5350), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Color(0xFFD32F2F),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          errorText!,
+                          style: const TextStyle(
+                            color: Color(0xFFD32F2F),
+                            fontFamily: 'Roboto',
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               const SizedBox(height: 20),

@@ -56,11 +56,46 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
+    // Add email format validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+      setState(() {
+        emailError = true;
+        errorText = 'Please enter a valid email address';
+      });
+      return;
+    }
+
     // Validate passwords
     if (_passwordController.text.isEmpty) {
       setState(() {
         passwordError = true;
         errorText = 'Please enter a password';
+      });
+      return;
+    }
+
+    // Enhanced password validation
+    final String password = _passwordController.text;
+    if (password.length < 8) {
+      setState(() {
+        passwordError = true;
+        errorText = 'Password must be at least 8 characters long';
+      });
+      return;
+    }
+
+    // Check for lowercase, uppercase, digits, and symbols
+    bool hasLowercase = password.contains(RegExp(r'[a-z]'));
+    bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
+    bool hasDigit = password.contains(RegExp(r'[0-9]'));
+    bool hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+
+    if (!hasLowercase || !hasUppercase || !hasDigit || !hasSpecialChar) {
+      setState(() {
+        passwordError = true;
+        errorText =
+            'Password must include lowercase, uppercase, numbers, and special characters';
       });
       return;
     }
@@ -183,17 +218,32 @@ class _SignUpPageState extends State<SignUpPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          final errorMsg = e.message.toLowerCase();
 
           // More specific error messages based on the error type
-          if (e.message.toLowerCase().contains('email') &&
-              e.message.toLowerCase().contains('taken')) {
+          if (errorMsg.contains('email') &&
+              (errorMsg.contains('taken') ||
+                  errorMsg.contains('already registered'))) {
             emailError = true;
-            errorText = 'This email is already in use. Please sign in instead.';
-          } else if (e.message.toLowerCase().contains('weak password')) {
+            errorText = 'This email is already in use. Please sign in instead';
+          } else if (errorMsg.contains('password') &&
+              (errorMsg.contains('should contain') ||
+                  errorMsg.contains('at least one character') ||
+                  errorMsg.contains('weak'))) {
+            // Handle complex password requirements with a user-friendly message
             passwordError = true;
-            errorText = 'Password is too weak. Please use a stronger password.';
+            errorText =
+                'Password must be at least 8 characters long and include lowercase, uppercase, numbers, and special characters';
+          } else if (errorMsg.contains('email') &&
+              errorMsg.contains('invalid')) {
+            emailError = true;
+            errorText = 'Please enter a valid email address';
+          } else if (errorMsg.contains('too many requests') ||
+              errorMsg.contains('rate limit')) {
+            errorText = 'Too many signup attempts. Please try again later';
           } else {
-            errorText = 'Sign up failed: ${e.message}';
+            errorText =
+                'Sign up failed. Please check your information and try again';
           }
         });
       }
@@ -240,11 +290,35 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               const SizedBox(height: 10),
               if (errorText != null)
-                Text(
-                  errorText!,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Roboto',
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE), // Light red background
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: const Color(0xFFEF5350), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Color(0xFFD32F2F),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          errorText!,
+                          style: const TextStyle(
+                            color: Color(0xFFD32F2F),
+                            fontFamily: 'Roboto',
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               const SizedBox(height: 20),
@@ -288,6 +362,14 @@ class _SignUpPageState extends State<SignUpPage> {
                       color: Color(0xFFBDBDBD),
                       fontFamily: "Roboto",
                     ),
+                    helperText:
+                        "8+ chars with lowercase, uppercase, numbers & symbols",
+                    helperStyle: TextStyle(
+                      color: Color(0xFF757575),
+                      fontFamily: "Roboto",
+                      fontSize: 12,
+                    ),
+                    helperMaxLines: 2,
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
