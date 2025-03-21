@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_app/services/supabase/supabase_service.dart';
 
@@ -265,6 +266,118 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  // Add signUpWithGoogle method after signUpWithEmail
+  Future<void> signUpWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      errorText = null;
+    });
+
+    try {
+      const webClientId =
+          '54044305887-0cl2lddi9hjremm4o5evdng9d7ardjes.apps.googleusercontent.com';
+      const iosClientId =
+          '54044305887-l8mqfssark4jlbsru5dt8pu85vpjvh2h.apps.googleusercontent.com';
+
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: iosClientId,
+        serverClientId: webClientId,
+      );
+
+      // Sign out first to ensure we get the sign-in dialog
+      await googleSignIn.signOut();
+
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        throw AuthException('User canceled Google sign-in');
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final accessToken = googleAuth.accessToken;
+      final idToken = googleAuth.idToken;
+
+      if (accessToken != null && idToken != null) {
+        // Use the client from the service
+        final response = await _supabaseService.client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+
+        if (response.session != null) {
+          // Check if this is a new user by checking if user details exist
+          final user = response.user;
+          if (user != null) {
+            try {
+              final existingDetails = await _supabaseService.client
+                  .from('UserDetails')
+                  .select()
+                  .eq('userId', user.id)
+                  .maybeSingle();
+
+              if (existingDetails == null) {
+                // New user - create user details
+                await _supabaseService.client.from('UserDetails').insert({
+                  'userId': user.id,
+                  'email': user.email,
+                  'firstName': '', // Empty but will be filled during onboarding
+                  'lastName': '', // Empty but will be filled during onboarding
+                  'role': '', // Empty but will be filled during onboarding
+                  'createdAt': DateTime.now().toIso8601String(),
+                });
+
+                if (mounted) {
+                  // Navigate to account setup for new users
+                  Navigator.pushReplacementNamed(
+                    context,
+                    '/account_setup',
+                    arguments: {'userId': user.id},
+                  );
+                }
+              } else {
+                // Existing user, go to home
+                if (mounted) {
+                  Navigator.pushReplacementNamed(context, '/home');
+                }
+              }
+            } catch (dbError) {
+              debugPrint('Error checking/creating user details: $dbError');
+              // Still redirect to account setup as fallback
+              if (mounted) {
+                Navigator.pushReplacementNamed(
+                  context,
+                  '/account_setup',
+                  arguments: {'userId': user.id},
+                );
+              }
+            }
+          }
+        }
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          errorText = e.message;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorText = e.toString().contains('canceled') ||
+                  e.toString().contains('cancelled')
+              ? 'Google sign-up was cancelled'
+              : 'Failed to sign up with Google: ${e.toString()}';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -472,6 +585,53 @@ class _SignUpPageState extends State<SignUpPage> {
                           fontFamily: 'Roboto',
                         ),
                       ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: const Color(0xFFF5F5F7),
+                      thickness: 1,
+                      endIndent: 10,
+                    ),
+                  ),
+                  Text(
+                    'or',
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: const Color(0xFFF5F5F7),
+                      thickness: 1,
+                      indent: 10,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : signUpWithGoogle,
+                icon: Image.asset('images/google_720255.png',
+                    height: 20, width: 20),
+                label: const Text(
+                  "Continue with Google",
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize:
+                      Size(MediaQuery.of(context).size.width * 0.9, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  side: const BorderSide(color: Color(0x26000000)),
+                ),
               ),
               const SizedBox(height: 20),
               Row(
