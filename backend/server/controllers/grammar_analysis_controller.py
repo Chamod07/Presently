@@ -1,100 +1,78 @@
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request, Depends, Query
 from services.gemini_grammar_service import GeminiGrammarAnalyzer
 from models.user_report_model import UserReport
 from services import storage_service
-from fastapi import Query
 import datetime
 import uuid
 from fastapi import status
 from services.auth_service import get_current_user_id
 import logging
 
+# Configure standard logging
 logger = logging.getLogger(__name__)
-
 
 router = APIRouter()
 analyzer = GeminiGrammarAnalyzer()
 
 @router.post("/analyze")
-async def analyze_grammar(request: Request):
-    """Analyze text for grammatical correctness and store results"""
+async def analyze_grammar(text: str, report_id: str):
+    """
+    Analyze grammar in a presentation transcription.
+    
+    Args:
+        text: The text transcription of the presentation
+        report_id: The ID of the report to update
+        
+    Returns:
+        A message indicating successful analysis
+    """
     try:
-        body = await request.json()
-        transcription = body.get("transcription")
-        report_id = body.get("reportId")
-        topic = body.get("topic", "")
-
-        if not transcription or not report_id:
-            raise HTTPException(status_code=400, detail="Transcription text and reportId are required")
-
-        try:
-            uuid.UUID(report_id, version=4)
-        except ValueError:
-            logger.error(f"Invalid reportId format: {report_id}")
-            raise HTTPException(status_code=400, detail="Invalid reportId format")
-
-        try:
-            analysis_results = analyzer.analyze_grammar(transcription)
-        except Exception as e:
-            logger.error(f"Error during grammar analysis: {str(e)}")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        # Better step logging with visual separators
+        print("\n" + "-" * 60)
+        print(f"GRAMMAR ANALYSIS: Starting for report {report_id}")
+        print("-" * 60)
+        
+        logger.info(f"Analyzing grammar for report ID: {report_id}")
+        
+        # Check if text is valid
+        if not text or len(text.strip()) < 10:
+            print("✗ Error: Text is too short or empty")
+            raise HTTPException(status_code=400, detail="Text is too short or empty")
+        
+        print(f"[1/3] Processing {len(text)} characters of text...")
             
-
-        user_report = UserReport(
-            reportId=report_id,
-            reportTopic=topic,
-            createdAt=datetime.datetime.now().isoformat(),
-            scoreGrammar=float(analysis_results["grammar_score"]),
-            subScoresGrammar={
-                "grammaticalAccuracy": analysis_results["analysis"]["grammatical_accuracy"],
-                "sentenceStructure": analysis_results["analysis"]["sentence_structure"],
-                "wordChoice": analysis_results["analysis"]["word_choice"]
-            },
-            weaknessTopicsGrammar=[{
-                "topic": wt["topic"],
-                "examples": wt["examples"],
-                "suggestions": wt["suggestions"]
-            } for wt in analysis_results["weakness_topics"]]
-        )
-
-        data = user_report.dict()
-
-        # Check if a report with the given reportId already exists
-        existing_report = storage_service.supabase.table("UserReport").select("*").eq("reportId", report_id).execute()
-
-        if existing_report.data:
-            # Update only grammar-related fields
-            update_data = {
-                "scoreGrammar": float(analysis_results["grammar_score"]),
-                "subScoresGrammar": {
-                    "grammaticalAccuracy": analysis_results["analysis"]["grammatical_accuracy"],
-                    "sentenceStructure": analysis_results["analysis"]["sentence_structure"],
-                    "wordChoice": analysis_results["analysis"]["word_choice"]
-                },
-                "weaknessTopicsGrammar": [{
-                    "topic": wt["topic"],
-                    "examples": wt["examples"],
-                    "suggestions": wt["suggestions"]
-                } for wt in analysis_results["weakness_topics"]],
-                #"updatedAt": datetime.datetime.now().isoformat()
-            }
-            
-            print(f"\nUpdating grammar fields for report {report_id}")
-            response = storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
-            print(f"Update result: {response.data}")
-            if response.data and "error" in response.data:
-                raise HTTPException(status_code=500, detail=response.data["error"])
-            return {"message": f"Grammar analysis completed successfully and updated report with reportId {report_id}"}
-        else:
-            # Insert a new report
-            response = storage_service.supabase.table("UserReport").insert(data).execute()
-            if response.data and "error" in response.data:
-                raise HTTPException(status_code=500, detail=response.data["error"])
-            return {"message": "Grammar analysis completed successfully and stored in Supabase"}
-
+        # Analyze grammar with the service
+        print(f"[2/3] Running grammar analysis with AI...")
+        grammar_results = analyzer.analyze_grammar(text)
+        
+        # Format the results for storage
+        score = grammar_results.get("score", 0)
+        weaknesses = grammar_results.get("weaknesses", [])
+        
+        print(f"[2/3] Analysis results: Score {score}/10 with {len(weaknesses)} identified issues")
+        
+        # Update the database with results
+        print(f"[3/3] Saving results to database...")
+        update_data = {
+            "scoreGrammar": score,
+            "weaknessTopicsGrammar": weaknesses
+        }
+        
+        storage_service.supabase.table("UserReport").update(update_data).eq("reportId", report_id).execute()
+        
+        print(f"✓ GRAMMAR ANALYSIS: Completed for report {report_id}")
+        print("-" * 60 + "\n")
+        
+        return {
+            "message": "Grammar analysis completed successfully",
+            "score": score,
+            "weaknesses_count": len(weaknesses)
+        }
+        
     except Exception as e:
-        print(f"\nError during grammar analysis: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"✗ GRAMMAR ANALYSIS ERROR: {str(e)}")
+        logger.error(f"Grammar analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Grammar analysis failed: {str(e)}")
 
 
 @router.get("/score")

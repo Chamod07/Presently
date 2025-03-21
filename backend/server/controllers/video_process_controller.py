@@ -42,7 +42,7 @@ async def download_video(video_url: str, report_id: str = Query(...)):
         if 'video' not in video_file.headers.get('Content-Type', ''):
             raise HTTPException(status_code=415, detail="URL does not point to a video file")
 
-        video_path = f"res/video/{report_id}_video.mp4"
+        video_path = f"tmp/video/{report_id}_video.mp4"
 
         with open(video_path, "wb") as f:
             for chunk in video_file.iter_content(chunk_size=8192):
