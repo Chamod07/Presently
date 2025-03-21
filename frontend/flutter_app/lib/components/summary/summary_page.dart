@@ -527,64 +527,61 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
 
   Widget _buildLoadingState() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-      ),
+      color: Colors.white,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  TweenAnimationBuilder<double>(
-                    duration: Duration(seconds: 2),
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    builder: (context, value, _) {
-                      return CircularProgressIndicator(
-                        value: value,
-                        color: Color(0xFF7400B8),
-                        backgroundColor: Color(0xFFE9ECEF),
-                        strokeWidth: 8,
-                      );
-                    },
-                    onEnd: () {
-                      setState(() {
-                        // Restart the animation when it completes
-                      });
-                    },
-                  ),
-                  Icon(
-                    Icons.analytics_rounded,
-                    size: 40,
-                    color: Color(0xFF7400B8),
+            // Clean, modern circular progress indicator
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 15,
+                    spreadRadius: 0,
+                    offset: Offset(0, 5),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7400B8)),
+                ),
+              ),
             ),
-            SizedBox(height: 40),
+
+            SizedBox(height: 32),
+
+            // Simple, clean title
             Text(
-              "Analyzing your performance...",
+              "Preparing Your Analysis",
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF212529),
+                color: Color(0xFF333333),
                 letterSpacing: 0.3,
               ),
             ),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
+
+            SizedBox(height: 12),
+
+            // Subtitle with subtle color
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                "We're preparing personalized insights to help improve your presentation skills",
+                "We're analyzing your presentation to provide personalized insights",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6C757D),
-                  height: 1.5,
+                  fontSize: 15,
+                  color: Color(0xFF757575),
+                  height: 1.4,
                 ),
               ),
             ),
@@ -598,70 +595,62 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
     return Container(
       color: Colors.white,
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.shade100,
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.error_outline_rounded,
-                  size: 60,
-                  color: Colors.red.shade400,
-                ),
-              ),
-              SizedBox(height: 40),
-              Text(
-                "Something Went Wrong",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF212529),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                reportProvider.errorMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6C757D),
-                  height: 1.5,
-                ),
-              ),
-              SizedBox(height: 40),
-              ElevatedButton.icon(
-                onPressed: () {
-                  reportProvider.fetchReportData();
-                },
-                icon: Icon(Icons.refresh_rounded),
-                label: Text("Try Again"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF7400B8),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Error icon with subtle shadow
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.1),
+                    blurRadius: 15,
+                    spreadRadius: 0,
+                    offset: Offset(0, 5),
                   ),
-                  elevation: 4,
-                  shadowColor: Color(0xFF7400B8).withOpacity(0.4),
+                ],
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 40,
+                color: Colors.red[700],
+              ),
+            ),
+
+            SizedBox(height: 24),
+
+            // Simple error title
+            Text(
+              "Unable to Load Data",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF333333),
+              ),
+            ),
+
+            SizedBox(height: 12),
+
+            // Modern retry button
+            ElevatedButton(
+              onPressed: () {
+                reportProvider.fetchReportData();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF7400B8),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
                 ),
               ),
-            ],
-          ),
+              child: Text("Try Again"),
+            ),
+          ],
         ),
       ),
     );
