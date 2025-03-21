@@ -183,35 +183,15 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
       // Enhanced app bar with gradient and dynamic title
       appBar: AppBar(
         title: Consumer<ReportProvider>(
-          builder: (context, provider, _) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  provider
-                      .sessionName, // Use dynamic session name from provider
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 20,
-                    letterSpacing: 0.3,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (provider.loading)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                ),
-            ],
+          builder: (context, provider, _) => Text(
+            provider.sessionName, // Use dynamic session name from provider
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 20,
+              letterSpacing: 0.3,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         centerTitle: true,
@@ -572,57 +552,56 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  TweenAnimationBuilder<double>(
-                    duration: Duration(seconds: 2),
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    builder: (context, value, _) {
-                      return CircularProgressIndicator(
-                        value: value,
-                        color: Color(0xFF7400B8),
-                        backgroundColor: Color(0xFFE9ECEF),
-                        strokeWidth: 8,
-                      );
-                    },
-                    onEnd: () {
-                      setState(() {
-                        // Restart the animation when it completes
-                      });
-                    },
-                  ),
-                  Icon(
-                    Icons.analytics_rounded,
-                    size: 40,
-                    color: Color(0xFF7400B8),
+            // Clean, modern circular progress indicator
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 15,
+                    spreadRadius: 0,
+                    offset: Offset(0, 5),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7400B8)),
+                ),
+              ),
             ),
-            SizedBox(height: 40),
+
+            SizedBox(height: 32),
+
+            // Simple, clean title
             Text(
-              "Analyzing your performance...",
+              "Preparing Your Analysis",
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF212529),
+                color: Color(0xFF333333),
                 letterSpacing: 0.3,
               ),
             ),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
+
+            SizedBox(height: 12),
+
+            // Subtitle with subtle color
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                "We're preparing personalized insights to help improve your presentation skills",
+                "We're analyzing your presentation to provide personalized insights",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6C757D),
-                  height: 1.5,
+                  fontSize: 15,
+                  color: Color(0xFF757575),
+                  height: 1.4,
                 ),
               ),
             ),
