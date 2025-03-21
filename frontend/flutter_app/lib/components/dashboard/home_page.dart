@@ -25,8 +25,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    Provider.of<SessionProvider>(context, listen: false)
-        .loadSessionsFromSupabase();
+
+    // Defer loading until after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // This will now run after the widget is built
+      final sessionProvider =
+          Provider.of<SessionProvider>(context, listen: false);
+      sessionProvider.loadSessionsFromSupabase();
+    });
+
     _loadHomePageData();
   }
 
