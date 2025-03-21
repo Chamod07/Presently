@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_app/components/settings/faq.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_app/components/scenario_selection/session_provider.dart';
@@ -28,6 +29,7 @@ late List<CameraDescription> cameras;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // Initialize the Supabase service before running the app
   final supabaseService = SupabaseService();
