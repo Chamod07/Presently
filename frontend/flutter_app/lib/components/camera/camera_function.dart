@@ -27,9 +27,7 @@ class CameraFunctions {
   bool isRecording = false;
   Timer? timer;
   int seconds = 0;
-  bool hasGoodLighting = true;
-  bool isFaceWellPositioned = true;
-  bool isRecordingQualitySufficient = true;
+
 
 
   // Video data
@@ -98,23 +96,7 @@ class CameraFunctions {
         .padLeft(2, '0')}';
   }
 
-  Future<bool> checkRecordingConditions() async {
-    bool isQualitySufficient = true;
 
-    if (!hasGoodLighting) {
-      isQualitySufficient = false;
-    }
-    else if (!isFaceWellPositioned) {
-      isQualitySufficient = false;
-    }
-    else if (!isRecordingQualitySufficient) {
-      isQualitySufficient = false;
-    }
-    setState(() {
-      isRecordingQualitySufficient = isQualitySufficient;
-    });
-    return isQualitySufficient;
-  }
 
   Future<void> startLiveFeed() async {
     final camera = cameras[cameraIndex];
@@ -215,12 +197,6 @@ class CameraFunctions {
     final inputImage = inputImageFromCameraImage(image);
     if (inputImage == null) return;
 
-    if (!isRecording) {
-      // This is where you'd implement actual image analysis for lighting and face position
-      // For now, we'll use placeholder logic which you can replace with actual ML analysis
-      hasGoodLighting = true;
-      isFaceWellPositioned = true;
-    }
     onImage(inputImage);
   }
 
@@ -293,10 +269,6 @@ class CameraFunctions {
           'camera': cameras[cameraIndex].lensDirection.toString(),
           'audioEnabled': true,
         },
-        'recordingConditions': {
-          'lightingQuality': hasGoodLighting ? 'good' : 'suboptimal',
-          'facePositioning': isFaceWellPositioned ? 'good' : 'suboptimal',
-        }
       };
 
       // Get app directory

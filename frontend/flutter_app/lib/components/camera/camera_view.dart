@@ -15,12 +15,13 @@ import 'package:provider/provider.dart';
 class CameraView extends StatefulWidget {
   CameraView(
       {Key? key,
-      required this.customPaint,
-      required this.onImage,
-      this.onCameraFeedReady,
-      this.onDetectorViewModeChanged,
-      this.onCameraLensDirectionChanged,
-      this.initialCameraLensDirection = CameraLensDirection.front})
+        this.customPaint,
+        required this.onImage,
+        this.onCameraFeedReady,
+        this.onDetectorViewModeChanged,
+        this.onCameraLensDirectionChanged,
+        this.initialCameraLensDirection = CameraLensDirection.front,
+        this.showPoseOverlay = false})
       : super(key: key);
 
   final CustomPaint? customPaint;
@@ -29,6 +30,7 @@ class CameraView extends StatefulWidget {
   final VoidCallback? onDetectorViewModeChanged;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
+  final bool showPoseOverlay;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -96,7 +98,7 @@ class _CameraViewState extends State<CameraView> {
         });
 
         final videoFile =
-            await _cameraFunctions.controller?.stopVideoRecording();
+        await _cameraFunctions.controller?.stopVideoRecording();
 
         if (videoFile != null) {
           // Process the recording
@@ -123,7 +125,7 @@ class _CameraViewState extends State<CameraView> {
                     } else {
                       // Video already uploaded, check processing status
                       final reportId =
-                          _cameraFunctions.videoMetaData['reportId'];
+                      _cameraFunctions.videoMetaData['reportId'];
                       if (reportId != null) {
                         return await UploadService()
                             .checkProcessingStatus(reportId);
@@ -225,23 +227,23 @@ class _CameraViewState extends State<CameraView> {
           Center(
             child: _cameraFunctions.changingCameraLens
                 ? Center(
-                    child: const Text('Changing camera lens'),
-                  )
+              child: const Text('Changing camera lens'),
+            )
                 : GestureDetector(
-                    onTap: () {
-                      if (!_isRecording) {
-                        setState(() {
-                          _showPositionGuide = !_showPositionGuide;
-                        });
-                      }
-                    },
-                    child: CameraPreview(
-                      _cameraFunctions.controller!,
-                      child: widget.customPaint,
-                    ),
-                  ),
+              onTap: () {
+                if (!_isRecording) {
+                  setState(() {
+                    _showPositionGuide = !_showPositionGuide;
+                  });
+                }
+              },
+              child: CameraPreview(
+                _cameraFunctions.controller!,
+                child: widget.showPoseOverlay ? widget.customPaint: null,
+              ),
+            ),
           ),
-          _positionGuideOverlay(),
+
           _recordingTimerWidget(),
           _notificationWidget(),
           _switchLiveCameraToggle(),
@@ -252,394 +254,215 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _recordingTimerWidget() => Positioned(
-        top: 40,
-        left: 0,
-        right: 0,
-        child: AnimatedOpacity(
-          opacity: _isRecording ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 300),
-          child: Center(
-            child: RecordingTimer(
-              durationSeconds: _cameraFunctions.seconds,
-              isRecording: _isRecording,
-            ),
-          ),
+    top: 40,
+    left: 0,
+    right: 0,
+    child: AnimatedOpacity(
+      opacity: _isRecording ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 300),
+      child: Center(
+        child: RecordingTimer(
+          durationSeconds: _cameraFunctions.seconds,
+          isRecording: _isRecording,
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _switchLiveCameraToggle() => Positioned(
-        bottom: 69,
-        right: 50,
-        child: SizedBox(
-          height: 60.0,
-          width: 60.0,
-          child: FloatingActionButton(
-            heroTag: Object(),
-            onPressed: () => _cameraFunctions.switchLiveCamera(),
-            backgroundColor: Colors.black54,
-            child: Icon(
-              Platform.isIOS
-                  ? Icons.flip_camera_ios_outlined
-                  : Icons.flip_camera_android_outlined,
-              size: 30,
-              color: Colors.white,
-            ),
-          ),
+    bottom: 69,
+    right: 50,
+    child: SizedBox(
+      height: 60.0,
+      width: 60.0,
+      child: FloatingActionButton(
+        heroTag: Object(),
+        onPressed: () => _cameraFunctions.switchLiveCamera(),
+        backgroundColor: Colors.black54,
+        child: Icon(
+          Platform.isIOS
+              ? Icons.flip_camera_ios_outlined
+              : Icons.flip_camera_android_outlined,
+          size: 30,
+          color: Colors.white,
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _notificationWidget() => Positioned(
-        bottom: 150, // Position above the shutter button
-        left: 20,
-        right: 20,
-        child: AnimatedOpacity(
-          opacity: _showNotification ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 300),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            transform: Matrix4.translationValues(
-                0.0, _showNotification ? 0.0 : 20.0, 0.0),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Color(0xB3000000),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.redAccent, width: 1.5),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.redAccent,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _notificationMessage,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: _dismissNotification,
-                ),
-              ],
-            ),
-          ),
+    bottom: 150, // Position above the shutter button
+    left: 20,
+    right: 20,
+    child: AnimatedOpacity(
+      opacity: _showNotification ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 300),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        transform: Matrix4.translationValues(
+            0.0, _showNotification ? 0.0 : 20.0, 0.0),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Color(0xB3000000),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.redAccent, width: 1.5),
         ),
-      );
-
-  Widget _positionGuideOverlay() => Positioned.fill(
-        child: IgnorePointer(
-          child: AnimatedOpacity(
-            opacity: (_showPositionGuide && !_isRecording)
-                ? 0.7
-                : 0.0, // Only show when not recording
-            duration: const Duration(milliseconds: 300),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Face position guide
-                Center(
-                  child: Container(
-                    width: 220,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white, width: 2),
-                      borderRadius: BorderRadius.circular(150),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(height: 80), // Space for face position
-                        Text(
-                          'Position your face here',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 8.0,
-                                color: Colors.black,
-                                offset: Offset(0, 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Quality indicator in top-left
-                Positioned(
-                  top: 50,
-                  left: 20,
-                  child: Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _cameraFunctions.hasGoodLighting
-                              ? Icons.light_mode
-                              : Icons.light_mode_outlined,
-                          color: _cameraFunctions.hasGoodLighting
-                              ? Colors.green
-                              : Colors.orange,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Lighting',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Position indicator in top-right
-                Positioned(
-                  top: 50,
-                  right: 20,
-                  child: Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _cameraFunctions.isFaceWellPositioned
-                              ? Icons.face
-                              : Icons.face_outlined,
-                          color: _cameraFunctions.isFaceWellPositioned
-                              ? Colors.green
-                              : Colors.orange,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Position',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Tap to dismiss text at the bottom
-                Positioned(
-                  bottom: 160,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Text(
-                      'Tap anywhere to hide guide',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 8.0,
-                            color: Colors.black,
-                            offset: Offset(0, 0),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.redAccent,
+              size: 24,
             ),
-          ),
-        ),
-      );
-
-  //the ready to record indicator
-  Widget _readyToRecordIndicator() => Positioned(
-        bottom: 135, // Position it above the shutter button
-        left: 0,
-        right: 0,
-        child: Center(
-          child: AnimatedOpacity(
-            opacity:
-                (!_isRecording && _cameraFunctions.isRecordingQualitySufficient)
-                    ? 1.0
-                    : 0.0,
-            duration: const Duration(milliseconds: 300),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.greenAccent,
-                    size: 16,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Ready to record',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _notificationMessage,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
               ),
             ),
-          ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: _dismissNotification,
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _shutterButton() => Positioned(
-        bottom: 62, // Position it above the bottom controls
-        left: 0,
-        right: 0,
-        child: Center(
-          child: SizedBox(
-            height: 80.0,
-            width: 200.0,
-            child: GestureDetector(
-              onTap: () async {
-                if (_isRecording) {
-                  // Stop recording
-                  setState(() {
-                    _isRecording = false;
-                    _cameraFunctions.isRecording = false;
-                    _cameraFunctions.stopTimer();
-                  });
-                  _constraintsManager.stopMonitoring();
-                  try {
+    bottom: 62, // Position it above the bottom controls
+    left: 0,
+    right: 0,
+    child: Center(
+      child: SizedBox(
+        height: 80.0,
+        width: 200.0,
+        child: GestureDetector(
+          onTap: () async {
+            if (_isRecording) {
+              // Stop recording
+              setState(() {
+                _isRecording = false;
+                _cameraFunctions.isRecording = false;
+                _cameraFunctions.stopTimer();
+              });
+              _constraintsManager.stopMonitoring();
+              try {
 
-                    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-                    // Show processing notification
-                    showNotification("Processing video...");
+                final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+                // Show processing notification
+                showNotification("Processing video...");
 
-                    // Stop video recording and get the file
-                    final videoFile =
-                        await _cameraFunctions.controller?.stopVideoRecording();
+                // Stop video recording and get the file
+                final videoFile =
+                await _cameraFunctions.controller?.stopVideoRecording();
 
-                    if (videoFile != null) {
-                      // Process the recording
-                      await _cameraFunctions.processRecording(videoFile);
+                if (videoFile != null) {
+                  // Process the recording
+                  await _cameraFunctions.processRecording(videoFile);
 
-                      // Stop the camera feed
-                      await _stopLiveFeed();
+                  // Stop the camera feed
+                  await _stopLiveFeed();
 
-                      // Show processing overlay BEFORE uploading the video
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          opaque: true,
-                          transitionDuration: const Duration(milliseconds: 500),
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) {
-                            return ProcessingOverlay(
-                              checkProcessingStatus: () async {
-                                // Upload the video if not already uploaded
-                                if (!_cameraFunctions.videoMetaData
-                                    .containsKey('uploadSuccess')) {
-                                  // First upload attempt - upload the video
-                                  bool uploadSuccess =
-                                      await _cameraFunctions.videoUpload();
-                                  _cameraFunctions
-                                          .videoMetaData['uploadSuccess'] =
-                                      uploadSuccess;
+                  // Show processing overlay BEFORE uploading the video
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      opaque: true,
+                      transitionDuration: const Duration(milliseconds: 500),
+                      pageBuilder:
+                          (context, animation, secondaryAnimation) {
+                        return ProcessingOverlay(
+                          checkProcessingStatus: () async {
+                            // Upload the video if not already uploaded
+                            if (!_cameraFunctions.videoMetaData
+                                .containsKey('uploadSuccess')) {
+                              // First upload attempt - upload the video
+                              bool uploadSuccess =
+                              await _cameraFunctions.videoUpload();
+                              _cameraFunctions
+                                  .videoMetaData['uploadSuccess'] =
+                                  uploadSuccess;
 
-                                  // Return false to keep showing the overlay
-                                  return false;
-                                } else {
-                                  // Video already uploaded, check processing status
-                                  final reportId = _cameraFunctions
-                                      .videoMetaData['reportId'];
-                                  if (reportId != null) {
-                                    return await UploadService()
-                                        .checkProcessingStatus(reportId);
-                                  }
-                                  return false;
-                                }
-                              },
-                              onProcessingComplete: () {
-                                // Navigate to summary page when processing is complete
-                                Navigator.pushReplacementNamed(
-                                    context, '/summary',
-                                    arguments: {
-                                      'selectedIndex': 1,
-                                      'videoPath':
-                                          _cameraFunctions.videoFilePath,
-                                      'metadata':
-                                          _cameraFunctions.videoMetaData,
-                                      'sessionId': sessionProvider.sessionId,
-                                      'sessionName': sessionProvider.selectedName,
-                                      'reportId': _cameraFunctions.videoMetaData['reportId'],
-                                    });
-
-                                // Clean up the local file
-                                _cameraFunctions.deleteVideoLocal();
-                              },
-                            );
+                              // Return false to keep showing the overlay
+                              return false;
+                            } else {
+                              // Video already uploaded, check processing status
+                              final reportId = _cameraFunctions
+                                  .videoMetaData['reportId'];
+                              if (reportId != null) {
+                                return await UploadService()
+                                    .checkProcessingStatus(reportId);
+                              }
+                              return false;
+                            }
                           },
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    print("Error stopping recording: $e");
-                    showNotification("Error stopping video");
+                          onProcessingComplete: () {
+                            // Navigate to summary page when processing is complete
+                            Navigator.pushReplacementNamed(
+                                context, '/summary',
+                                arguments: {
+                                  'selectedIndex': 1,
+                                  'videoPath':
+                                  _cameraFunctions.videoFilePath,
+                                  'metadata':
+                                  _cameraFunctions.videoMetaData,
+                                  'sessionId': sessionProvider.sessionId,
+                                  'sessionName': sessionProvider.selectedName,
+                                  'reportId': _cameraFunctions.videoMetaData['reportId'],
+                                });
 
-                    // Fall back to original behavior if recording fails
-                    _stopLiveFeed().then((_) {
-                      Navigator.pushReplacementNamed(context, '/summary');
-                    });
-                  }
-                } else {
-                  // Check conditions before starting recording
-                  bool conditionsGood =
-                      await _cameraFunctions.checkRecordingConditions();
-
-                  if (conditionsGood) {
-                    try {
-                      // Start actual video recording
-                      await _cameraFunctions.controller!.startVideoRecording();
-
-                      setState(() {
-                        _isRecording = true;
-                        _cameraFunctions.isRecording = true;
-                        _cameraFunctions.startTimer();
-                      });
-
-                      _constraintsManager.startMonitoring();
-                      showNotification("Recording started");
-                    } catch (e) {
-                      print("Error starting recording: $e");
-                      showNotification("Failed to start recording");
-                    }
-                  }
+                            // Clean up the local file
+                            _cameraFunctions.deleteVideoLocal();
+                          },
+                        );
+                      },
+                    ),
+                  );
                 }
-              },
-              child: Container(
-                width: 100.0,
-                height: 100.0,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 5),
-                ),
-                child: Center(
-                    child: Stack(
+              } catch (e) {
+                print("Error stopping recording: $e");
+                showNotification("Error stopping video");
+
+                // Fall back to original behavior if recording fails
+                _stopLiveFeed().then((_) {
+                  Navigator.pushReplacementNamed(context, '/summary');
+                });
+              }
+            } else {
+                try {
+                  // Start actual video recording
+                  await _cameraFunctions.controller!.startVideoRecording();
+
+                  setState(() {
+                    _isRecording = true;
+                    _cameraFunctions.isRecording = true;
+                    _cameraFunctions.startTimer();
+                  });
+
+                  _constraintsManager.startMonitoring();
+                  showNotification("Recording started");
+                } catch (e) {
+                  print("Error starting recording: $e");
+                  showNotification("Failed to start recording");
+                }
+              }
+          },
+          child: Container(
+            width: 100.0,
+            height: 100.0,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 5),
+            ),
+            child: Center(
+                child: Stack(
                   alignment: Alignment.center,
                   children: [
                     AnimatedOpacity(
@@ -668,9 +491,9 @@ class _CameraViewState extends State<CameraView> {
                     ),
                   ],
                 )),
-              ),
-            ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
