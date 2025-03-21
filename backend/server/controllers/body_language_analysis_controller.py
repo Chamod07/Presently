@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from services.auth_service import get_current_user_id
 from services import storage_service, pose_analysis_service
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -50,10 +51,49 @@ async def get_body_language_weaknesses(
         raise HTTPException(status_code=500, detail=f"Internal server error")
 
 @router.post("/analyze_video")
-async def analyze_video(report_id: str = Query(...)):
+async def analyze_video(report_id: str = Query(...), video_path: str = Query(None)):
+    """
+    Analyze body language from video using simplified approach.
+    
+    Parameters:
+    - report_id: ID of the report to update
+    - video_path: Optional path to the downloaded video file
+    
+    Returns:
+    - A status message indicating success
+    """
     try:
-        report_path = pose_analysis_service.generate_posture_report(f'res/video/{report_id}_video.mp4',report_id)
-        return {"report_path": report_path}
+        print("\n" + "-" * 60)
+        print(f"BODY LANGUAGE ANALYSIS: Starting for report {report_id}")
+        print("-" * 60)
+        
+        # If video_path is not provided, use standard location
+        if not video_path:
+            video_path = f"tmp/{report_id}/video/video.mp4"
+            print(f"[1/3] Using standard video path: {video_path}")
+        else:
+            print(f"[1/3] Using provided video path: {video_path}")
+        
+        # Check if video file exists
+        if not os.path.exists(video_path):
+            print(f"✗ Error: Video file not found at: {video_path}")
+            logger.error(f"Video file not found: {video_path}")
+            raise HTTPException(status_code=404, detail=f"Video file not found at: {video_path}")
+        
+        # Generate simplified body language report
+        print(f"[2/3] Analyzing body language...")
+        try:
+            report_file = pose_analysis_service.generate_posture_report(video_path, report_id)
+            print(f"[3/3] Saving analysis results...")
+            print(f"✓ BODY LANGUAGE ANALYSIS: Completed for report {report_id}")
+        except Exception as e:
+            print(f"✗ Error analyzing body language: {str(e)}")
+            raise
+            
+        print("-" * 60 + "\n")
+        
+        return {"status": "success", "message": "Body language analysis complete", "report_file": report_file}
+        
     except Exception as e:
-        logger.error(f"Internal server error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Body language analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Body language analysis failed: {str(e)}")

@@ -4,8 +4,6 @@ import 'package:flutter_app/components/dashboard/navbar.dart';
 import 'package:flutter_app/components/summary/graph_display.dart';
 import 'package:flutter_app/providers/report_provider.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
-
 
 import '../../models/report.dart';
 
@@ -49,6 +47,7 @@ class _SummaryPageState extends State<SummaryPage>
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(
       length: _pageData.length,
       vsync: this,
@@ -79,6 +78,8 @@ class _SummaryPageState extends State<SummaryPage>
     final int selectedIndex =
         args?['selectedIndex'] ?? 1; // Default to 1 (add/new tab)
     final String? initialSessionName = args?['sessionName'];
+    final String? reportId = args?['reportId'];
+    final String? sessionId = args?['sessionId']; // Extract session ID
 
     // Provide the ReportProvider at this level
     return ChangeNotifierProvider(
@@ -88,6 +89,21 @@ class _SummaryPageState extends State<SummaryPage>
         if (initialSessionName != null && initialSessionName.isNotEmpty) {
           provider.setSessionName(initialSessionName);
         }
+
+        // Set session ID if provided
+        if (sessionId != null && sessionId.isNotEmpty) {
+          provider.setSessionId(sessionId);
+        }
+
+        // If report ID is available, set it and load data
+        if (reportId != null && reportId.isNotEmpty) {
+          provider.setReportId(reportId);
+          provider.loadReportData();
+        } else if (sessionId != null && sessionId.isNotEmpty) {
+          // If no report ID but session ID is available, try loading with session ID
+          provider.loadReportData();
+        }
+
         return provider;
       },
       child: _SummaryPageContent(
@@ -136,8 +152,8 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
   @override
   void initState() {
     super.initState();
-
     // Initialize controller with proper vsync
+    WidgetsBinding.instance.addPostFrameCallback((_) {});
     _tabAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 300),
@@ -175,6 +191,7 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
               fontSize: 20,
               letterSpacing: 0.3,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         centerTitle: true,
@@ -535,57 +552,56 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  TweenAnimationBuilder<double>(
-                    duration: Duration(seconds: 2),
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    builder: (context, value, _) {
-                      return CircularProgressIndicator(
-                        value: value,
-                        color: Color(0xFF7400B8),
-                        backgroundColor: Color(0xFFE9ECEF),
-                        strokeWidth: 8,
-                      );
-                    },
-                    onEnd: () {
-                      setState(() {
-                        // Restart the animation when it completes
-                      });
-                    },
-                  ),
-                  Icon(
-                    Icons.analytics_rounded,
-                    size: 40,
-                    color: Color(0xFF7400B8),
+            // Clean, modern circular progress indicator
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 15,
+                    spreadRadius: 0,
+                    offset: Offset(0, 5),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7400B8)),
+                ),
+              ),
             ),
-            SizedBox(height: 40),
+
+            SizedBox(height: 32),
+
+            // Simple, clean title
             Text(
-              "Analyzing your performance...",
+              "Preparing Your Analysis",
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF212529),
+                color: Color(0xFF333333),
                 letterSpacing: 0.3,
               ),
             ),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
+
+            SizedBox(height: 12),
+
+            // Subtitle with subtle color
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                "We're preparing personalized insights to help improve your presentation skills",
+                "We're analyzing your presentation to provide personalized insights",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6C757D),
-                  height: 1.5,
+                  fontSize: 15,
+                  color: Color(0xFF757575),
+                  height: 1.4,
                 ),
               ),
             ),
@@ -721,18 +737,6 @@ abstract class BaseSummary extends StatelessWidget {
     }
   }
 
-  String _getScoreMessage(double score) {
-    if (score >= 8) {
-      return "Excellent! You've mastered this aspect.";
-    } else if (score >= 6) {
-      return "Good performance with room for improvement.";
-    } else if (score >= 4) {
-      return "You're on the right track, but needs work.";
-    } else {
-      return "This area needs significant improvement.";
-    }
-  }
-
   List<Map<String, dynamic>> _getPerformanceInsights(double score) {
     List<Map<String, dynamic>> insights = [];
 
@@ -823,8 +827,12 @@ abstract class BaseSummary extends StatelessWidget {
                   _buildWeaknessCards(context, provider),
                   SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ] else
-                  SliverFillRemaining(
-                    child: _buildNoWeaknessState(),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height -
+                          300, // Ensure adequate space
+                      child: _buildNoWeaknessState(),
+                    ),
                   ),
               ],
             ),
@@ -995,54 +1003,6 @@ abstract class BaseSummary extends StatelessWidget {
   }
 
   // Simplified score message for side-by-side layout
-  Widget _buildEnhancedScoreMessage(double score, Color scoreColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scoreColor.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header with reduced padding
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: scoreColor.withOpacity(0.1),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(11),
-                topRight: Radius.circular(11),
-              ),
-            ),
-            child: Text(
-              _getScoreTitle(score),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: scoreColor,
-              ),
-            ),
-          ),
-
-          // Concise message
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              _getDetailedScoreMessage(score),
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // More compact performance insights
   Widget _buildPerformanceInsights(double score) {
@@ -1721,57 +1681,60 @@ abstract class BaseSummary extends StatelessWidget {
 
   Widget _buildNoWeaknessState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.green.shade200.withOpacity(0.5),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
+      child: SingleChildScrollView(
+        // Add SingleChildScrollView to handle overflow
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.shade200.withOpacity(0.5),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  size: 64,
+                  color: Colors.green.shade600,
+                ),
               ),
-              child: Icon(
-                Icons.check_circle,
-                size: 64,
-                color: Colors.green.shade600,
+              SizedBox(height: 32),
+              Text(
+                "Great Job!",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF212529),
+                ),
               ),
-            ),
-            SizedBox(height: 32),
-            Text(
-              "Great Job!",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF212529),
+              SizedBox(height: 12),
+              Text(
+                "No areas for improvement were found.",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6C757D),
+                ),
               ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              "No areas for improvement were found.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6C757D),
+              SizedBox(height: 8),
+              Text(
+                "Keep up the excellent work!",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6C757D),
+                  fontStyle: FontStyle.italic,
+                ),
               ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "Keep up the excellent work!",
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6C757D),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
