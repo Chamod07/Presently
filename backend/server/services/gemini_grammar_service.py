@@ -1,127 +1,253 @@
 import os
 import json
-import google.generativeai as genai
-import os
-import json
+import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
 from typing import Dict, Any
 from pathlib import Path
-import logging
+import re
 
+# Configure standard logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+load_dotenv()  # Load environment variables from .env file
 
 class GeminiGrammarAnalyzer:
     def __init__(self):
-        load_dotenv()
-        api_key = os.getenv('GEMINI_API_KEY')
+        # Get API key from environment variables
+        api_key = os.getenv("GEMINI_API_KEY")
+        
         if not api_key:
             logger.error("GEMINI_API_KEY not found in environment variables")
-            raise ValueError("GEMINI_API_KEY not found in environment variables")
-
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-pro-exp-02-05')
-
-    def analyze_grammar(self, transcription: str) -> Dict[str, Any]:
-        """
-        Analyze presentation transcription for grammar issues using Gemini API
-
-        Args:
-            transcription (str): The presentation transcription text
-
-        Returns:
-            Dict containing grammar analysis results including scores and feedback
-        """
-
-        prompt = """You are a professional grammar and language expert. Analyze this presentation transcription for grammar, sentence structure, and word choice. Provide detailed feedback grouped by topic.
-
-        Generate a JSON response with the following structure exactly:
-        {
-            "grammar_score": <number between 0-10>,
-            "confidence_level": <number between 0-1>,
-            "analysis": {
-                "grammatical_accuracy": <number between 0-10>,
-                "sentence_structure": <number between 0-10>,
-                "word_choice": <number between 0-10>
-            },
-            "weakness_topics": [
-                {
-                    "topic": "<grammar topic>",
-                    "examples": ["<specific example from transcription>"],
-                    "suggestions": ["<actionable improvement suggestion>"]
-                }
-            ]
-        }
-
-        Key requirements:
-        1. Group grammar issues by topic (e.g., Subject-Verb Agreement, Tense Consistency)
-        2. All scores must be numerical values only
-        3. Each identified issue must include the exact problematic text from the transcription
-        4. Suggestions must be specific and actionable
-        5. Include clear explanations in the suggestions
-
-        Transcription to analyze:
-        {transcription}
-
-        Respond only with the JSON structure, no additional text.
-        """
-
+            print("ERROR: GEMINI_API_KEY is missing. Please set this in your .env file.")
+            raise ValueError("Missing GEMINI_API_KEY environment variable")
+        
+        # Configure the Gemini API
         try:
-            response = self.model.generate_content(prompt)
-            #print("\nRaw Gemini Response:")
-            #print(response.text)
-            print("\nAttempting to parse response...")
-
-            # Clean the response text to ensure it's valid JSON
-            response_text = response.text.strip()
-            if response_text.startswith('```json'):
-                response_text = response_text.replace('```json', '').replace('```', '').strip()
-
-            return json.loads(response_text)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON parsing error: {str(e)}")
-            raise
+            genai.configure(api_key=api_key)
+            
+            # Get available models first to make sure we use one that exists
+            available_models = self._get_available_models()
+            
+            # Choose the most suitable model based on availability
+            self.model_name = self._get_best_model(available_models)
+            # logger.info(f"Selected model for use: {self.model_name}")
+            
         except Exception as e:
-            logger.error(f"Error in API response: {str(e)}")
+            logger.error(f"❌ Failed to initialize Gemini API: {str(e)}")
+            print(f"ERROR: Failed to connect to Gemini API: {str(e)}")
             raise
+    
+    def _get_available_models(self):
+        """Get list of available models from the API"""
+        try:
+            models = genai.list_models()
+            return [model.name for model in models]
+        except Exception as e:
+            logger.error(f"Error listing models: {e}")
+            return []
+    
+    def _get_best_model(self, available_models):
+        """Select the best available model based on capabilities"""
+        # Model preference order from best to fallback
+        preferred_models = [
+            "gemini-2.0-pro-exp-02-05",
+            "gemini-pro",
+            "gemini-1.5-pro",
+            "gemini-1.0-pro",
+            "text-bison", 
+            "chat-bison",
+            "models/gemini-pro",
+            "models/text-bison-001",
+        ]
+        
+        # Check if any model names in available_models contain our preferred models
+        for preferred in preferred_models:
+            for available in available_models:
+                if preferred in available:
+                    return available
+        
+        # If no preferred model is found, use the first available model that can generate text
+        for model in available_models:
+            if any(text_model in model.lower() for text_model in ["text", "chat", "gemini"]):
+                return model
+        
+        # If still nothing suitable, return a fallback or raise an error
+        if available_models:
+            return available_models[0]
+        else:
+            logger.error("No suitable models available")
+            raise ValueError("No text generation models available in your Gemini API account")
 
+    def analyze_grammar(self, text):
+        """
+        Analyze the grammar of a presentation transcript using the Gemini API.
+        
+        Args:
+            text: The transcription text to analyze
+            
+        Returns:
+            Dict with grammar analysis results including score and weaknesses
+        """
+        try:
+            # Log the text length
+            logger.info(f"Analyzing grammar for {len(text)} characters of text")
+            print(f"📝 Grammar analysis: Processing text of length {len(text)}...")
+            
+            # Truncate text if too long (Gemini has a token limit)
+            max_chars = 60000  # Safe limit for Gemini API
+            if len(text) > max_chars:
+                logger.warning(f"Text exceeds {max_chars} characters, truncating...")
+                text = text[:max_chars] + "..."
+            
+            # Create the model with the previously selected model name
+            model = genai.GenerativeModel(self.model_name)
+            
+            # Prepare the prompt for grammar analysis
+            prompt = f"""
+            You are an expert grammar and language analysis tool. Analyze the following presentation transcript 
+            for grammar, language use, clarity, and structure.
 
-def main():
-    # Test the analyzer with sample transcription
-    analyzer = GeminiGrammarAnalyzer()
+            Begin your analysis by identifying any grammar problems, language usage issues, 
+            and areas where clarity could be improved.
 
-    # Read sample transcription
-    sample_path = Path(__file__).parent.parent.parent / 'sample_transcription.txt'
-    with open(sample_path, 'r') as f:
-        transcription = f.read()
+            Then, provide a score from 1 to 10 (where 10 is perfect) based on:
+            - Grammar correctness (30%)
+            - Sentence structure (30%)
+            - Word choice & vocabulary (20%)
+            - Overall clarity (20%)
 
-    # Test analysis
-    try:
-        result = analyzer.analyze_grammar(transcription)
-        print("\nGrammar Analysis Result:")
-        print(f"Grammar Score: {result['grammar_score']}/10")
-        print(f"Confidence Level: {result['confidence_level']}")
+            For each weakness you identify, include:
+            1. The specific topic or issue
+            2. Example passages from the text demonstrating the issue
+            3. Specific suggestions for improvement
 
-        print("\nDetailed Analysis:")
-        for metric, score in result['analysis'].items():
-            print(f"{metric.replace('_', ' ').title()}: {score}/10")
+            Format your response as a valid JSON object with these fields:
+            {{
+              "score": <score from 1-10>,
+              "weaknesses": [
+                {{
+                  "topic": "<issue description>",
+                  "examples": ["<example from text>", ...],
+                  "suggestions": ["<suggestion for improvement>", ...]
+                }},
+                ...
+              ]
+            }}
 
-        print("\nIdentified Weaknesses:")
-        for topic in result['weakness_topics']:
-            print(f"\nTopic: {topic['topic']}")
-            print("Examples:")
-            for example in topic['examples']:
-                print(f"- {example}")
-            print("Suggestions:")
-            for suggestion in topic['suggestions']:
-                print(f"- {suggestion}")
+            Important: Return ONLY the JSON object, with no other text before or after.
 
-    except Exception as e:
-        print(f"Error during analysis: {str(e)}")
-        raise
-
-
-if __name__ == "__main__":
-    main()
+            TRANSCRIPT TO ANALYZE:
+            {text}
+            """
+            
+            # Generate content
+            logger.info(f"Making API call to Gemini using model: {self.model_name}...")
+            print(f"🔄 Sending request to Gemini API (model: {self.model_name})...")
+            
+            # Use safety settings to ensure we get a response
+            generation_config = {
+                "temperature": 0.2,
+                "top_p": 0.8,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+            }
+            
+            safety_settings = [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
+            ]
+            
+            response = model.generate_content(
+                prompt,
+                generation_config=generation_config,
+                safety_settings=safety_settings
+            )
+            
+            # Check if response is empty
+            if not response or not response.text:
+                logger.error("Received empty response from Gemini API")
+                return {"score": 0, "weaknesses": []}
+            
+            # Log the raw response for debugging
+            raw_response = response.text
+            
+            # Extract JSON from the response
+            clean_json = self._extract_json_from_response(raw_response)
+                
+            if clean_json:
+                try:
+                    # Parse the extracted JSON
+                    result = json.loads(clean_json)
+                    logger.info(f"Successfully parsed JSON response: score={result.get('score', 'N/A')}")
+                    
+                    # Validate and enforce correct structure
+                    if 'score' not in result:
+                        logger.warning("Score missing from result, setting to 0")
+                        result['score'] = 0
+                        
+                    if 'weaknesses' not in result:
+                        logger.warning("Weaknesses missing from result, setting to empty list")
+                        result['weaknesses'] = []
+                    
+                    # Log the results
+                    print(f"✅ Grammar analysis complete: Score={result['score']}/10, Found {len(result['weaknesses'])} issues")
+                    return result
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse extracted JSON: {str(e)}")
+                    print(f"⚠️ Error parsing JSON after extraction: {str(e)}")
+            
+            # If all extraction methods fail, return default
+            logger.error("Could not extract valid JSON from response")
+            return {"score": 0, "weaknesses": []}
+                
+        except Exception as e:
+            logger.error(f"Error in grammar analysis: {str(e)}")
+            print(f"❌ Error during grammar analysis: {str(e)}")
+            # Return default values instead of failing
+            return {"score": 0, "weaknesses": []}
+    
+    def _extract_json_from_response(self, text):
+        """Extract JSON from a response that might contain markdown or other text"""
+        # Try several extraction methods
+        
+        # 1. First, check if the text is already valid JSON
+        try:
+            json.loads(text)
+            return text  # It's already valid JSON
+        except json.JSONDecodeError:
+            pass  # Not valid JSON, try other methods
+        
+        # 2. Check for markdown code blocks (```json ... ```)
+        code_block_pattern = r'```(?:json)?\s*([\s\S]*?)```'
+        code_matches = re.findall(code_block_pattern, text)
+        if code_matches:
+            # Use the first code block that contains valid JSON
+            for match in code_matches:
+                try:
+                    json.loads(match.strip())
+                    logger.info("Successfully extracted JSON from code block")
+                    return match.strip()
+                except json.JSONDecodeError:
+                    continue
+        
+        # 3. Try to find JSON-like pattern between curly braces
+        if "{" in text and "}" in text:
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            json_candidate = text[start:end]
+            
+            # Verify it's valid JSON
+            try:
+                json.loads(json_candidate)
+                logger.info("Successfully extracted JSON from curly braces")
+                return json_candidate
+            except json.JSONDecodeError:
+                pass
+        
+        # 4. None of the extraction methods worked
+        return None

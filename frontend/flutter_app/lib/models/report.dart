@@ -37,6 +37,15 @@ class PresentationReport {
       voice: VoiceAnalysisReport.fromJson(json['voice'] ?? {}),
     );
   }
+
+  // Add method to check if report is empty/invalid
+  bool isEmpty() {
+    // Check if all categories have default/empty values
+    return (context.score == null || context.score == 0) &&
+        (grammar.score == null || grammar.score == 0) &&
+        (bodyLanguage.score == null || bodyLanguage.score == 0) &&
+        (voice.score == null || voice.score == 0);
+  }
 }
 
 // TODO: Remove deprecated class after full migration

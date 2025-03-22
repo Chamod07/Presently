@@ -25,8 +25,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    Provider.of<SessionProvider>(context, listen: false)
-        .loadSessionsFromSupabase();
+
+    // Defer loading until after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // This will now run after the widget is built
+      final sessionProvider =
+          Provider.of<SessionProvider>(context, listen: false);
+      sessionProvider.loadSessionsFromSupabase();
+    });
+
     _loadHomePageData();
   }
 
@@ -631,6 +638,9 @@ class _HomePageState extends State<HomePage> {
     final bool isFavorite = session['is_favorite'] as bool? ?? false;
     final String topic = session['topic'] as String? ?? 'General Topic';
 
+    final String? sessionId = session['sessionId'] as String?;
+    final String? reportId = session['reportId'] as String?;
+
     // Format the creation date
     String createdAt = 'Recently created';
     if (session['created_at'] != null) {
@@ -673,13 +683,15 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: GestureDetector(
         onTap: () {
-          // Pass the session name when navigating to the summary page
+          // Pass the session name and report ID when navigating to the summary page
           Navigator.pushNamed(
             context,
             navigateTo,
             arguments: {
               'selectedIndex': 1, // Default to 1 (add/new tab)
               'sessionName': sessionName, // Pass session name
+              'sessionId': sessionId, // Pass session ID
+              'reportId': reportId, // Pass report ID
             },
           );
         },
@@ -820,13 +832,15 @@ class _HomePageState extends State<HomePage> {
                         // Practice button
                         OutlinedButton.icon(
                           onPressed: () {
-                            // Pass the session name when navigating via the practice button
+                            // Pass the session name and report ID when navigating via the practice button
                             Navigator.pushNamed(
                               context,
                               navigateTo,
                               arguments: {
                                 'selectedIndex': 1,
                                 'sessionName': sessionName,
+                                'sessionId': sessionId,
+                                'reportId': reportId, // Pass report ID
                               },
                             );
                           },

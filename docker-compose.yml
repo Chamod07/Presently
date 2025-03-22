@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: 
+      context: ./backend/server
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/server/.env
+    volumes:
+      # Mount for development to see code changes without rebuilding
+      - ./backend/server:/app
+    restart: unless-stopped

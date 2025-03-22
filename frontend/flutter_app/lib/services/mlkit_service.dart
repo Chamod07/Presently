@@ -54,11 +54,11 @@ class _CameraPageState extends State<CameraPage> {
   CustomPaint? _customPaint;
   bool _showPosePainter = true;
 
-    void _togglePosePainter(){
-      setState(() {
-        _showPosePainter = !_showPosePainter;
-      });
-    }
+    // void _togglePosePainter(){
+    //   setState(() {
+    //     _showPosePainter = !_showPosePainter;
+    //   });
+    // }
 
   @override
   void dispose() {
@@ -73,6 +73,7 @@ class _CameraPageState extends State<CameraPage> {
       customPaint: _customPaint,
       onImage: _processImage,
       initialCameraLensDirection: CameraLensDirection.back,
+      showPoseOverlay: false,
     );
   }
 

@@ -55,7 +55,9 @@ dependencies:
   ffmpeg_kit_flutter: ^6.0.3
   flutter_svg: ^2.0.17
   flutter_staggered_animations: ^1.1.1
-
+  wakelock_plus: ^1.2.10
+  app_links: ^3.5.0 # Replaces uni_links
+  page_transition: ^2.1.0 # Add this package for smooth page transitions
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3 #creates a icon for the app

@@ -5,21 +5,24 @@ import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 enum NetworkQuality {
-  none,       // No connection
-  poor,       // <500 Kbps
-  moderate,   // 500 Kbps - 2 Mbps
-  good,       // 2 Mbps - 5 Mbps
-  excellent,  // >5 Mbps
+  none, // No connection
+  poor, // <500 Kbps
+  moderate, // 500 Kbps - 2 Mbps
+  good, // 2 Mbps - 5 Mbps
+  excellent, // >5 Mbps
 }
 
 class NetworkBandwidthMonitor {
-  static final NetworkBandwidthMonitor _instance = NetworkBandwidthMonitor._internal();
+  static final NetworkBandwidthMonitor _instance =
+      NetworkBandwidthMonitor._internal();
   factory NetworkBandwidthMonitor() => _instance;
   NetworkBandwidthMonitor._internal();
 
   // Stream controller for network quality updates
-  final _networkQualityController = StreamController<NetworkQuality>.broadcast();
-  Stream<NetworkQuality> get networkQualityStream => _networkQualityController.stream;
+  final _networkQualityController =
+      StreamController<NetworkQuality>.broadcast();
+  Stream<NetworkQuality> get networkQualityStream =>
+      _networkQualityController.stream;
 
   // Current network status
   NetworkQuality _currentNetworkQuality = NetworkQuality.none;
@@ -39,7 +42,7 @@ class NetworkBandwidthMonitor {
   // Initialize the monitor
   Future<void> initialize() async {
     // Set up connectivity change listener
-    Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
+    Connectivity().onConnectivityChanged.listen(_handleConnectivityChange as void Function(List<ConnectivityResult> event)?);
 
     // Check initial connectivity
     await _checkConnectivity();
@@ -57,14 +60,9 @@ class NetworkBandwidthMonitor {
     }
   }
 
-  // Handle connectivity changes - now receives a list
-  void _handleConnectivityChange(List<ConnectivityResult> results) {
-    if (results.isEmpty) {
-      _updateConnectivity(ConnectivityResult.none);
-    } else {
-      // Use the first result (most relevant)
-      _updateConnectivity(results.first);
-    }
+  // Handle connectivity changes
+  void _handleConnectivityChange(ConnectivityResult result) {
+    _updateConnectivity(result);
   }
 
   // Update connectivity status with a single result
@@ -88,7 +86,8 @@ class NetworkBandwidthMonitor {
 
     try {
       final stopwatch = Stopwatch()..start();
-      final response = await http.get(Uri.parse(_testUrl))
+      final response = await http
+          .get(Uri.parse(_testUrl))
           .timeout(const Duration(seconds: 10));
       stopwatch.stop();
 
