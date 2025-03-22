@@ -750,6 +750,7 @@ class _TaskGroupPageState extends State<TaskGroupPage>
           ),
           const SizedBox(height: 25),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Enhanced progress bar with animations
               Expanded(
@@ -793,12 +794,18 @@ class _TaskGroupPageState extends State<TaskGroupPage>
                       ],
                     ),
                     const SizedBox(height: 16),
+                    Wrap(
+                      // horizontal spacing
+                      spacing: 8,
+                      // vertical spacing if it wraps
+                      runSpacing: 8,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Percentage with icon
-                        Row(
-                          children: [
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
@@ -825,7 +832,7 @@ class _TaskGroupPageState extends State<TaskGroupPage>
                         // Collection count badge
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
@@ -842,9 +849,9 @@ class _TaskGroupPageState extends State<TaskGroupPage>
                       ],
                     ),
                   ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 24),
 
               // Enhanced pie chart progress indicator
               _buildEnhancedProgressChart(progress),
