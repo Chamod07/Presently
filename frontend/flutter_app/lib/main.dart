@@ -24,8 +24,13 @@ import 'package:flutter_app/components/settings/terms_privacy.dart';
 import 'package:flutter_app/components/settings/help_page.dart';
 import 'package:flutter_app/components/tasks/info_card.dart';
 import 'services/supabase/supabase_service.dart';
+import 'package:flutter_app/services/deep_link_service.dart';
+import 'package:flutter_app/components/signin_signup/reset_password.dart';
+import 'package:page_transition/page_transition.dart';
+import 'package:flutter_app/utils/custom_page_transition.dart';
 
 late List<CameraDescription> cameras;
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,67 +52,125 @@ void main() async {
     // Handle initialization error appropriately
   }
 
-  runApp(ChangeNotifierProvider(
-    create: (context) => SessionProvider(),
-    child: MyApp(),
-  ));
+  runApp(MyApp(navigatorKey: navigatorKey));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  const MyApp({Key? key, required this.navigatorKey}) : super(key: key);
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final SupabaseService _supabaseService;
+  late final DeepLinkService _deepLinkService;
+
+  @override
+  void initState() {
+    super.initState();
+    _supabaseService = SupabaseService();
+    _deepLinkService = DeepLinkService(_supabaseService, widget.navigatorKey);
+    _deepLinkService.init();
+  }
+
+  @override
+  void dispose() {
+    _deepLinkService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false, //this removes the debug banner
-      title: 'Presently App',
-      theme: ThemeData(
-        primarySwatch: Colors.purple,
-        scaffoldBackgroundColor: Colors.white, // set background color to white
-      ),
-      initialRoute: '/splash',
-      routes: {
-        '/splash': (context) => SplashScreen(),
-        '/welcome': (context) => WelcomePage(),
-        '/sign_in': (context) => SignInPage(),
-        '/sign_up': (context) => SignUpPage(),
-        '/home': (context) => HomePage(),
-        '/summary': (context) => SummaryPage(),
-        '/camera': (context) => CameraPage(),
-        '/scenario_sel': (context) => ScenarioSelection(),
-        '/task_group_page': (context) => TaskGroupPage(),
-        '/settings': (context) => SettingsPage(),
-        '/account_setup_greeting': (context) => AccountSetupGreeting(),
-        '/account_setup': (context) =>
-            CombinedAccountSetup(), // Updated to use combined setup
-        '/task_pass': (context) => TaskPassed(),
-        '/task_failed': (context) => TaskFailed(),
-        '/faq': (context) => FAQPage(),
-        '/contact_support': (context) => ContactSupportPage(),
-        '/terms_privacy': (context) => TermsPrivacyPage(),
-        '/help': (context) => HelpPage(),
-        '/about': (context) => AboutPage(),
-      },
-      // Add onGenerateRoute to handle routes that need arguments
-      onGenerateRoute: (settings) {
-        if (settings.name == '/info_card') {
-          // Extract the arguments passed to the route
-          final args = settings.arguments as Map<String, dynamic>?;
+    return ChangeNotifierProvider(
+      create: (context) => SessionProvider(),
+      child: MaterialApp(
+        navigatorKey: widget.navigatorKey,
+        debugShowCheckedModeBanner: false, //this removes the debug banner
+        title: 'Presently App',
+        theme: ThemeData(
+          primarySwatch: Colors.purple,
+          scaffoldBackgroundColor:
+              Colors.white, // set background color to white
+          // Add page transitions for the entire app
+          pageTransitionsTheme: PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: CustomPageTransitionBuilder(),
+              TargetPlatform.iOS: CustomPageTransitionBuilder(),
+            },
+          ),
+        ),
+        initialRoute: '/splash',
+        routes: {
+          '/splash': (context) => SplashScreen(),
+          '/welcome': (context) => WelcomePage(),
+          '/sign_in': (context) => SignInPage(),
+          '/sign_up': (context) => SignUpPage(),
+          '/home': (context) => HomePage(),
+          '/summary': (context) => SummaryPage(),
+          '/camera': (context) => CameraPage(),
+          '/scenario_sel': (context) => ScenarioSelection(),
+          '/task_group_page': (context) => TaskGroupPage(),
+          '/settings': (context) => SettingsPage(),
+          '/account_setup_greeting': (context) => AccountSetupGreeting(),
+          '/account_setup': (context) =>
+              CombinedAccountSetup(), // Updated to use combined setup
+          '/task_pass': (context) => TaskPassed(),
+          '/task_failed': (context) => TaskFailed(),
+          '/faq': (context) => FAQPage(),
+          '/contact_support': (context) => ContactSupportPage(),
+          '/terms_privacy': (context) => TermsPrivacyPage(),
+          '/help': (context) => HelpPage(),
+          '/about': (context) => AboutPage(),
+          '/reset_password': (context) => ResetPasswordPage(),
+        },
+        onGenerateRoute: (settings) {
+          // Make sure ALL routes have transitions, not just sign_in and sign_up
+          Widget page;
+          switch (settings.name) {
+            case '/sign_in':
+              page = SignInPage();
+              break;
+            case '/sign_up':
+              page = SignUpPage();
+              break;
+            case '/account_setup':
+              page = CombinedAccountSetup();
+              break;
+            case '/account_setup_greeting':
+              page = AccountSetupGreeting();
+              break;
+            case '/home':
+              page = HomePage();
+              break;
+            // Add cases for other routes as needed
+            default:
+              // Use the route defined in routes map
+              return null;
+          }
 
-          // Return the InfoCard with the required parameters
-          return MaterialPageRoute(
-            builder: (context) => InfoCard(
-              taskTitle: args?['taskTitle'] ?? 'Task Title',
-              reportId: args?['reportId'],
-              taskDescription: args?['taskDescription'],
-              taskSubtitle: args?['taskSubtitle'],
-              points: args?['points'],
-              duration: args?['duration'],
-            ),
+          return PageTransition(
+            type: PageTransitionType.fade,
+            duration: Duration(milliseconds: 300),
+            child: page,
+            settings: settings,
           );
-        }
-        return null; // Let the routes table handle other routes
-      },
+        },
+      ),
     );
+  }
+
+  Widget _buildRouteWidget(RouteSettings settings) {
+    switch (settings.name) {
+      case '/sign_in':
+        return SignInPage();
+      case '/sign_up':
+        return SignUpPage();
+      // ...add other routes as needed
+      default:
+        return Container(); // Fallback
+    }
   }
 }
