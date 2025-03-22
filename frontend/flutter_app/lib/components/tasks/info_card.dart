@@ -514,51 +514,7 @@ class _InfoCardState extends State<InfoCard> {
 
   // Add a proper implementation for starting the challenge
   void _startChallenge(BuildContext context) {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7400B8)),
-          ),
-        ),
-      );
-
-      // Simulate loading for a better UX
-      Future.delayed(const Duration(milliseconds: 800), () {
-        // Hide loading dialog
-        Navigator.pop(context);
-
-        // Navigate to camera screen with task data
-        Navigator.pushNamed(
-          context,
-          '/camera',
-          arguments: {
-            'taskTitle': _taskTitle,
-            'taskDuration': _duration,
-            'taskType': _determineTaskType(_taskTitle),
-          },
-        ).catchError((error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not start the challenge. Please try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          print('Navigation error: $error');
-        });
-      });
-    } catch (e) {
-      Navigator.pop(context); // Hide loading dialog if shown
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    return;
   }
 
   // Helper function to determine task type from title

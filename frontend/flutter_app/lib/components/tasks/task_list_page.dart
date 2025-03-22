@@ -489,7 +489,7 @@ class _TaskDetailPageState extends State<TaskDetailPage>
 
   Widget _buildFilterSelectionBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -548,7 +548,7 @@ class _TaskDetailPageState extends State<TaskDetailPage>
             ),
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withOpacity(0.3)
