@@ -155,27 +155,33 @@ class CameraFunctions {
   Future<void> stopLiveFeed() async {
     try {
       if (controller != null) {
-
-        //stop recording if still recording
-        if(isRecording && controller!.value.isRecordingVideo){
-          await controller!.stopVideoRecording();
+        // First, stop recording if active
+        if (isRecording && controller!.value.isRecordingVideo) {
+          try {
+            await controller!.stopVideoRecording();
+          } catch (e) {
+            print('Error stopping video recording: $e');
+          }
           isRecording = false;
         }
 
-        //stop image stream if active
-        if(controller!.value.isStreamingImages){
-          await controller!.stopImageStream();
+        // Then stop image stream (do this only once)
+        if (controller!.value.isStreamingImages) {
+          try {
+            await controller!.stopImageStream();
+          } catch (e) {
+            print('Error stopping image stream: $e');
+          }
         }
 
-        //pause preview if available
-        if(controller!.value.isInitialized){
-          await controller!.pausePreview();
+        // Finally, dispose the controller
+        try {
+          await controller!.dispose();
+        } catch (e) {
+          print('Error disposing camera controller: $e');
         }
-        // Check if controller is initialized and streaming before stopping
-        if (controller!.value.isStreamingImages) {
-          await controller!.stopImageStream();
-        }
-        await controller!.dispose();
+
+        // Always set controller to null after attempted disposal
         controller = null;
       }
     } catch (e) {
