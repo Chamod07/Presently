@@ -1,28 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_app/components/dashboard/navbar.dart';
+import 'package:flutter_app/services/task_assign/task_group_service.dart';
 
-class InfoCard extends StatelessWidget {
+class InfoCard extends StatefulWidget {
   final String taskTitle;
-  final String taskDescription;
-  final String taskSubtitle;
-  final int points;
-  final String duration;
+  final String? reportId;
+  final String? taskDescription;
+  final String? taskSubtitle;
+  final int? points;
+  final String? duration;
 
   const InfoCard({
     super.key,
-    this.taskTitle = 'Steady Stare',
-    this.taskDescription =
-        'This task is to enhance your eye contact skills, which are crucial for effective communication and building rapport.',
-    this.taskSubtitle = 'SDGP Project Presentation',
-    this.points = 2,
-    this.duration = '30 sec',
+    required this.taskTitle,
+    this.reportId,
+    this.taskDescription,
+    this.taskSubtitle,
+    this.points,
+    this.duration,
   });
+
+  @override
+  State<InfoCard> createState() => _InfoCardState();
+}
+
+class _InfoCardState extends State<InfoCard> {
+  final TaskGroupService _taskGroupService = TaskGroupService();
+  bool _isLoading = true;
+  bool _hasError = false;
+  String _errorMessage = '';
+
+  // Task data
+  late String _taskTitle;
+  late String _taskDescription;
+  late String _taskSubtitle;
+  late int _points;
+  late String _duration;
+  List<String> _instructions = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize with default values from widget
+    _taskTitle = widget.taskTitle;
+    _taskDescription = widget.taskDescription ??
+        'This task will help improve your presentation skills.';
+    _taskSubtitle = widget.taskSubtitle ?? 'Presentation Skills';
+    _points = widget.points ?? 2;
+    _duration = widget.duration ?? '2 min';
+
+    // Fetch task details if reportId is provided
+    if (widget.reportId != null && widget.reportId!.isNotEmpty) {
+      _fetchTaskDetails();
+    } else {
+      // Use the provided values directly
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchTaskDetails() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+
+      // Fetch all tasks for the report
+      final tasks = await _taskGroupService.getTasksForGroup(widget.reportId!);
+
+      // Find the specific task by title
+      final task = tasks.firstWhere(
+        (t) =>
+            t.title.trim().toLowerCase() ==
+            widget.taskTitle.trim().toLowerCase(),
+        orElse: () => throw Exception('Task not found'),
+      );
+
+      // Update state with fetched data
+      setState(() {
+        _taskTitle = task.title;
+        _taskDescription = task.description ?? _taskDescription;
+        _points = task.points ?? _points;
+        _duration = task.durationSeconds != null
+            ? '${task.durationSeconds} min'
+            : _duration;
+        if (task.instructions != null && task.instructions!.isNotEmpty) {
+          _instructions = task.instructions!;
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching task details: $e');
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to load task details. $e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     // Determine theme color based on task title or subtitles
     final themeColor = _getTaskThemeColor();
+
+    if (_isLoading) {
+      return _buildLoadingState(themeColor);
+    }
+
+    if (_hasError) {
+      return _buildErrorState(themeColor);
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FC),
@@ -43,9 +135,18 @@ class InfoCard extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
+            actions: [
+              // Add refresh button if reportId is provided
+              if (widget.reportId != null)
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                  onPressed: _fetchTaskDetails,
+                  tooltip: 'Refresh',
+                ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                taskTitle,
+                _taskTitle,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -60,9 +161,13 @@ class InfoCard extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: <Widget>[
+                  // Use a placeholder image if no specific image is available
                   Image.network(
-                    'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1567&q=80',
+                    _getTaskImage(),
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(color: themeColor.withOpacity(0.8));
+                    },
                   ),
                   Container(
                     decoration: BoxDecoration(
@@ -120,7 +225,7 @@ class InfoCard extends StatelessWidget {
 
                   const SizedBox(height: 12),
                   Text(
-                    taskSubtitle,
+                    _taskSubtitle,
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey.shade800,
@@ -136,7 +241,7 @@ class InfoCard extends StatelessWidget {
                         _buildEnhancedStatCard(
                           context,
                           'Points',
-                          points.toString(),
+                          _points.toString(),
                           Icons.stars_rounded,
                           const Color(0xFFFFC107),
                         ),
@@ -144,7 +249,7 @@ class InfoCard extends StatelessWidget {
                         _buildEnhancedStatCard(
                           context,
                           'Duration',
-                          duration,
+                          _duration,
                           Icons.timer_rounded,
                           const Color(0xFF4CAF50),
                         ),
@@ -155,18 +260,18 @@ class InfoCard extends StatelessWidget {
                   // Description Section
                   _buildEnhancedSection(
                     'Description',
-                    taskDescription,
+                    _taskDescription,
                     icon: Icons.description_rounded,
                     color: themeColor,
                   ),
 
-                  // Instructions Section
+                  // Instructions Section with dynamic data
                   _buildEnhancedInstructionsSection(context, themeColor),
 
                   // Tips Section
                   _buildEnhancedSection(
                     'Tips',
-                    '• Focus on maintaining natural eye contact\n• Remember to blink normally\n• Practice with different audience sizes',
+                    _getTaskTips(),
                     icon: Icons.lightbulb_rounded,
                     color: const Color(0xFF2196F3),
                   ),
@@ -249,53 +354,167 @@ class InfoCard extends StatelessWidget {
     );
   }
 
-  // Add a proper implementation for starting the challenge
-  void _startChallenge(BuildContext context) {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7400B8)),
+  // Loading state widget
+  Widget _buildLoadingState(Color themeColor) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FC),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: themeColor,
+        leading: IconButton(
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          _taskTitle,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: themeColor),
+            const SizedBox(height: 20),
+            Text(
+              'Loading task details...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: const NavBar(selectedIndex: 2),
+    );
+  }
+
+  // Error state widget
+  Widget _buildErrorState(Color themeColor) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FC),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: themeColor,
+        leading: IconButton(
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          _taskTitle,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            onPressed: _fetchTaskDetails,
+          ),
+        ],
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: Colors.red,
+                size: 60,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to load task details',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _fetchTaskDetails,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+      bottomNavigationBar: const NavBar(selectedIndex: 2),
+    );
+  }
 
-      // Simulate loading for a better UX
-      Future.delayed(const Duration(milliseconds: 800), () {
-        // Hide loading dialog
-        Navigator.pop(context);
+  // Generate task tips based on the task title
+  String _getTaskTips() {
+    final normalizedTitle = _taskTitle.toLowerCase();
 
-        // Navigate to camera screen with task data
-        Navigator.pushNamed(
-          context,
-          '/camera',
-          arguments: {
-            'taskTitle': taskTitle,
-            'taskDuration': duration,
-            'taskType': _determineTaskType(taskTitle),
-          },
-        ).catchError((error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not start the challenge. Please try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          print('Navigation error: $error');
-        });
-      });
-    } catch (e) {
-      Navigator.pop(context); // Hide loading dialog if shown
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (normalizedTitle.contains('stare') || normalizedTitle.contains('eye')) {
+      return '• Focus on maintaining natural eye contact\n• Remember to blink normally\n• Practice with different audience sizes\n• Look at the forehead if direct eye contact is difficult';
+    } else if (normalizedTitle.contains('voice') ||
+        normalizedTitle.contains('speak')) {
+      return '• Speak clearly and at a moderate pace\n• Use variations in tone to emphasize key points\n• Take pauses between important statements\n• Practice deep breathing for better voice control';
+    } else if (normalizedTitle.contains('gesture') ||
+        normalizedTitle.contains('body')) {
+      return '• Keep gestures natural and purposeful\n• Use open gestures to appear more confident\n• Avoid fidgeting or excessive movements\n• Mirror your audience occasionally to build rapport';
+    } else if (normalizedTitle.contains('confidence') ||
+        normalizedTitle.contains('posture')) {
+      return '• Stand with your shoulders back and chin up\n• Distribute weight evenly on both feet\n• Take up space confidently but not aggressively\n• Practice power poses before presentations';
     }
+
+    // Default tips
+    return '• Prepare thoroughly before your presentation\n• Practice in front of a mirror or record yourself\n• Get feedback from peers or mentors\n• Focus on progress rather than perfection';
+  }
+
+  // Get appropriate image URL based on task type
+  String _getTaskImage() {
+    final normalizedTitle = _taskTitle.toLowerCase();
+
+    if (normalizedTitle.contains('stare') || normalizedTitle.contains('eye')) {
+      return 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1587&q=80';
+    } else if (normalizedTitle.contains('voice') ||
+        normalizedTitle.contains('speak')) {
+      return 'https://images.unsplash.com/photo-1556761175-b413da4baf72?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1674&q=80';
+    } else if (normalizedTitle.contains('gesture') ||
+        normalizedTitle.contains('body')) {
+      return 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1567&q=80';
+    } else if (normalizedTitle.contains('confidence') ||
+        normalizedTitle.contains('posture')) {
+      return 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80';
+    }
+
+    // Default image
+    return 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1567&q=80';
+  }
+
+  // Add a proper implementation for starting the challenge
+  void _startChallenge(BuildContext context) {
+    return;
   }
 
   // Helper function to determine task type from title
@@ -501,36 +720,67 @@ class InfoCard extends StatelessWidget {
               ],
             ),
             child: Column(
-              children: [
-                _buildEnhancedInstructionStep(
-                  '1',
-                  'Take a few deep breaths to calm your nerves.',
-                  const Color(0xFFE91E63),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(height: 1),
-                ),
-                _buildEnhancedInstructionStep(
-                  '2',
-                  'Skim through your report to refresh your memory.',
-                  const Color(0xFFE91E63),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(height: 1),
-                ),
-                _buildEnhancedInstructionStep(
-                  '3',
-                  'Good luck on your first challenge.',
-                  const Color(0xFFE91E63),
-                ),
-              ],
+              children: _buildInstructionSteps(),
             ),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildInstructionSteps() {
+    const Color instructionColor = Color(0xFFE91E63);
+
+    // If we have fetched instructions, use them
+    if (_instructions.isNotEmpty) {
+      final List<Widget> instructionWidgets = [];
+
+      for (int i = 0; i < _instructions.length; i++) {
+        // Add instruction step
+        instructionWidgets.add(_buildEnhancedInstructionStep(
+          '${i + 1}',
+          _instructions[i],
+          instructionColor,
+        ));
+
+        // Add divider except after the last instruction
+        if (i < _instructions.length - 1) {
+          instructionWidgets.add(const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(height: 1),
+          ));
+        }
+      }
+
+      return instructionWidgets;
+    }
+
+    // Default instructions if none are provided
+    return [
+      _buildEnhancedInstructionStep(
+        '1',
+        'Take a few deep breaths to calm your nerves.',
+        instructionColor,
+      ),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Divider(height: 1),
+      ),
+      _buildEnhancedInstructionStep(
+        '2',
+        'Skim through your report to refresh your memory.',
+        instructionColor,
+      ),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Divider(height: 1),
+      ),
+      _buildEnhancedInstructionStep(
+        '3',
+        'Good luck on your first challenge.',
+        instructionColor,
+      ),
+    ];
   }
 
   Widget _buildEnhancedInstructionStep(
@@ -576,7 +826,7 @@ class InfoCard extends StatelessWidget {
   }
 
   Color _getTaskThemeColor() {
-    final normalizedTitle = taskTitle.toLowerCase();
+    final normalizedTitle = _taskTitle.toLowerCase();
 
     if (normalizedTitle.contains('stare') || normalizedTitle.contains('eye')) {
       return const Color(0xFF7400B8); // Purple for eye contact tasks

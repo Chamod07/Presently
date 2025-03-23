@@ -21,6 +21,7 @@ class _TaskGroupPageState extends State<TaskGroupPage>
   List<TaskGroup> taskGroups = [];
   bool isLoading = true;
   String? errorMessage;
+  double overallProgress = 0.0; // Track overall progress separately
   // Add cache variables
   static List<TaskGroup> _cachedTaskGroups = [];
   static DateTime? _lastFetchTime;
@@ -147,6 +148,9 @@ class _TaskGroupPageState extends State<TaskGroupPage>
             if (fetchedTaskGroups.isNotEmpty) {
               _cachedTaskGroups = fetchedTaskGroups;
               _lastFetchTime = DateTime.now();
+
+              // Recalculate overall progress with new data
+              _calculateOverallProgress();
             } else {
               print('Received empty task groups list, not updating cache');
             }
@@ -240,6 +244,7 @@ class _TaskGroupPageState extends State<TaskGroupPage>
     }
   }
 
+  // Update this method to update the overall progress state
   double _calculateOverallProgress() {
     if (taskGroups.isEmpty) return 0.0;
     return taskGroups.fold<double>(0.0, (sum, group) => sum + group.progress) /
@@ -823,22 +828,22 @@ class _TaskGroupPageState extends State<TaskGroupPage>
                           ],
                         ),
                         // Collection count badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "${taskGroups.length} Collections",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+                        // Container(
+                        //   padding: const EdgeInsets.symmetric(
+                        //       horizontal: 10, vertical: 4),
+                        //   decoration: BoxDecoration(
+                        //     color: Colors.white.withOpacity(0.2),
+                        //     borderRadius: BorderRadius.circular(12),
+                        //   ),
+                        //   child: Text(
+                        //     "${taskGroups.length} Collections",
+                        //     style: TextStyle(
+                        //       color: Colors.white.withOpacity(0.9),
+                        //       fontSize: 13,
+                        //       fontWeight: FontWeight.w500,
+                        //     ),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ],

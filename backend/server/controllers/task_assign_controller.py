@@ -27,12 +27,8 @@ class TaskUpdateRequest(BaseModel):
 
 # API endpoint to assign challenges to a report
 @router.post("/assign_challenges", response_model=ReportAssignmentResponse)
-async def assign_challenges_endpoint(report_id: str, user_id: str = Depends(get_current_user_id)):
-    try:
-        # Verify user has access to this report
-        if not user_has_access_to_report(report_id, user_id):
-            raise HTTPException(status_code=403, detail="You don't have access to this report")
-            
+async def assign_challenges_endpoint(report_id: str):
+    try:       
         challenge_ids = assign_challenges_for_report(report_id)
         return ReportAssignmentResponse(report_id=report_id, assigned_challenge_ids=challenge_ids)
     except Exception as e:

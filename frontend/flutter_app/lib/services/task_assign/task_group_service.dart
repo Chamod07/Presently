@@ -1,275 +1,273 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_app/components/tasks/task_group.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_app/services/supabase/supabase_service.dart';
+import 'package:flutter/material.dart';
 
 class TaskGroupService {
-  // Choose the right URL based on platform
-  String get baseUrl {
-    if (kIsWeb) {
-      // Web uses localhost
-      return 'http://localhost:8000/api/task-assign';
-    } else if (Platform.isAndroid) {
-      // Android emulator uses 10.0.2.2
-      return 'http://10.0.2.2:8000/api/task-assign';
-    } else if (Platform.isIOS) {
-      // iOS simulator uses localhost
-      return 'http://localhost:8000/api/task-assign';
-    } else {
-      // Default for other platforms
-      return 'http://localhost:8000/api/task-assign';
-    }
-  }
-
-  final supabase = Supabase.instance.client;
+  final SupabaseService _supabaseService = SupabaseService();
 
   // Get the auth token
   String? getAuthToken() {
-    return supabase.auth.currentSession?.accessToken;
+    return _supabaseService.currentSession?.accessToken;
+  }
+
+  // Get the current user ID
+  String? get currentUserId => _supabaseService.currentUserId;
+
+  // Fetch task groups directly from Supabase
+  Future<List<TaskGroup>> getTaskGroups() async {
+    try {
+      final userId = currentUserId;
+      if (userId == null) {
+        debugPrint('TaskGroupService: No user ID available');
+        return [];
+      }
+
+      debugPrint('TaskGroupService: Fetching task groups for user: $userId');
+
+      // Query UserReport table which contains the report data
+      final response = await _supabaseService.client
+          .from('UserReport')
+          .select('reportId, session_name')
+          .eq('userId', userId)
+          .order('createdAt', ascending: false);
+
+      debugPrint('TaskGroupService received ${response.length} task groups');
+
+      List<TaskGroup> taskGroups = [];
+
+      for (final item in response) {
+        // Get the report ID
+        final reportId = item['reportId'] as String;
+        final sessionName = item['session_name'] ?? "Untitled Session";
+
+        // Get tasks and progress data for this report
+        final details = await getTaskGroupDetails(reportId);
+        final progress = details['progress'] as double? ?? 0.0;
+        final taskCount = details['taskCount'] as int? ?? 0;
+
+        // Create TaskGroup object
+        final taskGroup = TaskGroup(
+          title: sessionName,
+          taskCount: taskCount,
+          progress: progress / 100, // Convert percentage to 0-1 scale
+          tasks: [], // We'll fetch tasks separately
+          reportId: reportId,
+        );
+
+        // Fetch tasks for this group
+        final tasks = await getTasksForGroup(reportId);
+        taskGroup.tasks.addAll(tasks);
+
+        taskGroups.add(taskGroup);
+      }
+
+      return taskGroups;
+    } catch (e) {
+      debugPrint('Error fetching task groups from Supabase: $e');
+      return [];
+    }
   }
 
   // Fetch detailed information for a specific task group
   Future<Map<String, dynamic>> getTaskGroupDetails(String reportId) async {
     try {
-      final token = getAuthToken();
-      if (token == null) {
+      final userId = currentUserId;
+      if (userId == null) {
         throw Exception('Authentication required');
       }
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/report/details?report_id=$reportId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      // Get report details from UserReport
+      final reportResponse = await _supabaseService.client
+          .from('UserReport')
+          .select('session_name')
+          .eq('reportId', reportId)
+          .eq('userId', userId)
+          .single();
 
-      print('Response status for details: ${response.statusCode}');
+      // Get all tasks with their status
+      final tasks = await _getTasksWithStatus(reportId);
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        print('Error from server: ${response.body}');
-        throw Exception('Server error: ${response.statusCode}');
+      // Calculate task counts
+      final totalTasks = tasks.length;
+      final completedTasks =
+          tasks.where((task) => task['isDone'] == true).length;
+      final pendingTasks = totalTasks - completedTasks;
+
+      // Calculate progress percentage
+      double progressPercentage = 0.0;
+      if (totalTasks > 0) {
+        progressPercentage = (completedTasks / totalTasks) * 100;
       }
+
+      // Separate tasks into categories
+      final todoTasks = tasks.where((task) => task['isDone'] == false).toList();
+      final completedTasksList =
+          tasks.where((task) => task['isDone'] == true).toList();
+
+      return {
+        'reportId': reportId,
+        'session_name': reportResponse['session_name'] ?? "Untitled Session",
+        'progress': progressPercentage,
+        'taskCount': totalTasks,
+        'completedCount': completedTasks,
+        'pendingCount': pendingTasks,
+        'tasks': {
+          'all': tasks,
+          'todo': todoTasks,
+          'completed': completedTasksList,
+        }
+      };
     } catch (e) {
-      print('Error fetching task group details: $e');
+      debugPrint('Error fetching task group details: $e');
       throw Exception('Failed to fetch task group details: $e');
     }
   }
 
-  // Fetch task groups from backend
-  Future<List<TaskGroup>> getTaskGroups() async {
+  // Private helper function to get all tasks with their status
+  Future<List<Map<String, dynamic>>> _getTasksWithStatus(
+      String reportId) async {
     try {
-      final token = getAuthToken();
+      debugPrint('TaskGroupService: Fetching tasks for report ID: $reportId');
 
-      // Choose the endpoint based on authentication status
-      final endpoint =
-          token != null ? '$baseUrl/report' : '$baseUrl/report/debug';
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      // Get challenge IDs and isDone status linked to the reportId
+      final taskGroupResponse = await _supabaseService.client
+          .from('TaskGroupChallenges')
+          .select('challengeId, isDone')
+          .eq('reportId', reportId);
 
-      // Add auth token if available
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
+      debugPrint(
+          'TaskGroupService: Found ${taskGroupResponse.length} challenge links');
 
-      print('Using endpoint: $endpoint');
-      final response = await http.get(
-        Uri.parse(endpoint),
-        headers: headers,
-      );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}'); // Debug the actual response
-
-      if (response.statusCode == 200) {
-        List<dynamic> data = jsonDecode(response.body);
-        print('Number of task groups from API: ${data.length}');
-
-        List<TaskGroup> taskGroups = [];
-
-        // Process each task group from the API response directly
-        for (var item in data) {
-          final reportId = item['Id'];
-
-          if (token != null) {
-            // Use the new consolidated API endpoint
-            try {
-              final taskGroupDetails = await getTaskGroupDetails(reportId);
-              print('Details for report $reportId: $taskGroupDetails');
-
-              // Convert tasks from API response format to Task objects
-              List<dynamic> allTasks = taskGroupDetails['tasks']['all'] ?? [];
-              List<Task> tasks = allTasks
-                  .map((task) => Task(
-                        title: task['title'] ?? "",
-                        isCompleted: task['isDone'] ?? false,
-                      ))
-                  .toList();
-
-              taskGroups.add(TaskGroup(
-                title: taskGroupDetails['session_name'] ?? "Untitled Group",
-                taskCount: taskGroupDetails['taskCount'] ?? 0,
-                progress: (taskGroupDetails['progress'] ?? 0.0) / 100,
-                tasks: tasks,
-                reportId: reportId,
-              ));
-            } catch (e) {
-              print('Error fetching details for report $reportId: $e');
-            }
-          } else {
-            // When not authenticated, just add basic info
-            taskGroups.add(TaskGroup(
-              title: item['Topic'] ?? "Untitled Group",
-              taskCount: 0,
-              progress: 0.0,
-              tasks: [],
-              reportId: reportId,
-            ));
-          }
+      // Create a mapping of challengeId to its isDone status
+      final Map<int, bool> challengeStatusMap = {};
+      for (final item in taskGroupResponse) {
+        if (item.containsKey('challengeId')) {
+          challengeStatusMap[item['challengeId']] = item['isDone'] ?? false;
+          debugPrint(
+              'Challenge ${item['challengeId']}, isDone: ${item['isDone']}');
         }
-
-        print('Final number of task groups: ${taskGroups.length}');
-        return taskGroups;
-      } else {
-        print('Error from server: ${response.body}');
-        throw Exception('Server error: ${response.statusCode}');
       }
+
+      final challengeIds = challengeStatusMap.keys.toList();
+      if (challengeIds.isEmpty) {
+        debugPrint(
+            'TaskGroupService: No challenges found for report $reportId');
+        return [];
+      }
+
+      // Fetch challenge details
+      final challengesResponse = await _supabaseService.client
+          .from('Challenges')
+          .select('id, title, description, instructions, points, duration')
+          .inFilter('id', challengeIds);
+
+      debugPrint(
+          'TaskGroupService: Found ${challengesResponse.length} challenges');
+
+      // Debug log challenge data
+      for (var challenge in challengesResponse) {
+        debugPrint('Challenge: ${challenge['id']} - ${challenge['title']}');
+      }
+
+      // Combine challenge details with isDone status
+      return challengesResponse.map<Map<String, dynamic>>((item) {
+        final isDone = challengeStatusMap[item['id']] ?? false;
+        return {
+          'id': item['id'],
+          'title': item['title'],
+          'isDone': isDone,
+          'description': item['description'] ?? '',
+          'instructions': item['instructions'] ?? [],
+          'points': item['points'] ?? 0,
+          'duration': item['duration'] ?? 30,
+        };
+      }).toList();
     } catch (e) {
-      print('Error fetching task groups: $e');
-      throw Exception('Failed to load task groups: $e');
+      debugPrint('TaskGroupService: Error in _getTasksWithStatus: $e');
+      return [];
     }
   }
 
-  // Get tasks for a specific group - now using the consolidated API
+  // Get tasks for a specific group
   Future<List<Task>> getTasksForGroup(String reportId) async {
     try {
-      print('TaskGroupService: Fetching tasks for report ID: $reportId');
-      final token = getAuthToken();
-      if (token == null) {
-        print('TaskGroupService: No auth token available');
-        throw Exception('Authentication required');
-      }
-
-      // Check for valid reportId
       if (reportId.isEmpty) {
-        print('TaskGroupService: Empty reportId provided');
-        throw Exception('Invalid report ID');
+        debugPrint('TaskGroupService: Empty reportId provided');
+        return [];
       }
 
-      // Use the new consolidated endpoint
-      print('TaskGroupService: Getting task group details');
-      final details = await getTaskGroupDetails(reportId);
+      // Get tasks with status from helper method
+      final tasks = await _getTasksWithStatus(reportId);
 
-      print('TaskGroupService: Parsing tasks from details');
-      List<dynamic> tasksList = details['tasks']['all'] ?? [];
-      print('TaskGroupService: Found ${tasksList.length} tasks in response');
+      debugPrint(
+          'TaskGroupService: Converting ${tasks.length} tasks to Task objects');
 
-      return tasksList
-          .map((task) => Task(
-                title: task['title'] ?? "",
-                isCompleted: task['isDone'] ?? false,
-              ))
-          .toList();
+      // Convert to Task objects
+      final taskObjects = tasks.map((task) {
+        // Debug log task conversion
+        debugPrint(
+            'Converting task: ${task['title']}, isDone: ${task['isDone']}');
+
+        return Task(
+          title: task['title'] ?? "",
+          isCompleted: task['isDone'] ?? false,
+          description: task['description'],
+          instructions:
+              task['instructions'] != null && task['instructions'] is List
+                  ? List<String>.from(task['instructions'])
+                  : null,
+          points: task['points'],
+          durationSeconds: task['duration'],
+        );
+      }).toList();
+
+      debugPrint(
+          'TaskGroupService: Returning ${taskObjects.length} Task objects');
+      return taskObjects;
     } catch (e) {
-      print('TaskGroupService: Error fetching tasks: $e');
-      throw Exception('Failed to load tasks: $e');
+      debugPrint('TaskGroupService: Error fetching tasks: $e');
+      return [];
     }
   }
 
-  // Get todo tasks for a specific group
-  Future<List<Task>> getTodoTasksForGroup(String reportId) async {
-    try {
-      final token = getAuthToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
-
-      // Use the new consolidated endpoint
-      final details = await getTaskGroupDetails(reportId);
-      List<dynamic> tasksList = details['tasks']['todo'] ?? [];
-
-      return tasksList
-          .map((task) => Task(
-                title: task['title'] ?? "",
-                isCompleted: false,
-              ))
-          .toList();
-    } catch (e) {
-      print('Error fetching todo tasks: $e');
-      throw Exception('Failed to load todo tasks: $e');
-    }
-  }
-
-  // Get completed tasks for a specific group
-  Future<List<Task>> getCompletedTasksForGroup(String reportId) async {
-    try {
-      final token = getAuthToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
-
-      // Use the new consolidated endpoint
-      final details = await getTaskGroupDetails(reportId);
-      List<dynamic> tasksList = details['tasks']['completed'] ?? [];
-
-      return tasksList
-          .map((task) => Task(
-                title: task['title'] ?? "",
-                isCompleted: true,
-              ))
-          .toList();
-    } catch (e) {
-      print('Error fetching completed tasks: $e');
-      throw Exception('Failed to load completed tasks: $e');
-    }
-  }
-
+  // Update task status in Supabase
   Future<bool> updateTaskStatus(
       String reportId, String taskId, bool isCompleted) async {
     try {
-      print(
+      debugPrint(
           'TaskGroupService: Updating task "$taskId" to ${isCompleted ? "completed" : "not completed"}');
-      final token = getAuthToken();
-      if (token == null) {
-        print('TaskGroupService: No auth token available for task update');
+
+      final userId = currentUserId;
+      if (userId == null) {
+        debugPrint('TaskGroupService: No user ID available for task update');
         return false;
       }
 
-      // Log the request being made
-      print('TaskGroupService: Making API call to update task status');
-      print(
-          'TaskGroupService: reportId=$reportId, taskId=$taskId, isCompleted=$isCompleted');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/report/task/update'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'reportId': reportId,
-          'taskId': taskId,
-          'isDone': isCompleted,
-        }),
+      // First, find the challenge ID that matches this task title
+      final tasksResponse = await _getTasksWithStatus(reportId);
+      final task = tasksResponse.firstWhere(
+        (t) => t['title'] == taskId,
+        orElse: () => {},
       );
 
-      print(
-          'TaskGroupService: Got status code ${response.statusCode} for task update');
-
-      if (response.statusCode != 200) {
-        print('TaskGroupService: Error response body: ${response.body}');
+      if (task.isEmpty || !task.containsKey('id')) {
+        debugPrint('TaskGroupService: Task not found: $taskId');
+        return false;
       }
 
-      return response.statusCode == 200;
+      final challengeId = task['id'];
+
+      // Update task status in TaskGroupChallenges
+      final response = await _supabaseService.client
+          .from('TaskGroupChallenges')
+          .update({'isDone': isCompleted})
+          .eq('reportId', reportId)
+          .eq('challengeId', challengeId);
+
+      debugPrint('TaskGroupService: Update completed');
+      return true; // If we got here, the update was successful
     } catch (e) {
-      print('TaskGroupService: Exception in updateTaskStatus: $e');
+      debugPrint('TaskGroupService: Exception in updateTaskStatus: $e');
       return false;
     }
   }
