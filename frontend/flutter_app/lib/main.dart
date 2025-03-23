@@ -22,6 +22,7 @@ import 'package:flutter_app/components/screens/splash_screen.dart';
 import 'package:flutter_app/components/settings/contact_support.dart';
 import 'package:flutter_app/components/settings/terms_privacy.dart';
 import 'package:flutter_app/components/settings/help_page.dart';
+import 'package:flutter_app/components/tasks/info_card.dart';
 import 'services/supabase/supabase_service.dart';
 import 'package:flutter_app/services/deep_link_service.dart';
 import 'package:flutter_app/components/signin_signup/reset_password.dart';
@@ -144,6 +145,21 @@ class _MyAppState extends State<MyApp> {
             case '/home':
               page = HomePage();
               break;
+            case '/info_card':
+              // Extract the arguments passed to the route
+              final args = settings.arguments as Map<String, dynamic>?;
+
+              // Return the InfoCard with the required parameters
+              return MaterialPageRoute(
+                builder: (context) => InfoCard(
+                  taskTitle: args?['taskTitle'] ?? 'Task Title',
+                  reportId: args?['reportId'],
+                  taskDescription: args?['taskDescription'],
+                  taskSubtitle: args?['taskSubtitle'],
+                  points: args?['points'],
+                  duration: args?['duration'],
+                ),
+              );
             // Add cases for other routes as needed
             default:
               // Use the route defined in routes map

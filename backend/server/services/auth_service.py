@@ -4,7 +4,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import create_client
 import os
 
-# Replace OAuth2PasswordBearer with HTTPBearer which is more appropriate for JWT tokens
 security = HTTPBearer()
 
 def get_supabase():

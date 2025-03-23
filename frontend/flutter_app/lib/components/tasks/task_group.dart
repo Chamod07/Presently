@@ -17,6 +17,16 @@ class TaskGroup {
 class Task {
   final String title;
   bool isCompleted;
+  final String? description;
+  final List<String>? instructions;
+  final int? points;
+  final int? durationSeconds;
 
-  Task({required this.title, this.isCompleted = false});
+  Task(
+      {required this.title,
+      this.isCompleted = false,
+      this.description,
+      this.instructions,
+      this.points,
+      this.durationSeconds});
 }
