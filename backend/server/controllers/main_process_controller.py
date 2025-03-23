@@ -7,6 +7,8 @@ from urllib.parse import urlparse, unquote
 
 # Import the correct audio processing services
 from services.audio_processing import convert_video_to_mp3, transcribe_audio_to_text
+# Import the task assignment controller
+from controllers.task_assign_controller import assign_challenges_endpoint
 
 # Set up standard logging
 logger = logging.getLogger(__name__)
@@ -33,13 +35,13 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         logger.info(f"Starting video processing for report {report_id}")
         
         # 1. Download video from Supabase storage
-        print("\n[STEP 1/7] Downloading video from URL...")
+        print("\n[STEP 1/8] Downloading video from URL...")
         local_video_path = await download_from_supabase(video_url, report_id)
         print(f"✓ Video downloaded to {local_video_path}")
         
         # 2. Convert to MP3 - direct service call
         try:
-            print("\n[STEP 2/7] Converting video to audio...")
+            print("\n[STEP 2/8] Converting video to audio...")
             audio_path = convert_video_to_mp3(report_id, local_video_path)
             print(f"✓ Converted video to audio: {audio_path}")
         except Exception as e:
@@ -53,7 +55,7 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         transcription = ""
         try:
             if audio_path:
-                print("\n[STEP 3/7] Transcribing audio...")
+                print("\n[STEP 3/8] Transcribing audio...")
                 transcription = transcribe_audio_to_text(report_id)
                 print(f"✓ Transcription complete: {len(transcription)} characters")
         except Exception as e:
@@ -65,7 +67,7 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         
         # 4. Analyze body language
         try:
-            print("\n[STEP 4/7] Analyzing body language...")
+            print("\n[STEP 4/8] Analyzing body language...")
             from controllers.body_language_analysis_controller import analyze_video
             body_language_result = await analyze_video(report_id=report_id, video_path=local_video_path)
             print(f"✓ Body language analysis complete")
@@ -77,7 +79,7 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         
         # 5. Analyze context
         if transcription:
-            print("\n[STEP 5/7] Analyzing context...")
+            print("\n[STEP 5/8] Analyzing context...")
             try:
                 from controllers.context_analysis_controller import analyze_context
                 context_result = await analyze_context(transcription=transcription, report_id=report_id)
@@ -92,7 +94,7 @@ async def process_video(video_url: str, report_id: str = Query(...)):
             
         # 6. Analyze grammar
         if transcription:
-            print("\n[STEP 6/7] Analyzing grammar...")
+            print("\n[STEP 6/8] Analyzing grammar...")
             try:
                 from controllers.grammar_analysis_controller import analyze_grammar
                 grammar_result = await analyze_grammar(text=transcription, report_id=report_id)
@@ -107,7 +109,7 @@ async def process_video(video_url: str, report_id: str = Query(...)):
         
         # 7. Analyze voice characteristics
         if audio_path:
-            print("\n[STEP 7/7] Analyzing voice...")
+            print("\n[STEP 7/8] Analyzing voice...")
             try:
                 from controllers.voice_analysis_controller import analyze_voice
                 voice_result = await analyze_voice(report_id=report_id)
@@ -119,6 +121,17 @@ async def process_video(video_url: str, report_id: str = Query(...)):
                 errors.append(error_msg)
         else:
             print("\n! Warning: Skipping voice analysis - no audio file available")
+        
+        # 8. Assign challenges based on analysis
+        print("\n[STEP 8/8] Assigning tasks...")
+        try:
+            challenge_assignment = await assign_challenges_endpoint(report_id=report_id)
+            print(f"✓ Tasks assigned successfully")
+        except Exception as e:
+            error_msg = f"Task assignment failed: {str(e)}"
+            print(f"✗ Task assignment error: {str(e)}")
+            logger.error(error_msg)
+            errors.append(error_msg)
             
         # Return results with any errors that occurred
         print("\n" + "=" * 60)
