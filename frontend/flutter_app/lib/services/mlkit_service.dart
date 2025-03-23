@@ -52,7 +52,7 @@ class _CameraPageState extends State<CameraPage> {
   bool _canProcess = true;
   bool _isBusy = false;
   CustomPaint? _customPaint;
-  bool _showPosePainter = true;
+  bool _showPosePainter = false;
 
     // void _togglePosePainter(){
     //   setState(() {

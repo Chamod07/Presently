@@ -175,6 +175,13 @@ class _CameraViewState extends State<CameraView> {
   void dispose() {
     _constraintsSubscription?.cancel();
     _constraintsManager.dispose();
+    // Ensure we handle disposal safely
+    if (mounted) {
+      setState(() {
+        // Update state before stopping camera feed
+        _cameraFunctions.changingCameraLens = true;
+      });
+    }
     _stopLiveFeed();
     super.dispose();
     WakelockPlus.disable();
@@ -201,7 +208,17 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Future<void> _stopLiveFeed() async {
-    await _cameraFunctions.stopLiveFeed();
+    try {
+      // Set state before stopping to prevent UI updates during disposal
+      if (mounted) {
+        setState(() {
+          _cameraFunctions.changingCameraLens = true;
+        });
+      }
+      await _cameraFunctions.stopLiveFeed();
+    } catch (e) {
+      print('Error stopping camera feed in view: $e');
+    }
   }
 
   @override
@@ -212,42 +229,31 @@ class _CameraViewState extends State<CameraView> {
   Widget _liveFeedBody() {
     if (CameraFunctions.cameras.isEmpty) return Container();
     if (_cameraFunctions.controller == null) return Container();
-    if (_cameraFunctions.controller?.value.isInitialized == false)
-      return Container();
-
-    if (_cameraFunctions.controller?.value.isRecordingVideo == false &&
-        !(_cameraFunctions.controller?.value.isStreamingImages ?? false)) {
+    if (_cameraFunctions.changingCameraLens) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    if (_cameraFunctions.controller?.value.isInitialized == false) {
       return Container();
     }
+
+    // Simplified check to prevent buildPreview calls on disposed controller
     return ColoredBox(
       color: Colors.black,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
           Center(
-            child: _cameraFunctions.changingCameraLens
-                ? Center(
-              child: const Text('Changing camera lens'),
-            )
-                : GestureDetector(
-              onTap: () {
-                if (!_isRecording) {
-                  setState(() {
-                    _showPositionGuide = !_showPositionGuide;
-                  });
-                }
-              },
-              child: CameraPreview(
-                _cameraFunctions.controller!,
-                child: widget.showPoseOverlay ? widget.customPaint: null,
-              ),
+            child: CameraPreview(
+              _cameraFunctions.controller!,
+              child: widget.showPoseOverlay ? widget.customPaint : null,
             ),
           ),
-
           _recordingTimerWidget(),
           _notificationWidget(),
           _switchLiveCameraToggle(),
-          _shutterButton(), // Add the summary button to the stack
+          _shutterButton(),
         ],
       ),
     );
@@ -436,23 +442,23 @@ class _CameraViewState extends State<CameraView> {
                 });
               }
             } else {
-                try {
-                  // Start actual video recording
-                  await _cameraFunctions.controller!.startVideoRecording();
+              try {
+                // Start actual video recording
+                await _cameraFunctions.controller!.startVideoRecording();
 
-                  setState(() {
-                    _isRecording = true;
-                    _cameraFunctions.isRecording = true;
-                    _cameraFunctions.startTimer();
-                  });
+                setState(() {
+                  _isRecording = true;
+                  _cameraFunctions.isRecording = true;
+                  _cameraFunctions.startTimer();
+                });
 
-                  _constraintsManager.startMonitoring();
-                  showNotification("Recording started");
-                } catch (e) {
-                  print("Error starting recording: $e");
-                  showNotification("Failed to start recording");
-                }
+                _constraintsManager.startMonitoring();
+                showNotification("Recording started");
+              } catch (e) {
+                print("Error starting recording: $e");
+                showNotification("Failed to start recording");
               }
+            }
           },
           child: Container(
             width: 100.0,
