@@ -486,10 +486,10 @@ class _TaskDetailPageState extends State<TaskDetailPage>
       ],
     );
   }
-
   Widget _buildFilterSelectionBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -505,11 +505,21 @@ class _TaskDetailPageState extends State<TaskDetailPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildFilterTab("All", Icons.view_list_rounded, allTasks.length),
-          _buildFilterTab("To do", Icons.pending_actions_rounded,
-              allTasks.where((task) => !task.isCompleted).length),
-          _buildFilterTab("Completed", Icons.task_alt_rounded,
-              allTasks.where((task) => task.isCompleted).length),
+          Expanded(
+            flex: 3,
+            child: _buildFilterTab(
+                "All", Icons.view_list_rounded, allTasks.length),
+          ),
+          Expanded(
+            flex: 3,
+            child: _buildFilterTab("To do", Icons.pending_actions_rounded,
+                allTasks.where((task) => !task.isCompleted).length),
+          ),
+          Expanded(
+            flex: 4,
+            child: _buildFilterTab("Completed", Icons.task_alt_rounded,
+                allTasks.where((task) => task.isCompleted).length),
+          ),
         ],
       ),
     );
@@ -517,6 +527,9 @@ class _TaskDetailPageState extends State<TaskDetailPage>
 
   Widget _buildFilterTab(String label, IconData icon, int count) {
     final isSelected = selectedFilter == label;
+    // Adjust display for different screen sizes
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return GestureDetector(
       onTap: () {
@@ -524,47 +537,70 @@ class _TaskDetailPageState extends State<TaskDetailPage>
           selectedFilter = label;
         });
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF7400B8) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? Colors.white : Colors.grey.shade600,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                count.toString(),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1.0), // Further reduced margin
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 4 : 6,
+              vertical: 10
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF7400B8) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Hide icon on very small screens for "All" tab to save space
+              if (!(isSmallScreen && label == "All"))
+                Icon(
+                  icon,
+                  size: 14, // Even smaller icon
                   color: isSelected ? Colors.white : Colors.grey.shade600,
                 ),
+              if (!(isSmallScreen && label == "All"))
+                const SizedBox(width: 3), // Smaller gap
+
+              // Text with priority
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: label == "All" ? 13 : 12, // Make "All" text slightly larger
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                  ),
+                ),
               ),
-            ),
-          ],
+
+              const SizedBox(width: 3), // Smaller gap
+
+              // Count badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    count.toString(),
+                    style: TextStyle(
+                      fontSize: 11, // Smaller font for count
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
