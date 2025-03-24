@@ -29,8 +29,8 @@ import 'package:flutter_app/components/signin_signup/reset_password.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:flutter_app/utils/custom_page_transition.dart';
 
-// Placeholder widget for removed CameraPage
-class PlaceholderPage extends StatelessWidget {
+
+class CameraPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CameraView(
@@ -120,7 +120,7 @@ class _MyAppState extends State<MyApp> {
           '/sign_up': (context) => SignUpPage(),
           '/home': (context) => HomePage(),
           '/summary': (context) => SummaryPage(),
-          '/camera': (context) => PlaceholderPage(), // Placeholder for CameraPage
+          '/camera': (context) => CameraPage(),
           '/scenario_sel': (context) => ScenarioSelection(),
           '/task_group_page': (context) => TaskGroupPage(),
           '/settings': (context) => SettingsPage(),
