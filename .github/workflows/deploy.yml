@@ -29,7 +29,7 @@ jobs:
       - name: Build Docker image
         working-directory: backend/server
         run: |
-          docker build -t gcr.io/annular-climate-455110-j8/presently-server:${{ github.sha }} .
+          docker build -t asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repo/presently-server:${{ github.sha }} .
       
       # Authenticate Docker to push to Google Container Registry (GCR)
       - name: Configure Docker for GCR
@@ -39,13 +39,13 @@ jobs:
       # Push the Docker image to GCR
       - name: Push Docker image
         run: |
-          docker push gcr.io/annular-climate-455110-j8/presently-server:${{ github.sha }}
+          docker push asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repo/presently-server:${{ github.sha }}
 
       # Optionally, deploy the image to a service like Cloud Run
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy your-service-name \
-            --image gcr.io/annular-climate-455110-j8/presently-servere:${{ github.sha }} \
+            --image asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repopresently-servere:${{ github.sha }} \
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated
