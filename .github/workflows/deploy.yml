@@ -31,10 +31,10 @@ jobs:
         run: |
           docker build -t asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repo/presently-server:${{ github.sha }} .
       
-      # Authenticate Docker to push to Google Container Registry (GCR)
-      - name: Configure Docker for GCR
+      # Authenticate Docker to push to Google Artifact Registry
+      - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker configure-docker asia-south1-docker.pkg.dev
       
       # Push the Docker image to GCR
       - name: Push Docker image
