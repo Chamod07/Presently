@@ -45,7 +45,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy your-service-name \
-            --image asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repopresently-servere:${{ github.sha }} \
+            --image asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repopresently-server:${{ github.sha }} \
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated
