@@ -34,7 +34,7 @@ jobs:
       # Authenticate Docker to push to Google Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker configure-docker asia-south1-docker.pkg.dev
+          gcloud auth configure-docker asia-south1-docker.pkg.dev
       
       # Push the Docker image to GCR
       - name: Push Docker image
