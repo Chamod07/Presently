@@ -18,11 +18,11 @@ jobs:
           sparse-checkout: |
             backend/server
 
-      # Set up Cloud SDK and authenticate with GCP
+      # Set up Cloud SDK 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: annular-climate-455110-j8
+          project_id: secrets.GCP_PROJECT_ID 
 
         # Authenticate with GCP
       - name: Authenticate with GCP
@@ -33,24 +33,24 @@ jobs:
       # Configure Docker for Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet  
+          gcloud auth configure-docker ${{ secrets.GCP_REGISTRY_DOMAIN }} --quiet  
 
       # Build your Docker image
       - name: Build Docker image
         working-directory: backend/server
         run: |
-          docker build -t asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repo/presently-server:${{ github.sha }} .
+          docker build -t ${{ secrets.GCP_REGISTRY_PATH }}/presently-server:${{ github.sha }} .
            
       # Push the Docker image to GCR
       - name: Push Docker image
         run: |
-          docker push asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repo/presently-server:${{ github.sha }}
+          docker push ${{ secrets.GCP_REGISTRY_PATH }}/presently-server:${{ github.sha }}
 
       # Optionally, deploy the image to a service like Cloud Run
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy presently \
-          --image asia-south1-docker.pkg.dev/annular-climate-455110-j8/presently-repo/presently-server:${{ github.sha }} \
-          --region asia-south1 \
+          --image ${{ secrets.GCP_REGISTRY_PATH }}/presently-server:${{ github.sha }} \
+          --region ${{ secrets.GCP_REGION }} \
           --platform managed \
           --allow-unauthenticated
