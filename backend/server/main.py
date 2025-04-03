@@ -67,4 +67,5 @@ app.include_router(report_router, prefix="/api/report", tags=["Report"])
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8080))  # Default to 8080 for Cloud Run
+    uvicorn.run(app, host="0.0.0.0", port=port)
