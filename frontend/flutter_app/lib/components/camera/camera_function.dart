@@ -5,7 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
-import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import '../../services/upload/upload_service.dart';
 import '../../services/supabase/supabase_service.dart';
 import '../../providers/report_provider.dart';
@@ -36,27 +35,23 @@ class CameraFunctions {
   String? videoFilePath;
   XFile? videoFile;
 
-  // Callbacks
-  final Function(InputImage inputImage) onImage;
+    // Callbacks
   final VoidCallback? onCameraFeedReady;
-  final VoidCallback? onDetectorViewModeChanged;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
-  final CameraLensDirection initialCameraLensDirection;
+    final CameraLensDirection initialCameraLensDirection;
 
   // State update callback
-  final Function setState;
+    final Function setState;
 
-  //instanciating report provider
-  final ReportProvider? reportProvider;
+//instanciating report provider
+    final ReportProvider? reportProvider;
 
   CameraFunctions({
-    required this.onImage,
     required this.setState,
     this.onCameraFeedReady,
-    this.onDetectorViewModeChanged,
     this.onCameraLensDirectionChanged,
-    this.initialCameraLensDirection = CameraLensDirection.front,
-    this.reportProvider
+        this.initialCameraLensDirection = CameraLensDirection.front,
+        this.reportProvider
   });
 
   Future<void> initialize() async {
@@ -135,9 +130,6 @@ class CameraFunctions {
         print('Focus mode setting not supported: $e');
       }
 
-      // Start image stream for processing
-      await controller?.startImageStream(processCameraImage);
-
       // Call callbacks
       if (onCameraFeedReady != null) {
         onCameraFeedReady!();
@@ -199,65 +191,7 @@ class CameraFunctions {
     setState(() => changingCameraLens = false);
   }
 
-  void processCameraImage(CameraImage image) {
-    final inputImage = inputImageFromCameraImage(image);
-    if (inputImage == null) return;
-
-    onImage(inputImage);
-  }
-
-  final _orientations = {
-    DeviceOrientation.portraitUp: 0,
-    DeviceOrientation.landscapeLeft: 90,
-    DeviceOrientation.portraitDown: 180,
-    DeviceOrientation.landscapeRight: 270,
-  };
-
-  InputImage? inputImageFromCameraImage(CameraImage image) {
-    if (controller == null) return null;
-
-    final camera = cameras[cameraIndex];
-    final sensorOrientation = camera.sensorOrientation;
-
-    InputImageRotation? rotation;
-    if (Platform.isIOS) {
-      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
-    } else if (Platform.isAndroid) {
-      var rotationCompensation =
-      _orientations[controller!.value.deviceOrientation];
-      if (rotationCompensation == null) return null;
-      if (camera.lensDirection == CameraLensDirection.front) {
-        // front-facing
-        rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
-      } else {
-        // back-facing
-        rotationCompensation =
-            (sensorOrientation - rotationCompensation + 360) % 360;
-      }
-      rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
-    }
-    if (rotation == null) return null;
-
-    final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    if (format == null ||
-        (Platform.isAndroid && format != InputImageFormat.nv21) ||
-        (Platform.isIOS && format != InputImageFormat.bgra8888)) return null;
-
-    if (image.planes.length != 1) return null;
-    final plane = image.planes.first;
-
-    return InputImage.fromBytes(
-      bytes: plane.bytes,
-      metadata: InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: rotation,
-        format: format,
-        bytesPerRow: plane.bytesPerRow,
-      ),
-    );
-  }
-
-  Future<void> processRecording(XFile videoFile) async {
+    Future<void> processRecording(XFile videoFile) async {
     try {
       recordedVideoFile = File(videoFile.path);
 

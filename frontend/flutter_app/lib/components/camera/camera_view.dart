@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/services/recording/constraints_manager.dart';
-import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import './camera_function.dart';
 import 'recording_timer.dart';
 import 'processing_overlay.dart'; // Add import for ProcessingOverlay
@@ -15,22 +14,14 @@ import 'package:provider/provider.dart';
 class CameraView extends StatefulWidget {
   CameraView(
       {Key? key,
-        this.customPaint,
-        required this.onImage,
         this.onCameraFeedReady,
-        this.onDetectorViewModeChanged,
         this.onCameraLensDirectionChanged,
-        this.initialCameraLensDirection = CameraLensDirection.front,
-        this.showPoseOverlay = false})
+        this.initialCameraLensDirection = CameraLensDirection.front,})
       : super(key: key);
 
-  final CustomPaint? customPaint;
-  final Function(InputImage inputImage) onImage;
   final VoidCallback? onCameraFeedReady;
-  final VoidCallback? onDetectorViewModeChanged;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
-  final bool showPoseOverlay;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -53,17 +44,15 @@ class _CameraViewState extends State<CameraView> {
     super.initState();
     WakelockPlus.enable();
 
-    // Initialize the camera functions
-    _cameraFunctions = CameraFunctions(
-      onImage: widget.onImage,
-      setState: setState,
-      onCameraFeedReady: widget.onCameraFeedReady,
-      onDetectorViewModeChanged: widget.onDetectorViewModeChanged,
-      onCameraLensDirectionChanged: widget.onCameraLensDirectionChanged,
-      initialCameraLensDirection: widget.initialCameraLensDirection,
-    );
-    //initialize constrains manager
-    _constraintsManager = ConstraintsManager();
+        // Initialize the camera functions
+        _cameraFunctions = CameraFunctions(
+          setState: setState,
+          onCameraFeedReady: widget.onCameraFeedReady,
+          onCameraLensDirectionChanged: widget.onCameraLensDirectionChanged,
+          initialCameraLensDirection: widget.initialCameraLensDirection,
+        );
+        //initialize constrains manager
+        _constraintsManager = ConstraintsManager();
 
     _constraintsSubscription =
         _constraintsManager.constraintStream.listen(_handleConstraintViolation);
@@ -244,13 +233,10 @@ class _CameraViewState extends State<CameraView> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          Center(
-            child: CameraPreview(
-              _cameraFunctions.controller!,
-              child: widget.showPoseOverlay ? widget.customPaint : null,
-            ),
-          ),
-          _recordingTimerWidget(),
+                    Center(
+                      child: CameraPreview(_cameraFunctions.controller!),
+                    ),
+                    _recordingTimerWidget(),
           _notificationWidget(),
           _switchLiveCameraToggle(),
           _shutterButton(),

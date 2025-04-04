@@ -9,7 +9,6 @@ import 'package:flutter_app/components/scenario_selection/scenario_selection.dar
 import 'package:flutter_app/components/tasks/task_failed.dart';
 import 'package:flutter_app/components/tasks/task_group_page.dart';
 import 'package:flutter_app/components/dashboard/home_page.dart';
-import 'package:flutter_app/services/mlkit_service.dart';
 import 'package:flutter_app/components/summary/summary_page.dart';
 import 'package:flutter_app/components/onboarding/welcome.dart';
 import 'package:flutter_app/components/signin_signup/sign_in.dart';
@@ -23,11 +22,22 @@ import 'package:flutter_app/components/settings/contact_support.dart';
 import 'package:flutter_app/components/settings/terms_privacy.dart';
 import 'package:flutter_app/components/settings/help_page.dart';
 import 'package:flutter_app/components/tasks/info_card.dart';
+import 'components/camera/camera_view.dart';
 import 'services/supabase/supabase_service.dart';
 import 'package:flutter_app/services/deep_link_service.dart';
 import 'package:flutter_app/components/signin_signup/reset_password.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:flutter_app/utils/custom_page_transition.dart';
+
+
+class CameraPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return CameraView(
+      initialCameraLensDirection: CameraLensDirection.front,
+    );
+  }
+}
 
 late List<CameraDescription> cameras;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
