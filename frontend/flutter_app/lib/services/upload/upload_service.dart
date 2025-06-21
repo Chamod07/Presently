@@ -89,8 +89,6 @@ class UploadService {
     final metadataFileName = '$folderPath/metadata.json';
     final uploadId = 'upload_$reportId';
 
-    // Check if the file needs chunking
-    //final needsChunking = await _chunkingService.needsChunking(videoFile);
 
     // Add to queue with chunking information
     _uploadQueue.add({
@@ -102,7 +100,6 @@ class UploadService {
       'attempts': 0,
       'status': 'pending',
       'progress': 0.0,
-      //'needsChunking': needsChunking,
     });
 
     await savePendingUploads();
@@ -333,7 +330,7 @@ class UploadService {
 
         try {
           // Use the correct endpoint with trailing slash
-          final apiUrl = Uri.parse('http://10.0.2.2:8000/api/process/');
+          final apiUrl = Uri.parse('https://presently-182725349232.asia-south1.run.app/api/process/');
 
           // Add parameters as query parameters, not in body
           final urlWithParams = apiUrl.replace(queryParameters: {

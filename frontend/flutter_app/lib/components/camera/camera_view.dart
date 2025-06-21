@@ -36,7 +36,7 @@ class CameraView extends StatefulWidget {
   State<CameraView> createState() => _CameraViewState();
 }
 
-class _CameraViewState extends State<CameraView> {
+class _CameraViewState extends State<CameraView> with WidgetsBindingObserver{
   // UI state variables
   bool _isRecording = false;
   bool _showNotification = false;
@@ -52,6 +52,7 @@ class _CameraViewState extends State<CameraView> {
   void initState() {
     super.initState();
     WakelockPlus.enable();
+    WidgetsBinding.instance.addObserver(this);
 
     // Initialize the camera functions
     _cameraFunctions = CameraFunctions(
@@ -182,9 +183,24 @@ class _CameraViewState extends State<CameraView> {
         _cameraFunctions.changingCameraLens = true;
       });
     }
+    WidgetsBinding.instance.removeObserver(this);
     _stopLiveFeed();
     super.dispose();
     WakelockPlus.disable();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle app lifecycle changes
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // App is in background or being switched - turn off camera
+      _stopLiveFeed();
+    } else if (state == AppLifecycleState.resumed) {
+      // App came back to foreground - reinitialize camera if needed
+      if (_cameraFunctions.controller == null) {
+        _initialize();
+      }
+    }
   }
 
   void showNotification(String message) {
@@ -223,7 +239,13 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: _liveFeedBody());
+    return WillPopScope(
+      onWillPop: () async{
+        await _stopLiveFeed();
+        return true;
+      },
+        child: Scaffold(body: _liveFeedBody()),
+    );
   }
 
   Widget _liveFeedBody() {

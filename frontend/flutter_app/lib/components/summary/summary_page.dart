@@ -74,7 +74,7 @@ class _SummaryPageState extends State<SummaryPage>
   Widget build(BuildContext context) {
     // Get selectedIndex and sessionName from route arguments
     final Map<String, dynamic>? args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final int selectedIndex =
         args?['selectedIndex'] ?? 1; // Default to 1 (add/new tab)
     final String? initialSessionName = args?['sessionName'];
@@ -177,7 +177,7 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
   Widget build(BuildContext context) {
     // Get current page color
     final Color activeColor =
-        widget.pageData[widget.currentPage]["color"] as Color;
+    widget.pageData[widget.currentPage]["color"] as Color;
 
     return Scaffold(
       // Enhanced app bar with gradient and dynamic title
@@ -279,7 +279,7 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(
                     widget.pageData.length,
-                    (index) => _buildTabButton(index, activeColor),
+                        (index) => _buildTabButton(index, activeColor),
                   ),
                 ),
               ),
@@ -348,13 +348,13 @@ class _SummaryPageContentState extends State<_SummaryPageContent>
             borderRadius: BorderRadius.circular(22),
             boxShadow: isActive
                 ? [
-                    BoxShadow(
-                      color: tabColor.withOpacity(0.4),
-                      blurRadius: 8,
-                      spreadRadius: -2,
-                      offset: Offset(0, 3),
-                    ),
-                  ]
+              BoxShadow(
+                color: tabColor.withOpacity(0.4),
+                blurRadius: 8,
+                spreadRadius: -2,
+                offset: Offset(0, 3),
+              ),
+            ]
                 : null,
           ),
           child: Center(
@@ -752,7 +752,7 @@ abstract class BaseSummary extends StatelessWidget {
         'icon': Icons.star_border,
         'color': Colors.blue.shade600,
         'text':
-            'Your performance in this area enhances your overall presentation.',
+        'Your performance in this area enhances your overall presentation.',
       });
     } else if (score >= 6) {
       insights.add({
@@ -766,7 +766,7 @@ abstract class BaseSummary extends StatelessWidget {
         'icon': Icons.trending_up,
         'color': Colors.amber.shade700,
         'text':
-            'Minor refinements will significantly enhance your effectiveness.',
+        'Minor refinements will significantly enhance your effectiveness.',
       });
     } else if (score >= 4) {
       insights.add({
@@ -1011,17 +1011,17 @@ abstract class BaseSummary extends StatelessWidget {
     // Separate strengths and areas for improvement
     final strengths = insights
         .where((i) =>
-            i['type'] == 'strength' ||
-            i['color'] == Colors.green.shade600 ||
-            i['color'] == Colors.blue.shade600)
+    i['type'] == 'strength' ||
+        i['color'] == Colors.green.shade600 ||
+        i['color'] == Colors.blue.shade600)
         .toList();
 
     final improvements = insights
         .where((i) =>
-            i['type'] == 'improvement' ||
-            i['color'] == Colors.amber.shade700 ||
-            i['color'] == Colors.orange.shade700 ||
-            i['color'] == Colors.red.shade600)
+    i['type'] == 'improvement' ||
+        i['color'] == Colors.amber.shade700 ||
+        i['color'] == Colors.orange.shade700 ||
+        i['color'] == Colors.red.shade600)
         .toList();
 
     return Container(
@@ -1394,20 +1394,25 @@ abstract class BaseSummary extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Title with improved styling
-                    Text(
-                      "Practice this skill",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
+                    // Title with improved styling - Make it flexible with Expanded
+                    Expanded(
+                      child: Text(
+                        "Practice this skill",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                        overflow: TextOverflow.ellipsis, // Add overflow handling
                       ),
                     ),
-                    // Action buttons
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    // Small spacer
+                    SizedBox(width: 8),
+                    // Action buttons in a more compact layout
+                    Wrap(
+                      spacing: 8, // Reduce spacing between buttons
                       children: [
-                        // Copy Button
+                        // Copy Button - Simplified
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -1435,23 +1440,23 @@ abstract class BaseSummary extends StatelessWidget {
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
+                                  horizontal: 10, vertical: 8), // Reduce padding
                               decoration: BoxDecoration(
                                 border:
-                                    Border.all(color: color.withOpacity(0.3)),
+                                Border.all(color: color.withOpacity(0.3)),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.copy, size: 16, color: color),
-                                  SizedBox(width: 6),
+                                  Icon(Icons.copy, size: 14, color: color), // Smaller icon
+                                  SizedBox(width: 4), // Reduce spacing
                                   Text(
                                     'Copy',
                                     style: TextStyle(
                                       color: color,
                                       fontWeight: FontWeight.w500,
-                                      fontSize: 14,
+                                      fontSize: 12, // Smaller font
                                     ),
                                   ),
                                 ],
@@ -1459,9 +1464,8 @@ abstract class BaseSummary extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(width: 12),
 
-                        // Practice Button with improved styling
+                        // Practice Button - Simplified
                         Material(
                           color: color,
                           borderRadius: BorderRadius.circular(8),
@@ -1489,19 +1493,19 @@ abstract class BaseSummary extends StatelessWidget {
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
+                                  horizontal: 12, vertical: 8), // Reduce padding
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.add_task,
-                                      size: 16, color: Colors.white),
-                                  SizedBox(width: 6),
+                                      size: 14, color: Colors.white), // Smaller icon
+                                  SizedBox(width: 4), // Reduce spacing
                                   Text(
                                     'Practice',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w500,
-                                      fontSize: 14,
+                                      fontSize: 12, // Smaller font
                                     ),
                                   ),
                                 ],
@@ -1748,7 +1752,7 @@ abstract class BaseSummary extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) {
+              (context, index) {
             final weakness = weaknesses[index];
             return _buildWeaknessCard(context, weakness);
           },

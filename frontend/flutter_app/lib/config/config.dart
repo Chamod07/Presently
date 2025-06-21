@@ -6,16 +6,10 @@ class Config {
   static String get baseUrl {
     if (kIsWeb) {
       // Web uses localhost
-      return 'http://localhost:8000';
-    } else if (Platform.isAndroid) {
-      // Android emulator uses 10.0.2.2
-      return 'http://10.0.2.2:8000';
-    } else if (Platform.isIOS) {
-      // iOS simulator uses localhost
-      return 'http://localhost:8000';
+      return 'https://presently-182725349232.asia-south1.run.app';
     } else {
       // Default for other platforms
-      return 'http://localhost:8000';
+      return 'https://presently-182725349232.asia-south1.run.app';
     }
   }
 
